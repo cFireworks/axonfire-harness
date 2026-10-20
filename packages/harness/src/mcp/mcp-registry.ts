@@ -54,12 +54,22 @@ export type McpServerRecord = {
 };
 
 export class McpRegistry {
+  private nativeManager?: any;
+  private nativeReady?: any;
+  attachNativeManager(manager: any, ready: any): void {
+    this.nativeManager = manager;
+    this.nativeReady = ready;
+  }
   private readonly servers = new Map<string, McpConnection>();
   // Original McpManager returns one live connectedServersCache and mutates it via splice.
   private readonly connectedServersCache: McpConnection[] = [];
   private settlePromise: Promise<void> = Promise.resolve();
 
   register(server: McpConnection): void {
+    if (this.nativeManager)
+      throw Error(
+        "Native MCP projection owns connections; use connectNativeMcp or projection.manager.add",
+      );
     this.servers.set(server.name, server);
     this.connectedServers();
   }
@@ -74,6 +84,7 @@ export class McpRegistry {
 
   async waitForServersReady(signal?: AbortSignal): Promise<void> {
     if (signal?.aborted) throw signal.reason;
+    if (this.nativeManager) return this.nativeReady.waitForServersReady();
     await Promise.race([
       this.settlePromise,
       new Promise<never>((_, reject) => {
@@ -85,6 +96,7 @@ export class McpRegistry {
   }
 
   connectedServers(): McpConnection[] {
+    if (this.nativeManager) return this.nativeManager.connectedServersCache;
     const connected = [...this.servers.values()].filter(
       (server) =>
         server.connected !== false &&
@@ -99,11 +111,20 @@ export class McpRegistry {
     return this.connectedServersCache;
   }
 
-  async getConnectedServers(): Promise<McpConnection[]> {
+  async getConnectedServers(options?: any): Promise<McpConnection[]> {
+    if (this.nativeManager)
+      return this.nativeManager.getConnectedServers(options);
+    if (options?.waitForSettle) await this.waitForServersReady(options.signal);
     return this.connectedServers();
+  }
+  async waitForPendingServers(options?: any): Promise<void> {
+    if (this.nativeManager)
+      return this.nativeManager.waitForPendingServers(options);
+    return this.waitForServersReady(options?.signal);
   }
 
   async list(): Promise<McpServerRecord[]> {
+    if (this.nativeManager) return this.nativeManager.list();
     return [...this.servers.values()].map((server) => ({
       name: server.name,
       status:
@@ -114,6 +135,7 @@ export class McpRegistry {
     }));
   }
   async listForAgentManager(): Promise<any[]> {
+    if (this.nativeManager) return this.nativeManager.list();
     return [...this.servers.values()].map((server) => ({
       name: server.name,
       status:

@@ -118,6 +118,9 @@ export {createNativeMcpHost,type NativeMcpHostOptions} from './mcp/native-mcp-ho
 export {createNativeMcpRuntime} from './mcp/native-mcp-runtime.js';
 export {createNativeMcpResultProcessor} from './mcp/native-mcp-results.js';
 export {createNativeMcpUtils} from './mcp/native-mcp-utils.js';
+export {createNativeMcpManagerRuntime} from './mcp/native-mcp-manager-runtime.js';
+export {createNativeMcpProjectionHost,type NativeMcpProjectionOptions} from './mcp/native-mcp-projection-host.js';
+export {McpScope,MERGE_SCOPE_PRIORITY,McpConfigDiagnosticSeverity} from './mcp/native-mcp-manager-constants.js';
 export {createNativeInterruptionService,createNativeToolApprovalServices,type NativeInterruptionControllerRuntime,SessionCompactionAbortError,SdkPermissionDeniedError} from "./permissions/native-interruption-service.js";
 export * from "./permissions/interruption-stream-recovery.js";
 export * from "./prompts/prompt-renderer.js";

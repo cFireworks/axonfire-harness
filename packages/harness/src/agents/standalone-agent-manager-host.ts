@@ -113,14 +113,8 @@ export class StandaloneAgentManagerHost {
         },
         mcpManager: options.mcpManager ?? {
           list: () => mcp.listForAgentManager(),
-          getConnectedServers: (opts?: any) =>
-            opts?.waitForSettle
-              ? mcp
-                  .waitForServersReady(opts.signal)
-                  .then(() => mcp.connectedServers())
-              : Promise.resolve(mcp.connectedServers()),
-          waitForPendingServers: (opts: any) =>
-            mcp.waitForServersReady(opts.signal),
+          getConnectedServers: (opts?: any) => mcp.getConnectedServers(opts),
+          waitForPendingServers: (opts: any) => mcp.waitForPendingServers(opts),
         },
         mcpReadyService: options.mcpReadyService ?? {
           waitForServersReady: () => mcp.waitForServersReady(),

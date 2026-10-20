@@ -19,6 +19,7 @@ export type NativeMcpHostOptions = {
 export function createNativeMcpHost(options: NativeMcpHostOptions) {
   let closed = false;
   let closing: Promise<void> | undefined;
+  let projection: any;
   const configurations = new Map<string, { config: any; scope: string }>(),
     descriptors = new Map<string, Map<string, any>>(),
     timers = new Set<any>(),
@@ -155,6 +156,7 @@ export function createNativeMcpHost(options: NativeMcpHostOptions) {
   };
   async function connect(name: string, config: any, scope = "dynamic") {
     if (closed) throw Error("MCP host is closed");
+    if (projection) return projection.connect(name, config, scope);
     const previous = manager.underlyingCache.get(name);
     if (
       previous &&
@@ -181,8 +183,19 @@ export function createNativeMcpHost(options: NativeMcpHostOptions) {
     ui,
     configurations,
     connect,
+    attachProjection(value: any) {
+      if (projection) throw Error("MCP projection is already attached");
+      projection = value;
+    },
+    get projection() {
+      return projection;
+    },
     registerExternal(server: any, config: any = { type: "sdk" }) {
       if (closed) throw Error("MCP host is closed");
+      if (projection)
+        throw Error(
+          "Native MCP projection requires explicit configuration, not an external server instance",
+        );
       configurations.set(server.name, { config, scope: "dynamic" });
       manager.underlyingCache.set(server.name, server);
       manager.configByName.set(server.name, config);
@@ -200,6 +213,7 @@ export function createNativeMcpHost(options: NativeMcpHostOptions) {
     },
     async delete(name: string) {
       descriptors.delete(name);
+      if (projection) return projection.delete(name);
       options.registry?.unregister(name);
       const result = await manager.delete(name);
       configurations.delete(name);
@@ -209,6 +223,7 @@ export function createNativeMcpHost(options: NativeMcpHostOptions) {
       if (closing) return closing;
       closed = true;
       closing = (async () => {
+        const projectionClosing = projection?.close();
         await Promise.all(
           [...manager.creating.values()].map((p: any) => p.catch(() => {})),
         );
@@ -216,6 +231,7 @@ export function createNativeMcpHost(options: NativeMcpHostOptions) {
           options.registry?.unregister(name);
         await manager.clear();
         await Promise.all([...pendingCloses]);
+        await projectionClosing;
         for (const timer of timers) cancel(timer);
         timers.clear();
         for (const sub of subscriptions) sub.unsubscribe();

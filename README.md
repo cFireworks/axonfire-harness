@@ -72,7 +72,7 @@ npm run verify:config
 npm run verify:recovery -- /absolute/path/to/codebuddy.js
 ```
 
-最新验证：723 项核心测试、10 项 Web 宿主测试、645 项编译后 smoke、39 组原样本差分通过。完整权限服务和原审批控制器分别通过 `nativePermissions`、`nativeApprovals` 显式使用；提供 `sdkControl` 可使用已恢复的 JSONL 权限 / Hook / MCP 消息 / elicitation 客户端，并默认启用这两条 native 路径及原生 MCP 宿主。`nativeMcp` 也可单独配置 stdio / HTTP / SSE 服务，SDK MCP 通过 initialize 注册。CLI/Web 默认保留兼容审批宿主。配置中的 115 个原始 prompt 和固定哈希保持不变。详细边界见 [还原状态](docs/recovery-status.md)，安装与启动验证见 [使用说明](docs/getting-started.md)。
+最新验证：748 项核心测试、10 项 Web 宿主测试、670 项编译后 smoke、40 组原样本差分通过。完整权限服务和原审批控制器分别通过 `nativePermissions`、`nativeApprovals` 显式使用；`sdkControl` 或 `nativeMcp` 默认启用这两条 native 路径及原生 MCP 宿主。MCP 已接入原顶层配置合并、项目批准、代次隔离、热刷新与延迟工具索引；stdio / HTTP / SSE 使用显式配置，SDK MCP 通过 initialize 注册。CLI/Web 默认保留兼容审批宿主。配置中的 115 个原始 prompt 和固定哈希保持不变。详细边界见 [还原状态](docs/recovery-status.md)，安装与启动验证见 [使用说明](docs/getting-started.md)。
 
 本地工作台演示：
 

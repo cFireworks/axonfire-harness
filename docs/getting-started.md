@@ -46,7 +46,7 @@ Web 的 `--cwd` 指定工具工作目录：`npm start -- --cwd /absolute/path/to
 
 ## 原生 MCP（嵌入 API）
 
-最新门槛为723核心 + 10宿主、645编译smoke、39组样本差分。本批恢复stdio / HTTP / SSE override、SdkMcpTransport / SdkMcpServer、McpServerManager / McpTransportManager、子Agent白名单及结果处理；不是完整顶层McpManager的配置发现与热刷新。
+最新门槛为748核心 + 10宿主、670编译smoke、40组样本差分。stdio / HTTP / SSE override、SdkMcpTransport / SdkMcpServer、底层manager和结果处理之后，现已接入完整顶层McpManager、ConfigManager/Store、连接/模型/权限/toggle、Ready/CLI配置初始化、环境展开/diagnostics与plugin registry类。产品插件加载器与ProductManager的自动刷新编排仍是后续边界。
 
 普通嵌入调用可在已有模型配置上添加：
 
@@ -66,10 +66,32 @@ try {
 }
 ```
 
-地址仅为示例，需要你自己运行并信任该MCP服务；不自动启动示例端口或读取原应用配置。`nativeMcp.servers` 在创建时连接；后续可用 `harness.connectNativeMcp(name, config)` 添加/替换，`harness.nativeMcp.delete(name)` 删除。连接数组按源码保持同一动态对象，因此已创建Agent也能看到变化。`nativeMcp` 不自动打开两条native权限开关，仍按当前审批宿主请求确认。
+地址仅为示例，需要你自己运行并信任该MCP服务；不自动启动示例端口或读取原应用配置。`nativeMcp.servers` 在创建时连接；后续可用 `harness.connectNativeMcp(name, config)` 添加/替换，`harness.nativeMcp.delete(name)` 删除。连接数组按源码保持同一动态对象，因此已创建Agent也能看到变化。`nativeMcp` 与 `sdkControl` 现在默认启用原权限服务和审批控制器，包括延迟MCP工具的审批；普通CLI/Web默认路径不变。不建议显式关闭这些native开关，兼容路径并不等价于原权限策略。
 
 stdio配置按原字段提供 `command`、`args`、`env`，还必须提供 `nativeMcp.endpointProvider.get()`，返回由调用方实际拥有的Hook服务地址；缺省明确报错，不虚构产品网关。HTTP/SSE默认仅适合无鉴权公共服务或调用方显式配置的认证头；产品OAuth流程尚未还原，可通过 `oauthManager` 注入。执行stdio命令和连接任意URL具有本机权限，嵌入方负责配置可信度与网络限制。
 
 提供 `sdkControl` 会默认创建原生MCP宿主。收到原 `initialize` 请求时，其中SDK MCP配置会注册到同一连接列表，并通过已恢复的 `mcp_` 请求/`response.mcp_response` 往返JSON-RPC。不要将 `type:"sdk"` 放入启动期 `servers`，应在控制接收器就绪后使用initialize，避免启动等待尚不可回复的协议。重复相同配置的initialize不重新握手；控制断线/关闭会终止pending请求。完整示例见 `packages/harness/test/mcp-native-runtime.test.ts`，测试仅启动自有loopback/stdio peer。
 
 大结果落盘使用当前宿主state目录下的原生MCP输出路径，不读取安装应用数据；保留原完整读取提示、字符截断和image规则。OpenAI SDK仍是外部依赖，仅在Agent工厂补回样本SDK转换器的MCP `needsApproval` 字段，保证原proxy审批回调确实被调用。channel security、OAuth、遥测/支付与ACP广播仍为显式依赖边界，不因类方法已恢复就宣称整个产品服务完成。
+
+### 配置作用域与热刷新
+
+`harness.nativeMcp.projection` 提供原 `manager`、`config`、`configStore`、`permissions`、`toggle`、`diagnostics`、`ready` 等对象。配置优先级保持原序：internal > sdk > dynamic > local > project > user > plugin。项目级配置在批准前不会创建transport，也不允许listTools/getPrompt；批准连接后，原延迟索引提交完成才发布到Agent连接列表。
+
+```js
+const projection = harness.nativeMcp.projection;
+await projection.manager.add("owned", { type: "http", url: trustedMcpUrl }, "project");
+const pending = await projection.manager.getAllNeedingApproval();
+// 经由自己的交互明确确认 pending 后，按实际选择调用 allow 或 deny
+await projection.manager.allow(["owned"]);
+await projection.manager.waitForPendingServers({ names: ["owned"], timeoutMs: 5000 });
+await projection.drain(); // 独立宿主提供的异步/索引/关闭工作屏障
+```
+
+原 `manager.add` 默认scope是local，`connectNativeMcp` 为保持显式嵌入配置默认使用dynamic；传第三参数可指定scope。需要先等待用户批准的project配置应使用manager.add，而不是等待立即连接成功的connectNativeMcp。配置级allow不等于工具调用自动批准；实际调用仍遵循原ToolPermissionService/审批控制器。
+
+`nativeMcp.projection.scopes` 可显式初始化各scope。`filesystemScopes` 默认空，不自动加载安装应用用户配置；按需传 `['project']`、`['project-local']` 或 `['user']`，其中project-local是SettingsScope名称，对应MCP的local。独立宿主将用户/全局路径重定向到state目录内的 `mcp/`，project路径仍按原 `.mcp.json` / `mcp.json` 优先级解析当前工作目录。显式写project配置会写入该项目的MCP文件；不是只写内存。项目批准settings默认只在当前进程内存保存，可注入projection.settings提供自己拥有的作用域list/set存储；这不等于完整原SettingsManager磁盘服务。
+
+`config.invalidateFilesystemScopeCaches({ includeUser: true })` 后调用 `manager.list()` 重新投影文件配置；`manager.reloadPluginServers()` 失效并重投影插件配置。插件来源默认沿用显式 `agentManager.plugins`，也可用 `projection.plugins` 覆盖；不自动发现或安装真实插件。原ConfigManager对文件删除的缓存语义和strictDynamic的特殊scope读取顺序保持不变，详见测试。原生projection拥有连接时，不再接受 `harness.mcp.register` / `nativeMcp.registerExternal` 塞入绕过配置的实例，改用上述配置接口。
+
+旧代连接、listTools或索引结果晚到时按原generation/fingerprint拒绝提交；配置撤销、删除与工具列表变化清理/重建索引。`close()`取消本宿主调度、订阅并等待当前/旧连接的关闭，不停止调用方外部服务。完整产品命令/UI、OAuth服务、插件自动事件编排与原SDK stdin程序仍未恢复。

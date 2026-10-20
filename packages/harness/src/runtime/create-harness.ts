@@ -33,6 +33,7 @@ import { PermissionMode } from "../permissions/permission.js";
 import { createSdkControlHost, type SdkControlHostOptions } from "../sdk/sdk-control-host.js";
 import { attachHarnessSdkControl } from "../sdk/harness-sdk-control.js";
 import { createNativeMcpHost, type NativeMcpHostOptions } from "../mcp/native-mcp-host.js";
+import { createNativeMcpProjectionHost, type NativeMcpProjectionOptions } from "../mcp/native-mcp-projection-host.js";
 import { ProductPromptRenderer } from "../prompts/prompt-renderer.js";
 import { RunnerFactory } from "../runner/runner-factory.js";
 import { ToolCallLoopDetectorImpl } from "../runner/tool-call-loop-detector.js";
@@ -179,7 +180,7 @@ export type HarnessOptions = {
   approvalController?: Partial<NonNullable<InterruptionServiceOptions["controller"]>>;
   /** Explicit owned JSONL control transport; enables both native permission paths by default. */
   sdkControl?: SdkControlHostOptions;
-  nativeMcp?: Partial<Omit<NativeMcpHostOptions, "getWorkDir" | "getHomeProjectDir" | "permissionUtils">> & { servers?: Record<string, any> };
+  nativeMcp?: Partial<Omit<NativeMcpHostOptions, "getWorkDir" | "getHomeProjectDir" | "permissionUtils">> & { servers?: Record<string, any>; projection?: Partial<Omit<NativeMcpProjectionOptions, "serverHost" | "getWorkDir" | "getHomeDir" | "toolSearchService" | "deferToolConfigService">> };
   permissionHost?: Partial<ToolPermissionHostOptions>;
   workDir: string;
   stateDir?: string;
@@ -264,7 +265,7 @@ export async function createHarness(options: HarnessOptions) {
   }
   if (options.baseURL && !["http:", "https:"].includes(new URL(options.baseURL).protocol)) throw new Error("baseURL must use HTTP or HTTPS");
   const sdkControl = options.sdkControl ? createSdkControlHost(options.sdkControl) : undefined;
-  const nativeApprovals = options.nativeApprovals ?? !!sdkControl, nativePermissions = options.nativePermissions ?? !!sdkControl;
+  const nativeApprovals = options.nativeApprovals ?? (!!sdkControl || !!options.nativeMcp), nativePermissions = options.nativePermissions ?? (!!sdkControl || !!options.nativeMcp);
   const sdkPermissionClient = options.approvalController?.sdkPermissionClient ?? sdkControl?.permission;
   const sdkSettings = new Map<string, any>();
   const product = await loadProductConfiguration();
@@ -486,11 +487,22 @@ export async function createHarness(options: HarnessOptions) {
       ...options.nativeMcp?.dependencies,
     },
   }) : undefined;
-  if (nativeMcp) agentFactory.attachNativeMcpApprovalResolver(name => nativeMcp.resolveNeedsApproval(name));
+  const nativeMcpProjection = nativeMcp ? await createNativeMcpProjectionHost({
+    serverHost: nativeMcp, getWorkDir, getHomeDir: () => resolve(stateDir, "mcp"),
+    toolSearchService: deferredRuntime.search,
+    deferToolConfigService: agents.standaloneHost.runtime.dependencies.deferToolConfigService,
+    ...(options.agentManager?.plugins ? { plugins: options.agentManager.plugins } : {}),
+    logger: nativeMcp.runtime.logger,
+    ...options.nativeMcp?.projection,
+  }) : undefined;
+  if (nativeMcp && nativeMcpProjection) {
+    nativeMcp.attachProjection(nativeMcpProjection);
+    mcp.attachNativeManager(nativeMcpProjection.manager, nativeMcpProjection.ready);
+    agentFactory.attachNativeMcpApprovalResolver(name => nativeMcp.resolveNeedsApproval(name));
+  }
   async function connectNativeMcp(name: string, config: any, scope?: string) {
     if (!nativeMcp) throw Error("Native MCP host is not configured");
-    const proxy = await nativeMcp.connect(name, config, scope); mcp.register(proxy);
-    return proxy;
+    return nativeMcp.connect(name, config, scope);
   }
   const interruptions:InterruptionService = new InterruptionService(stateMachine, {
     ...(nativeApprovals ? { controller: {

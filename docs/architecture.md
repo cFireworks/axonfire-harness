@@ -24,4 +24,10 @@ SDK控制协议现由原StdoutWriter、Permission/Hooks/McpMessage/Elicitation�
 
 原manager替换underlying连接时会fire-and-forget close，外层宿主跟踪这些Promise，shutdown等待当前与已替换连接关闭，清理自有timer/subscription；不改原manager的方法体。stdio Hook endpoint、产品OAuth、channel security/遥测/支付/ACP传输仍为可注入边界，不能以空adapter计为恢复。
 
-下一批优先完整顶层McpManager（配置来源、代次reconcile、权限、索引与刷新），随后ProductManager初始化覆盖与刷新、SDK输入/启动、AutoMode backend和SettingsManager持久化。统一默认审批时还须验证原policy allow与独立guard的边界，不能只因为可选路径测试通过就声明默认已等价。新增Web UI不计为这些原产品服务已恢复。
+顶层McpManager现以完整原类驱动scope合并、revision队列、runtime generation、拒绝/删除eviction、tools/list_changed重索引及settle等待；配置、连接、模型、批准/toggle和ready服务也为原类。McpRegistry在原生模式下仅转发同一live cache和manager API，不再自建连接发布条件。源码要求active且当前代次索引已提交才可见；不能把“TCP已连上”当作工具已准备好。native projection拒绝手工register外部实例绕过配置。
+
+新增projection host只拥有外部依赖、scope来源和异步关闭屏障；延迟工作、inflight连接与旧实例dispose全部被跟踪，原方法体不重写。文件配置路径默认重定向到owned state，filesystem读取需显式选择；项目级配置批准默认使用内存settings adapter，外部可注入持久化实现。原插件组件来自显式getActivePlugins，同AgentManager可共用来源，但不冒充产品插件加载器/自动事件服务。
+
+显式nativeMcp现在与sdkControl一样默认启用nativePermissions/nativeApprovals，保证DeferExecuteTool→MCP也经过原分类/暂停/恢复。真实SDK测试覆盖项目批准前无握手、批准后索引→ToolSearch→DeferExecute→HTTP调用，以及工具拒绝时无底层调用；普通CLI/Web默认仍未切换原生入口。
+
+下一批优先ProductManager初始化覆盖、配置/插件跨服务刷新与命令物化，随后SDK输入/启动/鉴权、Hook服务端、AutoMode backend和SettingsManager持久化。统一默认审批时还须验证原policy allow与独立guard的边界，不能只因为可选路径测试通过就声明默认已等价。新增Web UI不计为这些原产品服务已恢复。
