@@ -331,3 +331,5 @@ export * from './sessions/native-session-prompt.js';
 export * from './protocol/native-acp-agent.js';
 export * from './protocol/native-acp-view.js';
 export * from './protocol/native-acp-primitives.js';
+export * from './protocol/native-acp-services.js';
+export * from './protocol/acp-services-host.js';

@@ -93,3 +93,5 @@ Addon默认从该服务取原变量和CLI语言，显式custom service/resolver�
 IO只在外层owned fs/OS/env适配：剪贴板缓存和时间/原扩展名规则不改，文件读取限project/state/显式root；依赖模块未知会明确抛出所需adapter，不用静默空输出。无隐式ACP transport/broadcast、Electron或生产认证。完整AcpView.executePrompt/通知队列/连接guard、任务与Plan重放、daemon动态配置/自动重启等仍待恢复；CLI/Web默认入口与Addon.prompt均未变为ACP输入。
 
 后续协议核心阶段已恢复完整 `AcpAgentImpl`、`AcpView`、`AcpTeamBridge`、`DetachedMemberSseBridge`、`JsonStreamParser` 和 `AcpToolInterceptor` 等 8 类 217 成员，以及完整 ErrorUtils/协议 tokens/trace/历史定位/Deferred factory。三份 `native-acp-*` factory 保留原类体，只把模块解析和时钟/定时器留在外层；不执行原模块 74428 的巨大 bootstrap。其全文 AST 与固定 CLI 样本核对。真实 SDK 测试经既有 SessionManager/AgentService/TaskManager 跑 Read、流式文本与第二轮历史，但完整传输、广播和审批 owner 仍未接到默认宿主；前段的“executePrompt 待恢复”已收窄为完整类已恢复、生产依赖接线待完成。参见 [ACP 协议边界](acp-protocol.md)。
+
+完整 ACP 服务阶段新增 6 类 70 成员、17 helpers、15 初始化和 8 惰性 factory，并核对标题/friction/recall 的 16 个原导出 getter（含 DI tokens）。原 AcpView.executePrompt 经真实 SDK 完成 Read、旁路广播、usage、标题与第二轮历史；没有以空服务代替执行依赖。createAcpServicesHost 只借用后端与父 ACP runtime，观察原方法及未 await 回调、拥有订阅/定时器/关闭屏障；原类体不修改。默认不请求召回/上报，REST/Event adapter 需明确注入。完整 RPC/入口/连接认证/审批 owner、request-send telemetry、daemon 重放等仍未完成；见 [ACP 服务说明](acp-services.md)。

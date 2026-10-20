@@ -6,6 +6,8 @@
 
 最新阶段恢复完整 ACP Agent/View/团队桥/增量解析器及依赖声明，并通过原样本 AST 与行为差分；真实 SDK 已验证其工具/文本转发和历史重放。完整 RPC、广播和审批 owner 尚未接管默认入口，见 [ACP 协议核心边界](docs/acp-protocol.md)。CLI/Web 的开箱即用入口保持不变。
 
+标题、friction/召回、广播与 usage 源服务也已恢复；完整 AcpView 执行链通过真实 SDK 集成，附有独立的订阅/定时器/异步任务宿主。其默认入口和外部服务边界见 [ACP 服务说明](docs/acp-services.md)。
+
 ## 快速开始
 
 需要 Node.js **22.19+** 和 npm。无需安装原版应用。

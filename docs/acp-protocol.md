@@ -40,4 +40,6 @@ npm run verify:acp-protocol -w @axonfire/harness -- /absolute/path/to/codebuddy.
 
 ## 尚未完成
 
+后续阶段已恢复完整标题/friction/召回/广播/usage 服务和独立所有权宿主，并用完整 AcpView.executePrompt 验证真实 SDK、Read、两轮历史、旁路广播、usage 和标题生成。参见 [ACP 服务说明](acp-services.md)。这收窄了下述服务缺口，但未自动切换 CLI/Web/Addon 的默认协议入口，也没有完成生产 RPC/认证/telemetry 接线。
+
 完整 RPC/NDJSON/HTTP/连接 guard、广播和 usage/title/friction 等服务的生产接线；CLI/Web 与 ACP 审批 owner 切换；完整 Desktop SessionManager/HistoryStore/Plan 重放；daemon 动态配置与自动重启；真实认证、BinaryManager 和外部 Docs 引擎仍待继续。完整类体 AST 相同与有限测试通过，不构成整个 harness 的 100% 等价证明。

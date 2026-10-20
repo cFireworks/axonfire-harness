@@ -435,3 +435,5 @@ const answer = await backend.promptAcp({
 同一ACP会话拒绝并发入口；Addon关闭先关闭SDK后端并join已接受的ACP组合，再释放借用的prompt资源。onSessionUpdate异步观察者被跟踪/记录错误，不因fire-and-forget产生未处理rejection。显式借用的外部服务仍自行负责取消、网络权限与生命周期。没有操作系统沙箱、跨进程事务或完整daemon重放保证。
 
 完整原 ACP Agent/View 与团队转发桥现已作为独立组件恢复，验证入口为 `npm run smoke:acp-protocol`。这没有把上述 `promptAcp` 自动改成 RPC/NDJSON 服务，也没有改变普通 CLI/Web 审批策略；接线状态及源行为见 [ACP 协议核心](acp-protocol.md)。
+
+标题/friction/广播/usage 已有完整源服务和 `createAcpServicesHost` 资源宿主，专项验证命令是 `npm run smoke:acp-services -w @axonfire/harness`。它需要父 ACP runtime 的显式依赖，并不自动把 Web/CLI 或 Addon.promptAcp 改为完整 RPC 服务。接口、关闭与借用边界见 [ACP 服务说明](acp-services.md)。

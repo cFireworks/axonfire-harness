@@ -931,3 +931,23 @@ REA 对三份惰性模块的静态证据为 `ev_fad57295cf09e96e53ed43bdf1ace261
 接线边界明确：公开 createNativeAcpAgent/createNativeAcpView/createNativeAcpPrimitives；依赖缺失明确抛错，不注入空业务服务。默认只含原 RequestError，不冒充完整 ACP transport SDK；外部 transport 需显式提供模块38113。CLI/Web、Addon.prompt 与上一阶段 promptAcp 默认链路不改。完整 View/Agent 类体已经恢复，但 RPC/连接 guard/广播、usage/title/friction 服务生产接线、审批 owner 切换仍待继续；Desktop SessionManager/HistoryStore/Plan 重放、daemon mode 自动重启、全局插件配置、真实认证/BinaryManager/外部 Docs 引擎等也未完成。SDK依赖、115 product prompts、6 JSON、22 Desktop资产字节未修改。参见 [ACP 协议核心](acp-protocol.md)。
 
 最终门槛：check/build、1164核心+11Web、1085项编译JS smoke、55组源码/行为验证、原字节配置及CLI/Web实际启动全部通过。新的全暂存快照不带原应用/bundle/旧node_modules，重新npm ci/check/build，通过212项编译后ACP协议/输入/用户Prompt/资源/环境/设置消费者/Addon/Cloud相关测试、11项Web及CLI/Web seed/reload实际启动和配置检查。发布审计656文件，在所检查的凭据/运行文件规则内无发现，不是安全证明；既有17项依赖告警（10中危/7高危）保留。下一批优先恢复完整 friction/title 等源依赖，明确审批归属，再接完整View/RPC/广播与daemon会话控制；整个目标仍未完成。
+
+## 2026-10-20：ACP 完整源服务、导出接口与 View 执行依赖接通
+
+固定 CLI SHA 仍为 `4120898f1ded86ac545316721d216c827a325c2513a8fae4bcd8c8bbbf211afd`。新增完整 SessionTitleServiceImpl（16成员）、FrictionAnalysisServiceImpl（9）、FrictionRecallClientImpl（1）、AcpBroadcastServiceImpl（26）、AcpUsagePublisherImpl（13）、UsageUtils（5），合计6类70成员、17全函数、15初始化。8完整惰性factory保留标题helpers、MessageContentUtils/MessageUtils、SessionUtils、usage分类/上下文构建器和完整ProductFeature/FeatureToggle枚举。原title/friction/recall模块16个导出getter单独AST核对，含Service/Client DI Symbols与同一Impl引用；getModule(68593/18945/43324)对应原导出，不只移植Impl而漏掉接口。巨大74428/93039模块未冒充全量恢复或执行其bootstrap。
+
+保留原标题非TTY/force/env门槛、最短2 UTF-16 units、三次失败放弃、15000毫秒race、custom-title优先、generation ID、完整session prompt和JSON/regex解析。friction的boolean true gate、3000毫秒/POST/原路径、19个类型映射和root-cause集合、request/session去重、20/10条历史窗口、300字execution signal均按原实现；最高score结构合格但标签无效不尝试次高，上报前先标记reported导致失败不重试，不“修复”为新的策略。
+
+广播原origin排除、tracking/compact/subagent、permission/question/checkpoint和session_end idle+0毫秒复查保留；ACK超时是2000毫秒而非主Agent/View的5000。usage保留250毫秒coalesce、used/size/cost/message/category去重、原快照request ID、团队stage先标记后发送及失败不重试、cache token优先级、CJK/ASCII/图片/hidden-section与token总数守恒分配。找不到model.maxInputTokens时原样skip/warn，不用估算上限制造一条成功usage。
+
+createAcpServicesHost为明确新增所有权/DI桥，借用真实SDK backend与父ACP有边界的resolver，原类方法不改。外层shim观察嵌套/fire-and-forget Promise并保留facade方法name/arity/稳定引用；原未await的terminal updater、计数器和日志异步回调也被观察并保留receiver。close先拒新服务调用/连接登记，停broadcast/usage订阅，保持旧title/broadcast timeout race，join后清owned timers/连接/prompt状态图；不关闭借用backend/client/REST/Event/terminal服务。超时赢race不取消借用模型，请求/外部adapter自己负责传输和取消，这不是OS沙箱或所有借用操作终止证明。
+
+默认没有远端recall/report网络能力；功能开启而缺少adapter时明确错误进入原catch/log，不塞空召回或假telemetry当完成。friction capture/tryReport方法可供原telemetry链调用，但还未自动恢复Galileo/EventService和request-send hook。原DI decorators不执行；新服务宿主不是原全局App/bootstrap。
+
+第56组verify:acp-services核对完整声明/类体、8 factory和16导出getter，再做18组有限行为差分。另6项宿主/真实SDK测试，共24项：完整原AcpView.executePrompt以实际AgentService/SessionManager/TaskManager执行Read、工具结果、两轮历史、旁路广播、session_end、usage和原标题生成；另验关闭期间title/broadcast/未await回调、方法引用/arity、借用backend继续可用以及默认不连接外部服务。协议/recall/report边界使用明确doubles；SDK模型和文件均为owned fixture，单独bypassPermissions以避免两个审批owner，不据此声称默认ACP审批已等价。
+
+CLI/Web、Addon.prompt与promptAcp默认入口未切换。后续仍需完整RPC/NDJSON/HTTP/连接guard/认证、审批owner及入口切换、Source request-send telemetry/标题Hook、Desktop SessionManager/HistoryStore/Plan重放、daemon mode动态配置/自动重启、真实Auth/BinaryManager/外部Docs引擎等。完整View直接执行与原组件保真比上一阶段更接近目标，但整个harness仍未完成；[ACP服务边界](acp-services.md)明确列出剩余范围。
+
+REA对本批两份源服务/所有权宿主的静态证据为 `ev_f0869863d3a63ce4b2b839a0f8477b290519e9867fb087e94e010638f435d02a`，16007 AST nodes、2文件、0 parse failures。semantic graph 上限750节点/150 unknown、45秒，仍partial/truncated；不执行应用bootstrap，不把静态图或有限差分当整个harness运行时等价。SDK依赖、115 product prompts、6原JSON与22份Desktop模板字节保持不变。
+
+最终门槛：check/build、1188核心+11Web、1109项编译JS smoke、56组源码/行为验证、原字节配置与CLI/Web实际启动全部通过。新的全暂存快照不带原应用/bundle/旧node_modules，重新npm ci/check/build，通过236项编译后ACP服务/协议/输入/用户Prompt/资源/环境/设置消费者/Addon/Cloud测试、11项Web和实际CLI/Web seed/reload启动及配置检查。发布审计664文件，在所检查的凭据/运行文件规则内无发现，不是安全证明；既有17项依赖告警（10中危/7高危）不强制升级。后续继续完整RPC/连接manager/guard、入口与审批owner切换、原request-send telemetry/标题Hook以及daemon会话控制；整个目标仍未完成。

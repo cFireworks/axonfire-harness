@@ -200,6 +200,8 @@ export function acpProtocolFixture(
   Object.assign(view, { logger, stateMachine, sessionManager });
   return {
     createPrimitives: factories.primitives,
+    runtime,
+    setDependency: (token: any, value: any) => di.set(token, value),
     agent,
     view,
     n,
