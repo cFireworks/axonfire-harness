@@ -7,6 +7,7 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import * as sdk from "@openai/agents-core";
 import { sessionIngressFixture } from "./session-ingress-fixture.js";
 import { createNativeSessionStack } from "../../src/sessions/native-session-stack.js";
+import { createNativeSessionStackHost } from "../../src/sessions/native-session-stack-host.js";
 import { manualTimers } from "./session-result-fixtures.js";
 import { createInputProcessorUtilities } from "../../src/sessions/input-processor-utils.js";
 import { createContentFilterInputUtils } from "../../src/sessions/content-filter-input-utils.js";
@@ -44,7 +45,6 @@ export async function sessionStackFixture(
     logs = ingress.logs,
     pending = new Set<Promise<any>>(),
     errors: any[] = [],
-    sessions = new Set<any>(),
     timers = manualTimers();
   let closed = false;
   function track(value: any) {
@@ -118,16 +118,14 @@ export async function sessionStackFixture(
     38195: { NotificationType: { IDLE_PROMPT: "idle_prompt" } },
     69466: { AgentNames: { COMPACT: "compact" } },
   };
-  const n = factory({
+  const stackRuntime = {
     ...ingress.runtime,
     modules,
     env: patch.env ?? {},
     argv: patch.argv ?? [],
-    setTimeout: timers.setTimeout,
-    clearTimeout: timers.clearTimeout,
-  });
-  const manager: any = new n.SessionManagerImpl(),
-    store: any = new n.SessionStoreImpl();
+    setTimeout: patch.realTimers ? setTimeout : timers.setTimeout,
+    clearTimeout: patch.realTimers ? clearTimeout : timers.clearTimeout,
+  };
   const blobRuntime = createBlobRuntime(root, project, {
     env: { CODEBUDDY_TOOL_RESULT_THRESHOLD_KB: "1" },
     logger: { ...ingress.controller.logger, setContext() {} },
@@ -136,19 +134,6 @@ export async function sessionStackFixture(
     imageBlobService = new ImageBlobServiceImpl(blobRuntime, { blobStore }),
     toolResultBlobService = new ToolResultBlobServiceImpl(blobRuntime);
   toolResultBlobService.init();
-  const sessionFactory = {
-    async create(seed: any) {
-      const s = await ingress.sessionFactory.create(seed);
-      sessions.add(s);
-      // Observe the actual RX callback, preserving its return and real subscription. No source body is replaced.
-      const subscribe = s.resultSubject.subscribe.bind(s.resultSubject);
-      s.resultSubject.subscribe = (callback: any, ...rest: any[]) =>
-        typeof callback === "function"
-          ? subscribe((value: any) => track(callback(value)), ...rest)
-          : subscribe(callback, ...rest);
-      return s;
-    },
-  };
   const initializeContext = async (s: any) => {
     calls.push(["permissions", s.id]);
     await patch.permissions?.(s);
@@ -179,9 +164,7 @@ export async function sessionStackFixture(
     new ParentIdLinkageProcessor(),
     new UsageAgentInputItemProcessor(),
   ];
-  Object.assign(manager, {
-    sessionFactory,
-    sessionStore: store,
+  const managerDependencies = {
     logger: ingress.controller.logger,
     stateMachine: new SessionRunStateMachine(ingress.controller.logger),
     userStateManager: {
@@ -257,20 +240,33 @@ export async function sessionStackFixture(
         "addMessageSuccessSpanEvent",
       ].map((name) => [name, (s: any) => calls.push(["galileo", name, s.id])]),
     ),
+  };
+  const host = createNativeSessionStackHost({
+    runtime: stackRuntime,
+    sourceFactory: factory,
+    ...(patch.ingressFactory ? { ingressFactory: patch.ingressFactory } : {}),
+    manager: managerDependencies,
+    store: {
+      logger: ingress.controller.logger,
+      imageBlobService,
+      toolResultBlobService,
+    },
+    middleware: {
+      ...ingress.middleware,
+      toolPermissionService: { initializeContext },
+    },
+    controller: { ...ingress.controller },
+    closeSession: patch.closeSession ?? (() => {}),
   });
-  Object.assign(store, {
-    sessionFactory,
-    logger: ingress.controller.logger,
-    imageBlobService,
-    toolResultBlobService,
-  });
-  Object.assign(ingress.middleware, {
-    sessionManager: manager,
-    toolPermissionService: { initializeContext },
-  });
-  ingress.controller.sessionManager = manager;
+  const n = host.native,
+    manager: any = host.manager,
+    store: any = host.store,
+    sessionFactory = host.sessionFactory;
   async function drain() {
-    while (pending.size) await Promise.allSettled([...pending]);
+    while (pending.size || host.pendingCount) {
+      await Promise.allSettled([...pending]);
+      await host.drain();
+    }
   }
   function normalize(value: any): any {
     return JSON.parse(
@@ -286,45 +282,28 @@ export async function sessionStackFixture(
   async function close() {
     if (closed) return;
     closed = true;
-    for (const s of sessions) s.abortController.abort();
-    await drain();
-    for (const sub of manager.resultSubscriptions.values()) sub.unsubscribe();
-    manager.resultSubscriptions.clear();
-    timers.pending.clear();
-    for (const s of sessions)
-      for (const name of [
-        "resultSubject",
-        "inputSubject",
-        "historyReloadSubject",
-        "modelSubject",
-        "backgroundTaskSubject",
-        "agentStateSubject",
-        "interruptionSubject",
-        "localExecuteSubject",
-        "permissionModeSubject",
-        "queueSubject",
-        "combineSubject",
-        "runStateSubject",
-        "progressSubject",
-        "phaseSubject",
-        "queuedTextRefillRequest$",
-      ])
-        s[name]?.complete();
-    manager.sessionSubject.complete();
-    manager.context.disable();
-    manager.skipHistoryContext.disable();
-    attributes.disable();
-    if (patch.ownedRoot) return;
-    if (
-      path.dirname(root) !== tmpdir() ||
-      !path.basename(root).startsWith("axonfire-source-sessions-")
-    )
-      throw Error("invalid owned cleanup target");
-    await io.rm(root, { recursive: true, force: true });
+    try {
+      await host.close();
+      await drain();
+    } finally {
+      timers.pending.clear();
+      attributes.disable();
+      if (!patch.ownedRoot) {
+        if (
+          path.dirname(root) !== tmpdir() ||
+          !path.basename(root).startsWith("axonfire-source-sessions-")
+        )
+          throw Error("invalid owned cleanup target");
+        await io.rm(root, { recursive: true, force: true });
+      }
+    }
   }
   return {
     ...ingress,
     n,
+    host,
+    middleware: host.middleware,
+    controller: host.controller,
     manager,
     store,
     sessionFactory,
@@ -337,7 +316,9 @@ export async function sessionStackFixture(
     timers,
     attributes,
     modules,
-    errors,
+    get errors() {
+      return [...errors, ...host.errors];
+    },
     pending,
     processors,
     imageBlobService,

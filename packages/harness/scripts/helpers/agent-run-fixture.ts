@@ -275,6 +275,9 @@ export async function agentRunFixture(
   });
   return {
     ...f,
+    get errors() {
+      return f.errors;
+    },
     sessionNative: f.n,
     n,
     utilities,

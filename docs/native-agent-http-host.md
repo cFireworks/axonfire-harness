@@ -12,6 +12,8 @@
 
 ## 嵌入接口
 
+后续已提供[公开原生会话栈父装配](native-session-stack-host.md)，Controller/Middleware/Manager/Store实例与会话资源所有权也已迁出测试helper。两层共用原HTTP Context；AgentService/认证/配置等完整默认父图仍需继续迁移。
+
 ```ts
 import { createNativeAgentHttpHost } from "@axonfire/harness/http/native-agent-http-host.js";
 

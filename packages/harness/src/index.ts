@@ -135,6 +135,7 @@ export * from "./runner/history-repair.js";
 export * from "./runner/runner-factory.js";
 export * from "./runner/native-runner-host.js";
 export * from "./http/native-http-host.js";
+export * from "./sessions/native-session-stack-host.js";
 export * from "./http/native-agent-http-host.js";
 export * from "./auth/native-authentication.js";
 export * from "./protocol/acp-rendezvous-host.js";

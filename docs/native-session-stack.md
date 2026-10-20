@@ -2,6 +2,8 @@
 
 固定 CLI SHA-256：`4120898f1ded86ac545316721d216c827a325c2513a8fae4bcd8c8bbbf211afd`。`packages/harness/src/sessions/native-session-stack.ts` 保存完整原惰性声明，不执行 DI decorators、原应用 bootstrap 或安装账户查找。
 
+后续[公开原生会话栈父装配](native-session-stack-host.md)已将实例装配、Subject/RX/调度与写盘所有权移出测试helper；完整原48组件差分+2SDK成对验证及ACP父链/冷恢复均已改接。普通CLI/Web默认入口仍待完整父装配迁移，不以新增所有权桥冒称原产品bootstrap。
+
 | 组件 | 完整范围 |
 | --- | --- |
 | SessionManagerImpl | 构造器及全部 37 方法（38 成员） |

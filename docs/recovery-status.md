@@ -25,7 +25,7 @@
 |    2 | Tool registry | 47个不同名称均有handler | 原48条声明含一条重复Agent。新增WeChatReply/WeComReply与bridge，默认CLI声明不变；WeCom连接沿原逻辑补入已构造Agent内存tools。47/47只是名称覆盖，已有工具的客户端/宿主分支、动态缓存/插件等仍待补；不是整体100% |
 |    2 | AgentManager | 完整原类移植，68个非constructor方法结构对照 | eager构建/ready与models屏障、pending/force重建/指纹、CLI/handoff/asTool、模型继承/related/env、插件replace/volatile expert/settings优先级、MCP首轮等待/原生defer/权限门槛已恢复；74个原YAML模块factory逐字保留。独立host明确适配DI/Deferred/Emitter，不等于完整ProductManager/插件loader/工具索引热刷新服务 |
 |    7 | MemoryManager / 条件规则 | 八类完整服务和依赖链已接入 | Manager/Loader/Parser/Cache/Validator/GlobMatcher/Subdirectory/ConditionalRules，原LRU、Path/Import/Glob/Markdown/context helper、tool注入/run interceptor；67个完整方法AST与282次比较。user/project/local发现、import/缓存/Hook、常驻提醒、Read/Write/Edit条件匹配接真实SDK；相关性/entrypoint/freshness及原提取RunState现已接入；watchers/UI与通用Hook命令执行器仍未完成 |
-|    3 | SessionManager | 完整原CLI类与独立宿主并存 | 完整原Manager38成员、Store28、Draft21及本地helper/factory均已恢复并做全文AST/差分；原ACP父链Read/Write/Ask/Plan、关闭旧图后的磁盘load/resume/continue/fork接真实SDK。兼容CLI/Web默认仍使用既有独立宿主，完整默认native父装配、桌面视图和Telemetry transport未完成 |
+|    3 | SessionManager | 完整原CLI类与公开父宿主已提供 | 完整原Manager38成员、Store28、Draft21及本地helper/factory均已恢复并做全文AST/差分；公开会话/HTTP宿主已接原ACP父链Read/Write/Ask/Plan、磁盘load/resume/continue/fork及真实SDK，拥有Subject/RX/调度/写盘收尾。兼容CLI/Web默认仍使用既有独立宿主，完整默认native父装配、桌面视图和Telemetry transport未完成 |
 |    3 | Input/image pipeline | 原处理器方法和宿主主路径已接 | Default10/Parent9/Function8/Result7/Usage6/Exit4按原provider正priority/降序；37套renderer、ImageFilter850默认接入，Rehydration1050现默认接入原blob服务；Compression1075现默认接原ImageUtils/Jimp，803次原codec图/Read方法差分+11项专项。另535次原三blob服务/四SessionStore方法差分+13项专项，不再以假blob依赖充当默认存储 |
 |    3 | SessionStore | 完整原CLI类及真实磁盘恢复已验证 | 完整28成员保留JSONL/meta、逆向64KB reader/边界/损坏行/storeId/legacy修复/跨项目查找/图片和工具结果外置；冷图真实读盘恢复历史和meta，fork续跑不改源JSONL/meta。原项目路径服务、全部媒体/跨工作目录父场景仍待补；不把CLI permissionMode Subject说成已持久化 |
 |    3 | Run state machine | 原始迁移表与事件投影差分通过 | 原生 13 状态/20 事件的完整表、非法迁移忽略、legacy agentState/phase metadata、日志、busy/idle/queue-busy、force idle 与 runStateSubject 去重已恢复；`getChange$(session,true)` 原语义是跳过当前值并发出 void，不是 emitCurrent。有限事件矩阵已与原类逐项比较；完整产品 UI projection service/宿主接线仍待补 |
@@ -1175,3 +1175,19 @@ REA证据 `ev_b0aea3f15293ce0da56b4cb9c2abbef1ccb6f0d13869afb68b5a1230383f5421`�
 下一步继续将完整原会话栈与AgentService/认证/配置的父装配迁出测试边界，接默认可运行入口和独立OS进程恢复；同时保留生产auth/REST、原JSON/pipe/Body/Cookie/HTTP Session、跨cwd/配置、Desktop HistoryStore等未完成前沿。公开HTTP只是完整默认父启动的一个实质组成部分，整体目标仍进行中。
 
 最终门槛：check/build、1604核心+11Web、1525编译JS smoke、全部67组源码/行为验证、原配置校验和CLI/Web seed/reload实际启动通过。最终暂存代码干净检出重新npm ci/check/build后，1604编译核心+11Web、配置与实际启动再次通过，无bundle/原应用或旧node_modules依赖。SDK和6 JSON/115 product prompts/22 Desktop资源（304358字节）不变；764文件发布审计在已检查规则内无发现，不是安全证明。既有17依赖告警（10中危/7高危）未隐藏。
+
+## 2026-10-21：公开原生会话栈父装配与所有权
+
+新增[公开会话栈宿主](native-session-stack-host.md) `createNativeSessionStackHost`：完整原Factory/Manager/Store/Middleware/Controller默认实例化，核心类体未改；所有实例装配与session Subject/RX/timer/immediate所有权从sessionStackFixture迁到src。外部依赖仍是明确借入的模块/DI、权限/Hook/状态/遥测/服务，不把测试doubles冒充默认产品实现。原48组件+2 SDK会话栈比较及12种ACP父链、4冷恢复、4异常入口均实际经过公开会话宿主和公开HTTP宿主，参考侧保持完整原Manager/Store/Ingress。
+
+Facade保留原this/参数/开放时返回值，构造器身份不变；create不补激活/保存，getCurrent不加全局fallback，Store冷载入也由同一Factory纳入owner。只被动观察原result函数next返回的Promise，不新增SDK stream消费者或改变gate/decision。关闭拒绝新准入，允许原先接受的异步scope完成；短期工作与长期run/Middleware/Controller scope分账，避免ACP的长驻HTTP/render被普通drain等待造成死锁。
+
+关闭等待原写盘/Hook/锁、显式closeSession逐会话释放和已开始的调度，完成自有Subjects、订阅/timers与ALS并恢复subscribe descriptor；晚完成创建和权限初始化失败后的对象也纳入回收。不调用remove、不删或额外saveHistory，JSONL/meta逐字节不变。原idle仍60000ms；未开始的Controller immediate可取消，已开始的真实Promise须收尾。closeSession失败逐个收集、不跳过后续回收，detached异常最终以AggregateError报告；借入View/SDK/transport须先由其owner结束，不能凭空造完成。
+
+18项新专项覆盖原身份/create语义、冷载入/持久文件/慢append、晚建timer、scope与drain、RX被动等待/descriptor/异常、权限失败/晚创建、失败后完整释放、immediate取消/等待、真实原timer清理、借入this与不擅自close、关闭准入。另确认AgentService/Runner组合fixture的errors getter保持动态，不被对象spread快照掩盖；测试getter主动注入detached错误验证传递。
+
+REA最终证据 `ev_7587479b42bf2c0a05978e70b7f80f6a1d647f49999713c2a510a7bda141849f`：3423 AST nodes、2 parsed、0 skipped/parse failures；750 semantic/每文件750、150unknown/每文件150、45秒限制下partial/truncated，不是完整运行时证明。仅owned临时磁盘/loopback/确定模型，无安装账户或生产请求；OpenAI SDK/原Prompt与配置未升级或改写。
+
+下一步继续原AgentService/Runner/认证/配置的公开父装配、默认CLI入口及独立OS进程恢复，再推进生产auth/REST、跨cwd/全部配置、Desktop HistoryStore/回放和其他外围/并发前沿。普通CLI/Web仍可用但未切到完整原生默认父图，整体目标保持进行中。
+
+最终门槛：check/build、1622核心+11Web、1543编译JS smoke、全部67组源码/行为验证、原配置字节校验与CLI/Web seed/reload实际启动通过。最终暂存代码干净检出重新npm ci/check/build后，1622编译核心+11Web、配置与启动再次通过，无原应用/bundle/旧node_modules依赖。SDK、6 JSON/115 product prompts/22 Desktop资源（304358字节）不变；767文件发布审计在已检查规则内无发现，不是安全证明。17项既有依赖告警（10中危/7高危）仍保留。

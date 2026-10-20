@@ -12,6 +12,8 @@
 
 [公开父 HTTP 装配](docs/native-agent-http-host.md)已从测试 helper 移入运行时：真实监听、原 MVC/CLS/路由、内部 REST 传输和启动/关闭回收均可复用，已有原 ACP 父链与恢复测试已改接。它借用完整父服务，不等于默认 CLI/Web 已切换到完整原产品 bootstrap。
 
+[公开原生会话栈装配](docs/native-session-stack-host.md)进一步接入完整原Factory/Manager/Store/Ingress/Controller，统一拥有会话Subject、写盘、RX和调度；原父链/冷恢复已改用此运行时。create不隐式激活/保存，关闭不删除或追加历史。完整AgentService/认证/配置的默认父装配仍在推进。
+
 [完整原 AskService / PlanStorage](docs/native-interaction-services.md) 已替换公开兼容入口的行为重写；原 ACP 父链现通过真实扩展 RPC 跑通问答、跳过、取消与计划批准/拒绝/退出，参考侧也使用原类验证。完整默认产品启动链与全部配置/并发分支仍在推进。
 
 ## 快速开始

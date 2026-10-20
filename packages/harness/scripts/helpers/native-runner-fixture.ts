@@ -93,6 +93,9 @@ export async function nativeRunnerFixture(
   };
   return {
     ...f,
+    get errors() {
+      return f.errors;
+    },
     n,
     runnerFactory,
     provider,

@@ -96,7 +96,7 @@
     "verify:session-ingress": "node --import tsx scripts/verify-session-ingress-recovery.ts",
     "smoke:session-ingress": "node --test dist/test/session-ingress-runtime.test.js",
     "verify:session-stack": "node --import tsx scripts/verify-session-stack-recovery.ts",
-    "smoke:session-stack": "node --test dist/test/session-stack-runtime.test.js",
+    "smoke:session-stack": "node --test dist/test/session-stack-runtime.test.js dist/test/native-session-stack-host.test.js",
     "verify:agent-run": "node --import tsx scripts/verify-agent-run-recovery.ts",
     "smoke:agent-run": "node --test dist/test/agent-run-runtime.test.js",
     "verify:native-runner": "node --import tsx scripts/verify-native-runner-recovery.ts",
