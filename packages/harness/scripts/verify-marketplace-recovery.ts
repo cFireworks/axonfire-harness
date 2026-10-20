@@ -7,12 +7,14 @@ import { getCapturedBundlePath } from "./helpers/captured-bundle-path.js";
 import { nodesOf } from "./helpers/captured-product-sources.js";
 import {
   MARKETPLACE_CLASSES,
+  MARKETPLACE_HELPERS,
   emittedMarketplace,
   loadCapturedMarketplace,
 } from "./helpers/captured-marketplace.js";
 import { marketplaceFixture } from "./helpers/marketplace-fixtures.js";
 import { createNativeMarketplace } from "../src/plugins/native-marketplace.js";
 import { createNativeFileLock } from "../src/tasks/native-file-lock.js";
+import { remoteMarketplaceDifferential } from "./helpers/remote-marketplace-differential.js";
 import { createHash } from "node:crypto";
 import {
   createCapturedMarketplacePolicy,
@@ -31,17 +33,54 @@ function ast(n: any): any {
         )
     : n;
 }
-const ports = ["plugins/native-marketplace", "tasks/native-file-lock"].flatMap(
-  (file) =>
-    nodesOf(
-      parse(emittedMarketplace(file), {
-        ecmaVersion: "latest",
-        sourceType: "module",
-      }),
-    ),
+const ports = [
+  "plugins/native-marketplace",
+  "tasks/native-file-lock",
+  "plugins/native-zip-utils",
+].flatMap((file) =>
+  nodesOf(
+    parse(emittedMarketplace(file), {
+      ecmaVersion: "latest",
+      sourceType: "module",
+    }),
+  ),
 );
 let completeAsts = 0,
   comparisons = 0;
+const originalNodes = nodesOf(parse(source, { ecmaVersion: "latest" }));
+const constantRows: Array<[string, number, number]> = [
+  ["t6", 9540000, 9540634],
+  ["Ac", 9547325, 9547937],
+  ["Au", 9547325, 9547937],
+  ["Ad", 9547325, 9547937],
+  ["AQ", 9567108, 9569105],
+  ["AD", 9567108, 9569105],
+  ["AT", 9567108, 9569105],
+  ["AO", 9577492, 9579120],
+  ["ew", 9844969, 9845680],
+  ["eB", 9844969, 9845680],
+  ["e_", 9844969, 9845680],
+  ["eI", 9844969, 9845680],
+];
+for (const [name, start, end] of constantRows) {
+  const original = originalNodes.find(
+    (n) =>
+      n.type === "VariableDeclarator" &&
+      n.id?.name === name &&
+      n.start >= start &&
+      n.end <= end,
+  );
+  assert.ok(original, name);
+  const candidates = ports.filter(
+    (n) => n.type === "VariableDeclarator" && n.id?.name === name,
+  );
+  assert.ok(
+    candidates.some(
+      (n) => JSON.stringify(ast(n.init)) === JSON.stringify(ast(original.init)),
+    ),
+    "constant " + name,
+  );
+}
 const policyOriginal = source.slice(9805697, 9807385);
 assert.equal(
   createHash("sha256").update(policyOriginal).digest("hex"),
@@ -118,6 +157,18 @@ for (const [name, start, end] of MARKETPLACE_CLASSES) {
     name,
   );
   completeAsts += original.body.body.length;
+}
+for (const [name, start, end] of MARKETPLACE_HELPERS) {
+  assert.deepEqual(
+    ast(
+      ports.find(
+        (n) => n.type === "FunctionDeclaration" && n.id?.name === name,
+      ),
+    ),
+    ast(parse(source.slice(start, end), { ecmaVersion: "latest" }).body[0]),
+    name,
+  );
+  completeAsts++;
 }
 const root = await mkdtemp(join(tmpdir(), "marketplace-diff-"));
 try {
@@ -337,6 +388,7 @@ try {
     assert.deepEqual(restored[i], original[i], "scenario " + i);
     comparisons++;
   }
+  comparisons += await remoteMarketplaceDifferential(root, captured);
 } finally {
   await rm(root, { recursive: true, force: true });
 }
@@ -346,7 +398,8 @@ console.log(
     comparisons,
     completeClasses: MARKETPLACE_CLASSES.length,
     constantFactories: 1,
+    constantInitializers: constantRows.length,
     scope:
-      "raw local-marketplace/file-lock classes in common owned DI; not full bootstrap or remote installers",
+      "complete local/Git/HTTP/ZIP marketplace classes, file locks and ZIP helpers in owned DI; not full product bootstrap or other plugin installers",
   }),
 );

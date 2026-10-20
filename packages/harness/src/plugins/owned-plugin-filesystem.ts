@@ -42,6 +42,11 @@ export function createOwnedPluginFilesystem(stateDir: string) {
     return full;
   }
   return {
+    assertWritePath: assertWrite,
+    createReadStream: fs.createReadStream,
+    createWriteStream(target: string, options?: any) {
+      return fs.createWriteStream(assertWrite(target), options);
+    },
     access: fs.promises.access,
     readFile: fs.promises.readFile,
     readdir: fs.promises.readdir,

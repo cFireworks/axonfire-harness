@@ -18,7 +18,7 @@
 |    1 | OpenAI Agents SDK | 完成                         | 精确锁定 `@openai/agents* 0.5.2`、`openai 6.25.0`；SDK 不重写                                                                                                                                                                                                                         |
 |    2 | Product config    | 100% 字节保留                | default/cloudhosted/internal/ioa/selfhosted/sandbox 六份原始 JSON；SHA 验证                                                                                                                                                                                                           |
 |    2 | ProductManager / providers | 原manager、merger及文件/模型provider默认接入 | 首批19类/112处AST/743次比较；文件/模型15类及helper为118处AST/263次比较。插件完整刷新队列现默认接入原manager并更新各消费者；Cloud product、市场/资源seed/环境服务和磁盘Settings仍待补，不等于完整产品bootstrap |
-|    2 | PluginManager / loaders / refresh | 完整核心类、本地目录与市场主路径默认接入 | 首批14完整类含PluginManager 194成员、七loader、事务/reload命令/output style；294处AST/472次比较/3纯constant factory。本批另9完整类含市场Storage/Config/Directory/LocalInstaller与FileLock：63处AST/381次比较/1纯policy factory。原MCP提交保护、刷新队列、真实SDK市场/重启与跨进程存储验证；远端下载/安装/资源seed、Options/完整策略与磁盘Settings仍待补 |
+|    2 | PluginManager / loaders / refresh | 完整核心类、本地/Git/HTTP/ZIP市场主路径默认接入 | 首批14完整类含PluginManager 194成员、七loader、事务/reload命令/output style；294处AST/472次比较/3纯constant factory。市场/锁批次现累计15完整类、19 helper、129处AST/584次比较/12原常量/1纯policy factory。真实SDK远端ZIP→版本cache→Agent/命令→重启通过；其他Git/npm/subdir插件安装器、资源seed、Options/完整策略与磁盘Settings仍待补 |
 |    2 | Prompt registry   | 100% 内容保留                | 115 模板、284,899 Unicode code point；Nunjucks `autoescape:false`、编译缓存、失败回退                                                                                                                                                                                                 |
 |    2 | Tool registry | 47个不同名称均有handler | 原48条声明含一条重复Agent。新增WeChatReply/WeComReply与bridge，默认CLI声明不变；WeCom连接沿原逻辑补入已构造Agent内存tools。47/47只是名称覆盖，已有工具的客户端/宿主分支、动态缓存/插件等仍待补；不是整体100% |
 |    2 | AgentManager | 完整原类移植，68个非constructor方法结构对照 | eager构建/ready与models屏障、pending/force重建/指纹、CLI/handoff/asTool、模型继承/related/env、插件replace/volatile expert/settings优先级、MCP首轮等待/原生defer/权限门槛已恢复；74个原YAML模块factory逐字保留。独立host明确适配DI/Deferred/Emitter，不等于完整ProductManager/插件loader/工具索引热刷新服务 |
@@ -661,3 +661,25 @@ REA再次分析从module65117精确截取的惰性输入，证据`ev_b68ebceab15
 `verify:marketplaces`核对9完整类/63成员的完整AST、1个原policy factory及381次有限比较。新增24项专项覆盖真实自有子进程锁竞争/并发写入、备份/迁移/退避/失败恢复、目录缓存/manifest覆盖、作用域合并、命名policy、默认host add/重启、配置驱动安装与close写入屏障；真实SDK两次启动均加载持久化市场的Agent/命令并消费Prompt。PID故障分支使用fake probe；模型为fake，未访问真实模型、生产市场、联系人或桌面。
 
 最新门槛：842核心、11Web宿主、764编译JS smoke、44组样本差分、check/build/config与实际CLI/Web启动。另在不含原应用/bundle/旧node_modules的暂存快照副本完成全新npm ci、check/build、CLI/Web启动、48项插件/市场编译后测试及11项Web测试。保留SDK/OpenAI锁定版本、六份原JSON、115个Prompt和memory policy摘要；旧audit仍16项，未强制升级。下一批继续远端Git/HTTP/ZIP provider、更新检查/原子替换/安装器及资源seed，再补Options/完整策略/磁盘Settings、Cloud product与其余产品bootstrap；整体目标尚未完成。
+
+## 远端市场provider与更新链路批次
+
+完整移植GithubMarketplace `9540634..9543574`、HttpMarketplace `9544069..9547325`、ZipMarketplace `9547937..9555429`、MarketplaceUpdateChecker `9569105..9572073`、GitAvailabilityDetector `9575670..9576155`、GitToZipUrlConverter `9576904..9577492`。索引仍为固定SHA原样本UTF-16；市场/锁批次累计15完整类。完整module14783中19个helper `9845680..9851651`按函数移植，不执行其原module或应用bootstrap；第三方yauzl按CLI样本固定3.2.0，不复制第三方源码或改写SDK。
+
+Factory默认创建真实Git/HTTP/ZIP provider，不再返回未配置的Symbol；UpdateChecker、BuiltinProvider、Git detector/converter/coordinator接入同一宿主。Git保留浅clone、当前branch fetch、reset --hard/clean -fd、无效目录移除/重clone、manifest命名对齐。HTTP保留先取manifest再update的两次fetch、完整base URL拼接、metadata目录探测缓存、旧metadata清理和单插件失败继续；它只下载清单，不假称已下载所有插件资源。
+
+ZIP保留重定向/60秒下载与30秒HEAD超时、ETag/Last-Modified/本地mtime、UUID版本种子与60秒默认检查节流、404-only main/master互换、临时提取/staging/backup交换、恢复失败时保留backup、旧孤儿匹配清理。原helper保留yauzl路径检查、permissions、忽略__MACOSX后单目录展平、rename退避；gzip helper只解压不解tar，provider临时文件固定.zip，使tgz输入仍有原失败边界。它不是带总大小/条目数限制的安全解包器。原提取按entry input end推进，未改写为另一套pipeline/发布时序。
+
+新增owned-marketplace-io只负责显式网络/流/ZIP打开/子进程和关闭所有权：下载/清单abort、未使用响应体排空、关闭已有与late-open归档、read stream end与close差异、等待自有资源。默认Git仅支持原市场所需命令，clone目标和更新cwd限制在state；HOME/Git config隔离，不使用安装账号、SSH identity/agent。认证SSH需显式exec adapter。原provider中的reset/clean在测试中只作用于新建自有fixture clone，未操作用户checkout。source方法体与原字符串不因这个adapter而改变；adapter不是execa/fs-extra或OS沙箱。
+
+`verify:marketplaces`扩展为129处完整成员/函数AST、12个原常量initializer（含7条转换规则/分支/缓存值）及1个policy factory，584次有限比较。新增203次原类/原helper与还原代码的owned DI比较覆盖Git命令/探测、URL转换、HTTP错误、slug/格式/版本、HEAD分类、分支回退、真实归档提取与回滚。新增27项专项覆盖自有HTTP/HEAD/redirect、ZIP本地与远端安装/更新、etag跳过/UUID提交、unsafe path/单目录/gzip、双失败backup保留、关闭中下载与late-open、真实自有file:// Git clone/update。真实SDK在两次启动中从显式远端ZIP配置安装/恢复版本cache、Agent/命令并消费原Prompt，第二次不重复GET。真实生产网络、TLS、代理、私有仓库认证及全部平台/并发状态未据此证明。
+
+REA惰性module14783派生证据`ev_f99aa1ee5da288fab92c030d50e9b0dd0ad331a27d0414af734e0382285afb41`，750节点/每文件750节点与150 unknown上限、45秒；语义图partial/truncated，不代表完整应用覆盖。
+
+全量编译smoke首次运行发现原FileLock元数据发布竞态：一个进程mkdir后尚未写lock.json，另一个进程的isLockStale会因metadata缺失返回true并删除它，两个owner随后都能返回acquire成功，真实fixture曾丢失a2更新。新增确定性barrier在原类与还原类中复现双owner，完整AST也仍一致，不为通过测试修改生产协议。跨进程正向测试改为有效记录上的明确争用/调度，仍检查两个真实进程的全部6条记录；不声称涵盖创建窗口或所有并发。当前市场存储并非强一致方案，源码保真不等于修复原bug。
+
+多套全量验证/编译并行时，既有真实fs.watch用例另出现一次10秒超时；未据此修改watcher方法或放宽deadline。该27项suite单独复测通过，停止并行构建后的完整源码870项及11项Web测试通过；编译后792项也通过。这些记录不把操作系统事件交付/所有负载下时序称作已穷举。
+
+本批仅新增yauzl及其新传递依赖，既有版本完全未变；锁定SDK/OpenAI、六份JSON、115 Prompt和memory policy摘要均不变。npm audit现17项（10中危/7高危），其中yauzl3.2.0新增[GHSA-gmq8-994r-jv83](https://github.com/advisories/GHSA-gmq8-994r-jv83)中危告警。当前原路径不调用该告警涉及的entry.getLastModDate，但不宣称总体安全，也不通过升级破坏样本保真；只用可信归档。
+
+最新门槛：870核心、11Web宿主、792编译JS smoke、44组样本差分、check/build/config与实际CLI/Web启动。另从暂存快照在无原应用/bundle/旧node_modules的全新目录验证npm ci/check/build、76项编译后插件/市场测试、11项Web测试与CLI/Web实际回复。下一批继续独立Git/npm/subdir插件安装器、Options/原策略/磁盘Settings及资源seed、Cloud product和其余产品bootstrap，整体目标仍未完成。

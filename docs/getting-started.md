@@ -46,7 +46,7 @@ Web 的 `--cwd` 指定工具工作目录：`npm start -- --cwd /absolute/path/to
 
 ## 原生 MCP（嵌入 API）
 
-最新门槛为842核心 + 11宿主、764编译smoke、44组样本差分。完整原MCP类群、ProductManager、文件/模型providers及企业模型策略已接入。本地插件loader、active snapshot提交和完整刷新事务现已恢复；本地目录市场与市场存储/文件锁也已接入。远端市场下载、资源seed与完整设置/安装服务仍是后续边界。
+最新门槛为870核心 + 11宿主、792编译smoke、44组样本差分。完整原MCP类群、ProductManager、文件/模型providers及企业模型策略已接入。插件loader、active snapshot提交和完整刷新事务、本地/Git/HTTP/ZIP市场与市场存储/文件锁/更新检查现已接入。其他插件安装器、资源seed与完整设置服务仍是后续边界。
 
 普通嵌入调用可在已有模型配置上添加：
 
@@ -129,7 +129,7 @@ CLI：`npm run cli -- --plugin-dir /absolute/plugin --cwd /absolute/project`；W
 
 输入`/reload-plugins`可刷新同一active snapshot及MCP/LSP/工具/配置/命令/输出样式/Agent。已产生模型输出、当前Agent不含ToolSearch且MCP有效server名称集改变时，原处理器要求`/reload-plugins --force`。该检查按有效名称集合，不是任意配置变化检测。SDK新运行等待刷新队列完成，再取重新构建的托管Agent。Web与嵌入`harness.prompt`也走本地命令分派；结果写JSONL并返回/流式输出，不多调用模型。
 
-原PluginManager完整194个成员已移植，但不代表全部外部服务已恢复。市场Factory、本地目录provider与LocalPluginInstaller、原Storage/ConfigManager/BuiltInProvider和FileLock现在默认接入；远端Git/HTTP/ZIP provider、MCPB下载、真实磁盘Settings/Options/策略服务仍需恢复或显式适配。Git/process安装执行默认不可用；Node文件桥不是原fs-extra，写入与清理限制在本次state，拒绝外部symlink路径。无需安装WorkBuddy即可使用上面的本地目录链路。
+原PluginManager完整194个成员已移植，但不代表全部外部服务已恢复。市场Factory、本地/Git/HTTP/ZIP provider与LocalPluginInstaller、原Storage/ConfigManager/BuiltInProvider、FileLock和更新检查现在默认接入；Git/npm/subdir独立插件安装器、MCPB下载、真实磁盘Settings/Options/策略服务仍需恢复或显式适配。Node文件桥不是原fs-extra，写入与清理限制在本次state，拒绝外部symlink路径；不是OS沙箱。无需安装WorkBuddy即可使用以上链路。
 
 ### 本地目录市场（嵌入接口）
 
@@ -145,11 +145,23 @@ CLI：`npm run cli -- --plugin-dir /absolute/plugin --cwd /absolute/project`；W
 
 跨进程锁位于`<state>/tmp/*.lock/lock.json`，只做PID的signal=0存活探测。市场存储拿锁失败时原逻辑会警告并降级为进程内锁；损坏JSON会先移动到`.broken-<timestamp>`，后续写入重建。原瞬时rename错误最多初次加5次重试。只加载可信市场：本地源路径检查为原词法边界，不能把它当作symlink隔离/插件沙箱。默认内置市场profile为空，不自动联网安装样本中的官方市场。
 
+### 远端市场（嵌入接口）
+
+文件锁另有保留的原竞态：新锁目录的lock.json发布前可能被另一进程当作坏锁回收，导致双持锁/丢更新。不要将多个写入进程的全部并发安全当作已证明；这不是强一致数据库。确定性原样本/还原对照及有效锁争用测试分开覆盖，不静默改写原协议。
+
+同一`addMarketplace()`现支持显式可信的Git仓库、HTTP JSON或ZIP地址；例如`await harness.pluginManager.addMarketplace('https://your-trusted-host/market.zip')`。作用域设置也可使用`{"my-market":{"source":"url","url":"https://your-trusted-host/market.zip"}}`，由原parseSource按.zip识别；配合`enabledPlugins`选择具体插件，原启动链可解包、物化到版本cache并在重启后恢复。SDK只在插件启用后消费其Agent/命令/Hook，不默认批准全部市场内容。
+
+Git克隆放在`<state>/plugins/marketplaces`；原更新会reset --hard并clean -fd，宿主仅允许在state内自有clone执行。默认Git需要PATH中存在git，不使用本机SSH key/agent或用户Git配置；认证SSH请显式注入`nativePlugins.marketplaceRuntime.exec`提供自己的实现。公开HTTPS仍依赖本机git/网络/TLS；测试仅使用自有file://仓库，未访问真实生产仓库。
+
+HTTP provider按原实现只下载清单，并把插件路径附加到完整base URL（包括marketplace.json），不是浏览器式相对路径解析。ZIP下载/HEAD采用原重定向、ETag与版本检查逻辑；只有404触发main/master互换。`.tgz/.tar.gz`仍有原格式边界，不当作已支持完整tar市场。ZIP不限制总解压体积/条目数，插件可能自动执行Hook，只能使用可信输入，不提供公网解包接口。
+
+ZIP第三方依赖固定样本`yauzl 3.2.0`，新增一项[中危时间戳解析告警](https://github.com/advisories/GHSA-gmq8-994r-jv83)，当前npm audit共17项（10中危/7高危）。原提取路径未调用告警对应的`entry.getLastModDate()`，这不等于整体安全证明；未自动升级或修改原控制流。远端TLS/代理/认证/真实市场资源与所有平台故障仍需继续验证。
+
 `harness.pluginManager`为当前来源，`pluginRuntimeRefresh.refresh(reason, options)`为原队列服务，`pluginHost`暴露原类与宿主生命周期。已有`agentManager.plugins`只读adapter继续兼容，但不冒充完整manager，也不会自动启用原刷新事务；同时提供`nativePlugins`时必须明确共用同一个完整manager。显式LSP配置在插件刷新后由宿主重新注册，不被原LSP shutdown顺带清除。
 
 插件可能含可执行Hooks，加载即表示信任其内容；本地命令/Hook不是OS沙箱，也不是逐次工具审批。MCP自动接线只在显式`nativeMcp`宿主启用时生效；CLI/Web新增目录参数并未暗中扩大MCP/legacy工具allowlist。卸下插件可删除其manifest后reload；原plugin-tag实例会被清理，和普通文件Agent缓存残留行为不同。
 
-本批再次将Git暂存快照检出到全新空目录，不复制任何node_modules、原安装包或bundle：`npm ci`、`npm run check`、`npm run build`、CLI/Web launcher smoke、48项插件/市场编译后测试与11项Web测试均通过。完整842核心/764编译smoke及44组差分在主验证目录运行；差分仍需用户自行提供固定SHA样本。semver仍固定7.7.2，本批仅按CLI样本新增async-mutex 0.5.0；既有依赖版本不变，16项旧audit风险仍存在。
+本批再次将Git暂存快照检出到全新空目录，不复制任何node_modules、原安装包或bundle：`npm ci`、`npm run check`、`npm run build`、CLI/Web launcher smoke、76项插件/市场编译后测试与11项Web测试均通过。完整870核心/792编译smoke及44组差分在主验证目录运行；差分仍需用户自行提供固定SHA样本。semver仍固定7.7.2、async-mutex仍0.5.0，本批按CLI样本新增yauzl 3.2.0；既有依赖版本不变，audit风险现为17项，详见远端市场边界。
 
 缓存默认用本宿主独立的原MemoryLocalStorage；可用`productRuntime.storage`注入自己拥有的get/set及可选getSync。缓存保留原gzip/base64、稳定快照与版本key，不自动读取原应用的本地存储。`productRuntime.env`是显式拥有的配置环境对象，默认空；原Env provider可处理其中的ACC_PRODUCT_CONFIG等字段，不会自动扫描进程中可能包含账号的产品配置环境。模型API key仍使用原CLI/Web自己的配置，不映射为产品账号。
 

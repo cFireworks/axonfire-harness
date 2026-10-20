@@ -1,8 +1,9 @@
-// Complete fixed-sample local-marketplace classes. No original bootstrap is executed.
+// Complete fixed-sample local/Git/HTTP/ZIP marketplace classes. No original bootstrap is executed.
 import * as path from "node:path";
 import { SettingsScope } from "../permissions/native-permission-policy.js";
 import { createCapturedPluginConstants } from "../vendor/captured-plugin-constants.js";
 import { createNativePluginConcurrency } from "./native-plugin-concurrency.js";
+import { createNativeZipUtils } from "./native-zip-utils.js";
 export function createNativeMarketplace(runtime: any) {
   const Object: any = globalThis.Object,
     Promise: any = globalThis.Promise,
@@ -24,7 +25,20 @@ export function createNativeMarketplace(runtime: any) {
   const tV = {
     ContainerUtil: {
       get: (key: any): any => {
-        if (key === t1 || key === t4) return new key();
+        if (
+          [
+            BaseMarketplace,
+            DirectoryMarketplace,
+            GithubMarketplace,
+            HttpMarketplace,
+            ZipMarketplace,
+          ].includes(key)
+        )
+          return new key();
+        if (key === t$.MarketplaceUpdateChecker)
+          return services.marketplaceUpdateChecker;
+        if (key === t$.BuiltInMarketplaceProvider)
+          return services.builtInMarketplaceProvider;
         if (key === t$.PluginErrorCollector) return services.errorCollector;
         if (key === "logger" || key === "consoleManager")
           return services.logger;
@@ -231,9 +245,879 @@ export function createNativeMarketplace(runtime: any) {
     }
   }
   const t4 = DirectoryMarketplace,
-    t9 = runtime.providers?.git ?? Symbol("GithubMarketplace"),
-    t7 = runtime.providers?.http ?? Symbol("HttpMarketplace"),
-    Ap = runtime.providers?.zip ?? Symbol("ZipMarketplace");
+    t8 = { default: runtime.exec },
+    t6 = {
+      env: {
+        GIT_TERMINAL_PROMPT: "0",
+        GIT_SSH_COMMAND:
+          "ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new",
+      },
+    },
+    fetch = runtime.fetch ?? globalThis.fetch,
+    An = { tmpdir: runtime.tmpdir },
+    Al = runtime.zipUtils ?? createNativeZipUtils(runtime),
+    Ac = [
+      ["main", "master"],
+      ["master", "main"],
+    ],
+    Au = /\.(\d{13})-[a-z0-9]{6}(?:\.zip|\.tmp)?$/,
+    Ad = 3600000,
+    AQ = ".marketplace-version",
+    AD = ".zip-metadata.json",
+    AT = 60000;
+  // UTF-16 9540634..9543574
+  class GithubMarketplace extends t4 {
+    [key: string]: any;
+    async install(eA: any): Promise<any> {
+      if (
+        (eA?.("Parsing repository information..."),
+        !this.name || "temp" === this.name)
+      ) {
+        let eA: any = this.source.repo;
+        eA
+          ? (this.name = eA.replace(/\//g, "_").replace(/\.git$/, ""))
+          : this.source.path
+            ? (this.name = this.source.path
+                .replace(/[^a-zA-Z0-9_]/g, "_")
+                .replace(/\//g, "_")
+                .replace(/\.git$/, ""))
+            : (this.name = "unknown");
+      }
+      ((this.installLocation = (0, tX.join)(
+        t5.PathUtils.getHomePluginsDir(),
+        t$.MARKETPLACES_DIR,
+        this.name,
+      )),
+        await this.update(eA),
+        await this.renameToManifestName(eA));
+    }
+    async renameToManifestName(eA: any): Promise<any> {
+      let el: any = await this.readManifestName(this.installLocation);
+      if (!el || el === this.name) return;
+      let ec: any = (0, tX.join)(
+        t5.PathUtils.getHomePluginsDir(),
+        t$.MARKETPLACES_DIR,
+        el,
+      );
+      if (ec !== this.installLocation)
+        try {
+          (eA?.(`Aligning marketplace directory to manifest name "${el}"...`),
+            (await tZ.pathExists(ec)) && (await tZ.remove(ec)),
+            await tZ.move(this.installLocation, ec),
+            (this.name = el),
+            (this.installLocation = ec));
+        } catch (eA: any) {
+          tV.ContainerUtil.get(t2.Logger).warn(
+            `[GithubMarketplace] Failed to rename "${this.installLocation}" to "${ec}": ${eA}`,
+          );
+        }
+    }
+    async readManifestName(eA: any): Promise<any> {
+      for (let el of t$.PLUGINS_METADATA_DIRS) {
+        let ec: any = (0, tX.join)(eA, el, t$.MARKETPLACE_MANIFEST_FILE);
+        if (await tZ.pathExists(ec)) {
+          try {
+            let eA: any = await tZ.readJSON(ec),
+              el: any = eA?.name;
+            if ("string" == typeof el && el.length > 0) return el;
+          } catch {}
+          break;
+        }
+      }
+    }
+    async update(eA: any): Promise<any> {
+      try {
+        eA?.("Preparing Git repository...");
+        let el: any = this.getGitUrl(),
+          ec: any = this.installLocation;
+        (await tZ.pathExists(ec))
+          ? (await this.isValidGitRepo(ec))
+            ? (eA?.("Updating existing repository..."),
+              await this.updateRepo(ec, eA))
+            : (eA?.("Removing invalid repository directory..."),
+              await tZ.remove(ec),
+              eA?.("Cloning repository..."),
+              await this.cloneRepo(el, ec, eA))
+          : (eA?.("Cloning repository..."), await this.cloneRepo(el, ec, eA));
+      } catch (eA: any) {
+        throw Error(`Failed to install GitHub marketplace: ${eA}`);
+      }
+    }
+    async isValidGitRepo(eA: any): Promise<any> {
+      try {
+        return (
+          await (0, t8.default)("git", ["rev-parse", "--git-dir"], {
+            ...t6,
+            cwd: eA,
+          }),
+          !0
+        );
+      } catch {
+        return !1;
+      }
+    }
+    async cloneRepo(eA: any, el: any, ec: any): Promise<any> {
+      try {
+        (await tZ.ensureDir((0, tX.join)(el, "..")),
+          ec?.(`Cloning repository from ${eA}...`),
+          await (0, t8.default)("git", ["clone", "--depth", "1", eA, el], t6),
+          ec?.("Repository cloned successfully"));
+      } catch (eA: any) {
+        try {
+          (await tZ.pathExists(el)) && (await tZ.remove(el));
+        } catch {}
+        throw Error(`Failed to clone repository: ${eA}`);
+      }
+    }
+    async updateRepo(eA: any, el: any): Promise<any> {
+      try {
+        let ec: any = { ...t6, cwd: eA },
+          eu: any = await (0, t8.default)(
+            "git",
+            ["rev-parse", "--abbrev-ref", "HEAD"],
+            ec,
+          ),
+          ed: any = String(eu.stdout || "").trim() || "main";
+        (el?.("Fetching latest changes..."),
+          await (0, t8.default)(
+            "git",
+            ["fetch", "origin", ed, "--depth", "1"],
+            ec,
+          ),
+          el?.("Syncing to remote..."),
+          await (0, t8.default)("git", ["reset", "--hard", `origin/${ed}`], ec),
+          await (0, t8.default)("git", ["clean", "-fd"], ec),
+          el?.("Repository updated successfully"));
+      } catch (eA: any) {
+        throw Error(`Failed to update repository: ${eA}`);
+      }
+    }
+    getGitUrl(): any {
+      let eA: any = this.source;
+      if (eA.repo) return `https://github.com/${eA.repo}.git`;
+      if (eA.url) return eA.url;
+      if (eA.path) return eA.path;
+      throw Error("Invalid GitHub marketplace source: missing repo or url");
+    }
+  }
+  // UTF-16 9544069..9547325
+  class HttpMarketplace extends t4 {
+    [key: string]: any;
+    async install(eA: any): Promise<any> {
+      try {
+        eA?.("Parsing marketplace URL...");
+        let el: any = this.getHttpUrl(),
+          ec: any = this.generateNameFromUrl(el),
+          eu: any = (0, tX.join)(
+            t5.PathUtils.getHomePluginsDir(),
+            t$.MARKETPLACES_DIR,
+            ec,
+          );
+        (eA?.("Downloading marketplace manifest..."), await tZ.ensureDir(eu));
+        let ed: any = await this.fetchManifest(el);
+        ((this.name = ed.name || ec),
+          (this.installLocation = (0, tX.join)(
+            t5.PathUtils.getHomePluginsDir(),
+            t$.MARKETPLACES_DIR,
+            this.name,
+          )),
+          eu !== this.installLocation &&
+            ((await tZ.pathExists(this.installLocation)) &&
+              (await tZ.remove(this.installLocation)),
+            (await tZ.pathExists(eu)) &&
+              (await tZ.move(eu, this.installLocation))),
+          await this.update(eA));
+      } catch (eA: any) {
+        throw Error(`Failed to install HTTP marketplace: ${eA}`);
+      }
+    }
+    async update(eA: any): Promise<any> {
+      try {
+        eA?.("Preparing HTTP marketplace download...");
+        let el: any = this.getHttpUrl(),
+          ec: any = this.installLocation;
+        (await tZ.ensureDir(ec),
+          eA?.("Downloading marketplace manifest..."),
+          await this.downloadManifest(el, ec, eA),
+          eA?.("HTTP marketplace updated successfully"));
+      } catch (eA: any) {
+        throw Error(`Failed to update HTTP marketplace: ${eA}`);
+      }
+    }
+    async fetchManifest(eA: any): Promise<any> {
+      try {
+        let el: any = await fetch(eA);
+        if (!el.ok) throw Error(`HTTP ${el.status}: ${el.statusText}`);
+        return await el.json();
+      } catch (eA: any) {
+        throw Error(`Failed to fetch manifest: ${eA}`);
+      }
+    }
+    async downloadManifest(eA: any, el: any, ec: any): Promise<any> {
+      try {
+        ec?.("Fetching marketplace manifest...");
+        let eu: any = await this.fetchManifest(eA);
+        ec?.("Saving marketplace manifest...");
+        let ed: any = t$.PLUGINS_METADATA_DIRS["0"],
+          ep: any = (0, tX.join)(el, ed, "marketplace.json");
+        (await tZ.ensureDir((0, tX.join)(el, ed)),
+          await tZ.writeJSON(ep, eu, { spaces: 2 }),
+          ec?.(`Downloading ${eu.plugins.length} plugin manifests...`));
+        for (let ed: any = 0; ed < eu.plugins.length; ed++) {
+          let ep: any = eu.plugins[ed];
+          try {
+            ec?.(
+              `Downloading plugin manifest ${ed + 1}/${eu.plugins.length}: ${ep.name}`,
+            );
+            let eg: any =
+              "string" == typeof ep.source ? ep.source : ep.source.path;
+            eg && (await this.downloadPluginManifest(eA, el, eg));
+          } catch (eA: any) {
+            tV.ContainerUtil.get(t2.Logger).error(
+              `Failed to download plugin manifest for ${ep.name}:`,
+              eA,
+            );
+          }
+        }
+        ec?.("All plugin manifests downloaded successfully");
+      } catch (eA: any) {
+        throw Error(`Failed to download manifest: ${eA}`);
+      }
+    }
+    async downloadPluginManifest(eA: any, el: any, ec: any): Promise<any> {
+      let eu: any = this.detectedMetaDir
+          ? [
+              this.detectedMetaDir,
+              ...t$.PLUGINS_METADATA_DIRS.filter(
+                (eA: any) => eA !== this.detectedMetaDir,
+              ),
+            ]
+          : t$.PLUGINS_METADATA_DIRS,
+        ed: any = [];
+      for (let ep of eu) {
+        let eu: any = this.buildUrl(eA, `${ec}/${ep}/plugin.json`);
+        try {
+          let eA: any = await fetch(eu);
+          if (!eA.ok) {
+            ed.push(`${ep}: HTTP ${eA.status}`);
+            continue;
+          }
+          let eg: any = await eA.json(),
+            eh: any = (0, tX.join)(el, ec, ep, "plugin.json");
+          (await tZ.ensureDir((0, tX.join)(el, ec, ep)),
+            await tZ.writeJSON(eh, eg, { spaces: 2 }),
+            await Promise.all(
+              t$.PLUGINS_METADATA_DIRS.filter((eA: any) => eA !== ep).map(
+                (eA: any) => tZ.remove((0, tX.join)(el, ec, eA, "plugin.json")),
+              ),
+            ),
+            (this.detectedMetaDir = ep));
+          return;
+        } catch (eA: any) {
+          ed.push(`${ep}: ${eA instanceof Error ? eA.message : String(eA)}`);
+        }
+      }
+      throw Error(
+        `Failed to download plugin manifest from any metadata dir [${ed.join("; ")}]`,
+      );
+    }
+    generateNameFromUrl(eA: any): any {
+      return eA
+        .replace(/^https?:\/\//, "")
+        .replace(/\/marketplace\.json$/, "")
+        .replace(/[^a-zA-Z0-9_]/g, "_")
+        .replace(/_+/g, "_")
+        .replace(/^_|_$/g, "");
+    }
+    getHttpUrl(): any {
+      let eA: any = this.source;
+      if (eA.url) return eA.url;
+      if (eA.path) return eA.path;
+      throw Error("Invalid HTTP marketplace source: missing url or path");
+    }
+    buildUrl(eA: any, el: any): any {
+      let ec: any = eA.replace(/\/$/, ""),
+        eu: any = el.replace(/^\//, "");
+      return `${ec}/${eu}`;
+    }
+  }
+  // UTF-16 9547937..9555429
+  class ZipMarketplace extends t4 {
+    [key: string]: any;
+    async install(eA: any): Promise<any> {
+      let el: any = this.getZipUrl(),
+        ec: any = this.generateNameFromUrl(el),
+        eu: any = (0, tX.join)(
+          t5.PathUtils.getHomePluginsDir(),
+          t$.MARKETPLACES_DIR,
+        ),
+        ed: any = await this.createTempRoot("install"),
+        ep: any = (0, tX.join)(ed, "extract"),
+        eg: any = (0, tX.join)(ed, `${ec}.zip`);
+      try {
+        (eA?.("Parsing marketplace ZIP URL..."),
+          eA?.("Downloading marketplace ZIP archive..."),
+          await tZ.ensureDir(eu));
+        let { result: ed, url: eh } = (0, Al.isLocalFilePath)(el)
+          ? { result: await (0, Al.copyLocalFile)(el, eg), url: el }
+          : await this.downloadWithBranchFallback(el, eg);
+        (eA?.("Extracting marketplace archive..."),
+          await tZ.ensureDir(ep),
+          await (0, Al.extractZip)(eg, ep, !0),
+          await tZ.remove(eg),
+          eA?.("Reading marketplace manifest..."));
+        let ef: any = await this.readManifestFromDir(ep);
+        ((this.name && "temp" !== this.name) || (this.name = ef?.name || ec),
+          (this.installLocation = (0, tX.join)(eu, this.name)),
+          ep !== this.installLocation &&
+            (await tZ.pathExists(ep)) &&
+            (await this.swapDirectoryFromTemp(ep, this.installLocation)),
+          await (0, Al.writeZipMetadata)(this.installLocation, {
+            url: eh,
+            lastModified: ed.lastModified,
+            etag: ed.etag,
+            downloadedAt: new Date().toISOString(),
+            installComplete: !0,
+          }),
+          (0, Al.isLocalFilePath)(el) || (await this.seedVersionFromUrl(el)),
+          await this.cleanupOrphanArtifacts(eu),
+          eA?.("ZIP marketplace installed successfully"));
+      } catch (eA: any) {
+        throw Error(
+          `Failed to install ZIP marketplace: ${eA instanceof Error ? eA.message : String(eA)}`,
+        );
+      } finally {
+        await this.safeRemove(ed);
+      }
+    }
+    async update(eA: any): Promise<any> {
+      let el: any,
+        ec: any = tV.ContainerUtil.get(t2.Logger),
+        eu: any = this.getZipUrl(),
+        ed: any = this.installLocation;
+      if (!(0, Al.isLocalFilePath)(eu) && ed)
+        try {
+          let ep: any = tV.ContainerUtil.get(t$.MarketplaceUpdateChecker),
+            eg: any = (await this.isBuiltInMarketplace())
+              ? ((0, Al.parseVersionFromUrl)(eu) ?? void 0)
+              : void 0,
+            eh: any = await ep.needsUpdate({
+              marketplaceName: this.name,
+              installLocation: ed,
+              zipUrl: eu,
+              urlVersion: eg,
+            });
+          if (!eh.needsUpdate) {
+            (ec.info(
+              `[ZipMarketplace.update] ${this.name} up-to-date, skipping download (reason=${eh.reason})`,
+            ),
+              eA?.(`Marketplace '${this.name}' is up to date`));
+            return;
+          }
+          (ec.info(
+            `[ZipMarketplace.update] ${this.name} needs update (reason=${eh.reason})`,
+          ),
+            (el = eh.remoteVersion));
+        } catch (eA: any) {
+          ec.warn(
+            `[ZipMarketplace.update] update checker failed, proceeding with full download: ${eA instanceof Error ? eA.message : String(eA)}`,
+          );
+        }
+      let ep: any = await this.createTempRoot("update"),
+        eg: any = (0, tX.join)(
+          ep,
+          `${this.slugify(this.name || "marketplace")}.zip`,
+        ),
+        eh: any = (0, tX.join)(ep, "extract");
+      try {
+        (ec.info(
+          `[ZipMarketplace.update] Downloading ${this.name} from ${eu}...`,
+        ),
+          eA?.("Preparing ZIP marketplace update..."),
+          eA?.("Downloading updated marketplace archive..."));
+        let { result: ep, url: ef } = (0, Al.isLocalFilePath)(eu)
+          ? { result: await (0, Al.copyLocalFile)(eu, eg), url: eu }
+          : await this.downloadWithBranchFallback(eu, eg);
+        if (
+          (eA?.("Extracting updated marketplace archive..."),
+          (await tZ.pathExists(eh)) && (await tZ.remove(eh)),
+          await tZ.ensureDir(eh),
+          await (0, Al.extractZip)(eg, eh, !0),
+          await tZ.remove(eg),
+          await this.swapDirectoryFromTemp(eh, ed),
+          await (0, Al.writeZipMetadata)(ed, {
+            url: ef,
+            lastModified: ep.lastModified,
+            etag: ep.etag,
+            downloadedAt: new Date().toISOString(),
+            installComplete: !0,
+          }),
+          el)
+        )
+          try {
+            let eA: any = tV.ContainerUtil.get(t$.MarketplaceUpdateChecker);
+            await eA.commitVersion(this.name, ed, el);
+          } catch (eA: any) {
+            ec.warn(
+              `[ZipMarketplace.update] commitVersion failed: ${eA instanceof Error ? eA.message : String(eA)}`,
+            );
+          }
+        let em: any = await this.readManifestFromDir(ed);
+        (em &&
+          ((this.manifest = em),
+          em.name && (this.name = em.name),
+          em.description && (this.description = em.description)),
+          await super.update(eA),
+          await this.cleanupOrphanArtifacts(
+            (0, tX.join)(t5.PathUtils.getHomePluginsDir(), t$.MARKETPLACES_DIR),
+          ),
+          eA?.("ZIP marketplace updated successfully"));
+      } catch (eA: any) {
+        throw Error(
+          `Failed to update ZIP marketplace: ${eA instanceof Error ? eA.message : String(eA)}`,
+        );
+      } finally {
+        await this.safeRemove(ep);
+      }
+    }
+    async isBuiltInMarketplace(): Promise<any> {
+      try {
+        let eA: any = tV.ContainerUtil.get(t$.BuiltInMarketplaceProvider);
+        return await eA.isBuiltInMarketplace(this.name);
+      } catch {
+        return !1;
+      }
+    }
+    async seedVersionFromUrl(eA: any): Promise<any> {
+      let el: any = tV.ContainerUtil.get(t2.Logger);
+      try {
+        if (!(await this.isBuiltInMarketplace())) return;
+        let el: any = (0, Al.parseVersionFromUrl)(eA);
+        if (!el) return;
+        let ec: any = tV.ContainerUtil.get(t$.MarketplaceUpdateChecker);
+        await ec.commitVersion(this.name, this.installLocation, el);
+      } catch (eA: any) {
+        el.debug(
+          `[ZipMarketplace] seedVersionFromUrl failed for ${this.name}: ${eA instanceof Error ? eA.message : String(eA)}`,
+        );
+      }
+    }
+    async downloadWithBranchFallback(eA: any, el: any): Promise<any> {
+      let ec: any = tV.ContainerUtil.get(t2.Logger);
+      try {
+        return { result: await (0, Al.downloadFile)(eA, el), url: eA };
+      } catch (ed: any) {
+        let eu: any = ed instanceof Error ? ed.message : String(ed);
+        if (!eu.includes("HTTP 404")) throw ed;
+        for (let [ed, ep] of Ac) {
+          let eg: any = RegExp(`([-/])${ed}(\\.zip)(?=[?#]|$)`);
+          if (!eg.test(eA)) continue;
+          let eh: any = eA.replace(eg, `$1${ep}$2`);
+          ec.info(
+            `[ZipMarketplace] Branch "${ed}" returned 404, retrying with "${ep}": ${eh}`,
+          );
+          try {
+            return { result: await (0, Al.downloadFile)(eh, el), url: eh };
+          } catch (el: any) {
+            let eA: any = el instanceof Error ? el.message : String(el);
+            throw (
+              ec.warn(
+                `[ZipMarketplace] Fallback branch "${ep}" also failed: ${eA}`,
+              ),
+              Error(`${eu}; fallback "${ep}" also failed: ${eA}`)
+            );
+          }
+        }
+        throw (
+          ec.debug(
+            `[ZipMarketplace] URL "${eA}" returned 404 but matched no branch fallback pattern`,
+          ),
+          ed
+        );
+      }
+    }
+    async readManifestFromDir(eA: any): Promise<any> {
+      let el: any = tV.ContainerUtil.get(t2.Logger);
+      for (let ec of [
+        (0, tX.join)(eA, t$.MARKETPLACE_MANIFEST_FILE),
+        ...t$.PLUGINS_METADATA_DIRS.map((el: any) =>
+          (0, tX.join)(eA, el, t$.MARKETPLACE_MANIFEST_FILE),
+        ),
+      ])
+        if (await tZ.pathExists(ec))
+          try {
+            return await tZ.readJSON(ec);
+          } catch (eA: any) {
+            el.warn(`Failed to parse manifest at ${ec}:`, eA);
+          }
+    }
+    getZipUrl(): any {
+      let { url: eA, path: el } = this.source;
+      if (eA) return eA;
+      if (el) return el;
+      throw Error("Invalid ZIP marketplace source: missing url or path");
+    }
+    generateNameFromUrl(eA: any): any {
+      return (0, Al.isLocalFilePath)(eA)
+        ? this.slugify(eA.split(/[\\/]/).pop() || "marketplace")
+        : this.slugify(eA.replace(/^https?:\/\//, ""));
+    }
+    slugify(eA: any): any {
+      return (
+        eA
+          .replace(/\.(zip|tgz|tar\.gz)$/i, "")
+          .replace(/[^a-zA-Z0-9_-]/g, "_")
+          .replace(/_+/g, "_")
+          .replace(/^_|_$/g, "") || "marketplace"
+      );
+    }
+    async createTempRoot(eA: any): Promise<any> {
+      return tZ.mkdtemp(
+        (0, tX.join)((0, An.tmpdir)(), `codebuddy-marketplace-${eA}-`),
+      );
+    }
+    async swapDirectoryFromTemp(eA: any, el: any): Promise<any> {
+      let ec: any = (0, tX.join)(el, ".."),
+        eu: any = `${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        ed: any = (0, tX.join)(
+          ec,
+          `.${this.slugify(this.name || "marketplace")}.staging-${eu}`,
+        ),
+        ep: any = (0, tX.join)(
+          ec,
+          `.${this.slugify(this.name || "marketplace")}.backup-${eu}`,
+        ),
+        eg: any = !1,
+        eh: any = !1;
+      await tZ.ensureDir(ec);
+      try {
+        (await tZ.move(eA, ed, { overwrite: !1 }),
+          (await tZ.pathExists(el)) &&
+            (await this.renameDirectory(el, ep), (eg = !0)));
+        try {
+          (await this.renameDirectory(ed, el), (eh = !0));
+        } catch (eA: any) {
+          if (eg)
+            try {
+              (await this.renameDirectory(ep, el), (eg = !1));
+            } catch (el: any) {
+              throw Error(
+                `Failed to promote marketplace and restore backup: ${eA instanceof Error ? eA.message : String(eA)}; restore failed: ${el instanceof Error ? el.message : String(el)}; backup preserved at ${ep}`,
+              );
+            }
+          throw eA;
+        }
+        eg && (await this.safeRemove(ep), (eg = !1));
+      } finally {
+        (await this.safeRemove(ed), (eh || !eg) && (await this.safeRemove(ep)));
+      }
+    }
+    async renameDirectory(eA: any, el: any): Promise<any> {
+      await tZ.rename(eA, el);
+    }
+    async safeRemove(eA: any): Promise<any> {
+      try {
+        (await tZ.pathExists(eA)) && (await tZ.remove(eA));
+      } catch {}
+    }
+    async cleanupOrphanArtifacts(eA: any): Promise<any> {
+      let el: any = tV.ContainerUtil.get(t2.Logger);
+      try {
+        let ec: any = await tZ.readdir(eA),
+          eu: any = Date.now();
+        for (let ed of ec) {
+          let ec: any = Au.exec(ed);
+          if (!ec) continue;
+          let ep: any = Number(ec[1]);
+          if (!Number.isFinite(ep) || eu - ep < Ad) continue;
+          let eg: any = (0, tX.join)(eA, ed);
+          try {
+            (await tZ.remove(eg),
+              el.debug(`[ZipMarketplace] removed orphan artefact: ${ed}`));
+          } catch (eA: any) {
+            el.debug(
+              `[ZipMarketplace] failed to remove orphan artefact ${ed}: ` +
+                (eA instanceof Error ? eA.message : String(eA)),
+            );
+          }
+        }
+      } catch (eA: any) {
+        el.debug(
+          "[ZipMarketplace] cleanupOrphanArtifacts skipped: " +
+            (eA instanceof Error ? eA.message : String(eA)),
+        );
+      }
+    }
+  }
+  // UTF-16 9569105..9572073
+  class MarketplaceUpdateChecker {
+    [key: string]: any;
+    init(): any {
+      this.logger.setContext("MarketplaceUpdateChecker");
+    }
+    async needsUpdate(eA: any): Promise<any> {
+      let {
+          marketplaceName: el,
+          installLocation: ec,
+          zipUrl: eu,
+          urlVersion: ed,
+        } = eA,
+        ep: any = Date.now();
+      if (!ec || !(await tZ.pathExists(ec)))
+        return (
+          this.logger.info(`[${el}] checked reason=first-install`),
+          { needsUpdate: !0, reason: "first-install" }
+        );
+      if (await this.isRecentlyChecked(ec)) {
+        let eA: any = Date.now() - ep;
+        return (
+          this.logger.debug(`[${el}] checked reason=throttled elapsed=${eA}ms`),
+          { needsUpdate: !1, reason: "throttled" }
+        );
+      }
+      if (ed) {
+        let eA: any = await this.readCachedVersion(ec),
+          eu: any = Date.now() - ep;
+        return eA && eA === ed
+          ? (await this.touchVersionFile(ec),
+            this.logger.info(
+              `[${el}] checked reason=url-version-match elapsed=${eu}ms`,
+            ),
+            { needsUpdate: !1, reason: "url-version-match", remoteVersion: ed })
+          : (this.logger.info(
+              `[${el}] checked reason=url-version-changed elapsed=${eu}ms (local=${eA ?? "none"}, url=${ed})`,
+            ),
+            {
+              needsUpdate: !0,
+              reason: "url-version-changed",
+              remoteVersion: ed,
+            });
+      }
+      try {
+        let eA: any = await (0, Al.checkZipNeedsUpdate)(eu, ec),
+          ed: any = this.classifyHttpCheck(
+            eA,
+            !!(await this.hasZipMetadata(ec)),
+          ),
+          eg: any = Date.now() - ep;
+        return (
+          this.logger.info(`[${el}] checked reason=${ed} elapsed=${eg}ms`),
+          eA.needsUpdate || (await this.touchVersionFile(ec)),
+          {
+            needsUpdate: eA.needsUpdate,
+            reason: ed,
+            etag: eA.etag,
+            lastModified: eA.lastModified,
+          }
+        );
+      } catch (eA: any) {
+        return (
+          this.logger.warn(
+            `[${el}] HEAD check failed: ${eA instanceof Error ? eA.message : String(eA)}`,
+          ),
+          { needsUpdate: !0, reason: "head-failed" }
+        );
+      }
+    }
+    async commitVersion(eA: any, el: any, ec: any): Promise<any> {
+      try {
+        let eu: any = (0, tX.join)(el, AQ);
+        (await tZ.writeFile(eu, ec.trim(), "utf-8"),
+          this.logger.debug(`[${eA}] wrote version cache "${ec}"`));
+      } catch (el: any) {
+        this.logger.warn(
+          `[${eA}] failed to write version cache: ${el instanceof Error ? el.message : String(el)}`,
+        );
+      }
+    }
+    async invalidateCache(eA: any, el: any): Promise<any> {
+      for (let ec of [(0, tX.join)(el, AQ), (0, tX.join)(el, AD)])
+        try {
+          await tZ.remove(ec);
+        } catch (el: any) {
+          this.logger.warn(
+            `[${eA}] failed to invalidate cache file '${ec}': ${el instanceof Error ? el.message : String(el)}`,
+          );
+        }
+      this.logger.info(`[${eA}] cache invalidated for forced update`);
+    }
+    async isRecentlyChecked(eA: any): Promise<any> {
+      try {
+        let el: any = (0, tX.join)(eA, AQ);
+        if (!(await tZ.pathExists(el))) return !1;
+        let ec: any = await tZ.stat(el);
+        return Date.now() - ec.mtimeMs < this.getCheckIntervalMs();
+      } catch {
+        return !1;
+      }
+    }
+    async touchVersionFile(eA: any): Promise<any> {
+      try {
+        let el: any = (0, tX.join)(eA, AQ);
+        if (await tZ.pathExists(el)) {
+          let eA: any = new Date();
+          await tZ.utimes(el, eA, eA);
+        } else await tZ.writeFile(el, "", "utf-8");
+      } catch {}
+    }
+    async readCachedVersion(eA: any): Promise<any> {
+      try {
+        let el: any = (0, tX.join)(eA, AQ);
+        if (!(await tZ.pathExists(el))) return;
+        return (await tZ.readFile(el, "utf-8")).trim() || void 0;
+      } catch {
+        return;
+      }
+    }
+    async hasZipMetadata(eA: any): Promise<any> {
+      try {
+        return await tZ.pathExists((0, tX.join)(eA, AD));
+      } catch {
+        return !1;
+      }
+    }
+    classifyHttpCheck(eA: any, el: any): any {
+      return el
+        ? eA.etag
+          ? eA.needsUpdate
+            ? "etag-changed"
+            : "etag-match"
+          : eA.lastModified
+            ? eA.needsUpdate
+              ? "last-modified-changed"
+              : "last-modified-match"
+            : eA.needsUpdate
+              ? "no-metadata"
+              : "etag-match"
+        : "no-metadata";
+    }
+    getCheckIntervalMs(): any {
+      try {
+        let eA: any = this.productManager.getCurrentConfiguration(),
+          el: any = eA?.marketplaceVersionCheckIntervalMs;
+        if ("number" == typeof el && el > 0) return el;
+      } catch {}
+      return AT;
+    }
+  }
+  // UTF-16 9575670..9576155
+  class GitAvailabilityDetector {
+    declare static DETECTION_TIMEOUT_MS: number;
+    [key: string]: any;
+    async isAvailable(): Promise<any> {
+      return (
+        this.probePromise || (this.probePromise = this.probe()),
+        this.probePromise
+      );
+    }
+    invalidateCache(): any {
+      this.probePromise = void 0;
+    }
+    async probe(): Promise<any> {
+      try {
+        return (
+          await (0, t8.default)("git", ["--version"], {
+            timeout: ew.DETECTION_TIMEOUT_MS,
+            env: { ...process.env, GIT_TERMINAL_PROMPT: "0" },
+          }),
+          this.logger.info("[GitAvailability] git is available"),
+          !0
+        );
+      } catch (el: any) {
+        let eA: any = el instanceof Error ? el.message : String(el);
+        return (
+          this.logger.warn(`[GitAvailability] git is unavailable: ${eA}`),
+          !1
+        );
+      }
+    }
+  }
+  // UTF-16 9576904..9577492
+  class GitToZipUrlConverter {
+    [key: string]: any;
+    constructor() {
+      this.rules = [...AO];
+    }
+    registerRule(eA: any): any {
+      this.rules.unshift(eA);
+    }
+    convert(eA: any): any {
+      let el: any = this.normaliseToHttpUrl(eA);
+      if (el)
+        try {
+          let eA: any = new URL(el.replace(/\.git$/, "")),
+            ec: any = eA.hostname.toLowerCase(),
+            eu: any = eA.pathname.replace(/\/+$/, "");
+          if (!eu) return;
+          for (let el of this.rules)
+            if (el.match(ec)) return el.convert(eA.host, eu);
+          return;
+        } catch {
+          return;
+        }
+    }
+    normaliseToHttpUrl(eA: any): any {
+      let el: any = eA.trim();
+      if (!el) return;
+      if (/^[\w.-]+\/[\w.-]+$/.test(el)) return `https://github.com/${el}`;
+      let ec: any = el.match(/^git@([^:]+):(.+?)(?:\.git)?$/);
+      return ec
+        ? `https://${ec[1]}/${ec[2]}`
+        : /^https?:\/\//i.test(el)
+          ? el
+          : void 0;
+    }
+  }
+  let ew = GitAvailabilityDetector;
+  GitAvailabilityDetector.DETECTION_TIMEOUT_MS = 5000;
+  const AO: any = [
+    {
+      name: "cnb.cool",
+      match: (eA: any) => "cnb.cool" === eA || eA.endsWith(".cnb.cool"),
+      convert: (eA: any, el: any) =>
+        `https://${eA}${el}/-/git/archive/refs/heads/master.zip`,
+    },
+    {
+      name: "cnb.woa.com",
+      match: (eA: any) => "cnb.woa.com" === eA || eA.endsWith(".cnb.woa.com"),
+      convert: (eA: any, el: any) =>
+        `https://${eA}${el}/-/git/archive/refs/heads/main.zip`,
+    },
+    {
+      name: "git.woa.com",
+      match: (eA: any) => "git.woa.com" === eA,
+      convert: (eA: any, el: any) =>
+        `https://${eA}${el}/-/repository/archive.zip`,
+    },
+    {
+      name: "github.com",
+      match: (eA: any) => "github.com" === eA || eA.endsWith(".github.com"),
+      convert: (eA: any, el: any) =>
+        `https://${eA}${el}/archive/refs/heads/main.zip`,
+    },
+    {
+      name: "gitlab",
+      match: (eA: any) => "gitlab.com" === eA || eA.includes("gitlab"),
+      convert: (eA: any, el: any) => {
+        let ec: any = el.split("/").filter(Boolean).pop() ?? "repo";
+        return `https://${eA}${el}/-/archive/main/${ec}-main.zip`;
+      },
+    },
+    {
+      name: "gitee.com",
+      match: (eA: any) => "gitee.com" === eA,
+      convert: (eA: any, el: any) =>
+        `https://${eA}${el}/repository/archive/master.zip`,
+    },
+    {
+      name: "bitbucket.org",
+      match: (eA: any) => "bitbucket.org" === eA,
+      convert: (eA: any, el: any) => `https://${eA}${el}/get/main.zip`,
+    },
+  ];
+  const t9 = runtime.providers?.git ?? GithubMarketplace,
+    t7 = runtime.providers?.http ?? HttpMarketplace,
+    Ap = runtime.providers?.zip ?? ZipMarketplace;
   // UTF-16 9555538..9556101
   class MarketplaceFactory {
     [key: string]: any;
@@ -837,6 +1721,13 @@ export function createNativeMarketplace(runtime: any) {
     }
   }
   return {
+    GithubMarketplace,
+    HttpMarketplace,
+    ZipMarketplace,
+    MarketplaceUpdateChecker,
+    GitAvailabilityDetector,
+    GitToZipUrlConverter,
+    services,
     GitFallbackCoordinator,
     BaseMarketplace,
     DirectoryMarketplace,

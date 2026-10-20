@@ -19,6 +19,7 @@ import { createOwnedPluginFilesystem } from "../src/plugins/owned-plugin-filesys
 import { createNativePluginHost } from "../src/plugins/native-plugin-host.js";
 import { createHarness } from "../src/runtime/create-harness.js";
 import { createCapturedMarketplacePolicy } from "../src/vendor/captured-marketplace-policy.js";
+import { characterizeFileLockPublicationRace } from "../scripts/helpers/file-lock-race-fixture.js";
 import { Usage, setTraceProcessors, type Model } from "@openai/agents-core";
 setTraceProcessors([]);
 async function owned(t: any) {
@@ -244,22 +245,43 @@ test("native marketplace storage persists storageName and serializes concurrent 
   assert.deepEqual(await readdir(join(f.root, "tmp")), []);
 });
 test(
-  "native marketplace cross-process writes preserve both writers",
+  "native marketplace published-lock contention preserves both writers under controlled scheduling",
   { timeout: 15000 },
   async (t) => {
     const root = await owned(t),
       f = marketplaceFixture(root);
     await f.storage.getMarketplaces();
-    await Promise.all([
-      worker(t, root, "save", "a").done,
-      worker(t, root, "save", "b").done,
-    ]);
+    const waitForMessage = (w: ReturnType<typeof worker>, expected: string) =>
+      new Promise<void>((resolve, reject) => {
+        w.child.once("message", (value) =>
+          value === expected
+            ? resolve()
+            : reject(Error("Unexpected owned worker message")),
+        );
+        void w.done.catch(reject);
+      });
+    const first = worker(t, root, "save-held", "a");
+    await waitForMessage(first, "write-locked");
+    const second = worker(t, root, "save", "b");
+    await waitForMessage(second, "contended");
+    first.child.send("release");
+    await first.done;
+    second.child.send("continue");
+    await second.done;
     assert.deepEqual(
       (await f.storage.getMarketplaces()).map((v: any) => v.name).sort(),
       ["a0", "a1", "a2", "b0", "b1", "b2"],
     );
   },
 );
+test("native lock retains original metadata publication race with two simultaneous owners", async (t) => {
+  const root = await owned(t);
+  assert.deepEqual(await characterizeFileLockPublicationRace(root), {
+    secondAcquiredBeforeFirstPublished: true,
+    firstAlsoAcquired: true,
+    recordExists: true,
+  });
+});
 test("native corrupted storage backs up bytes and reports repair before rebuilding", async (t) => {
   const f = marketplaceFixture(await owned(t), undefined, {
     Date: class extends Date {

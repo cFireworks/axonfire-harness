@@ -35,6 +35,8 @@ export function marketplaceFixture(
     productManager = { getCurrentConfiguration: () => configuration };
   const runtime = {
     fsExtra,
+    streamFs: fsExtra,
+    tmpdir: () => join(root, "tmp"),
     getHomePluginsDir: () => join(root, "plugins"),
     services: { logger, errorCollector, productManager },
     ...overrides,
@@ -62,6 +64,14 @@ export function marketplaceFixture(
   const builtIn = Object.assign(new classes.BuiltInMarketplaceProvider(), {
     logger,
   });
+  const updateChecker = Object.assign(new classes.MarketplaceUpdateChecker(), {
+    logger,
+    productManager,
+  });
+  Object.assign(classes.services, {
+    marketplaceUpdateChecker: updateChecker,
+    builtInMarketplaceProvider: builtIn,
+  });
   storage.init();
   config.init();
   builtIn.init();
@@ -72,6 +82,7 @@ export function marketplaceFixture(
     storage,
     config,
     builtIn,
+    updateChecker,
     installer,
     nativeLock,
     fileLockService,

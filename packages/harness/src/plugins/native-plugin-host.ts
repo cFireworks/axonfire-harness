@@ -17,6 +17,7 @@ import { createMemoryRuleUtilities } from "../memory/memory-rule-utilities.js";
 import { FileLockService } from "../tasks/file-lock-service.js";
 import { createNativeMarketplace } from "./native-marketplace.js";
 import { createCapturedMarketplacePolicy } from "../vendor/captured-marketplace-policy.js";
+import { createOwnedMarketplaceIO } from "./owned-marketplace-io.js";
 
 export type NativePluginHostOptions = {
   directories?: readonly string[];
@@ -176,6 +177,7 @@ export function createNativePluginHost(options: {
     resolveFilePathToWorkDir: paths.resolveFilePathToWorkDir.bind(paths),
   });
   const fsExtra = createOwnedPluginFilesystem(options.stateDir);
+  const marketplaceIO = createOwnedMarketplaceIO(options.stateDir, fsExtra);
   const lockDirectory = path.join(options.stateDir, "tmp");
   const lockNative = new FileLockService(lockDirectory, { fs: fsExtra });
   const fileLockService = {
@@ -185,7 +187,10 @@ export function createNativePluginHost(options: {
     },
   };
   const marketplaceClasses = createNativeMarketplace({
+    ...marketplaceIO,
     fsExtra,
+    process: { env, pid: process.pid },
+    tmpdir: () => lockDirectory,
     env,
     getHomePluginsDir: () => path.join(options.stateDir, "plugins"),
     services: {
@@ -224,12 +229,26 @@ export function createNativePluginHost(options: {
     new marketplaceClasses.BuiltInMarketplaceProvider(),
     { logger },
   );
+  const marketplaceUpdateChecker = Object.assign(
+    new marketplaceClasses.MarketplaceUpdateChecker(),
+    { logger, productManager },
+  );
+  marketplaceUpdateChecker.init();
+  Object.assign(marketplaceClasses.services, {
+    marketplaceUpdateChecker,
+    builtInMarketplaceProvider,
+  });
+  const gitAvailabilityDetector = Object.assign(
+    new marketplaceClasses.GitAvailabilityDetector(),
+    { logger },
+  );
+  const gitToZipUrlConverter = new marketplaceClasses.GitToZipUrlConverter();
   const gitFallbackCoordinator = Object.assign(
     new marketplaceClasses.GitFallbackCoordinator(),
     {
       logger,
-      detector: { isAvailable: () => unavailable("git availability detector") },
-      converter: { convert: () => unavailable("git-to-zip converter") },
+      detector: gitAvailabilityDetector,
+      converter: gitToZipUrlConverter,
     },
   );
   marketplaceStorage.init();
@@ -239,6 +258,7 @@ export function createNativePluginHost(options: {
     marketplaceStorage,
     marketplaceConfigManager,
     builtInMarketplaceProvider,
+    marketplaceUpdateChecker,
   ]) {
     for (const name of Object.getOwnPropertyNames(
       Object.getPrototypeOf(service),
@@ -393,6 +413,10 @@ export function createNativePluginHost(options: {
     loaderClasses,
     managerClasses,
     marketplaceClasses,
+    marketplaceIO,
+    marketplaceUpdateChecker,
+    gitAvailabilityDetector,
+    gitToZipUrlConverter,
     marketplaceStorage,
     marketplaceConfigManager,
     builtInMarketplaceProvider,
@@ -421,6 +445,7 @@ export function createNativePluginHost(options: {
       if (closed) throw Error("Plugin host is closed");
       if (started) return;
       started = true;
+      await fsExtra.ensureDir(lockDirectory);
       if (!options.plugins?.pluginManager) {
         pluginManager.init();
         await observe(pluginManager.whenReady());
@@ -430,6 +455,7 @@ export function createNativePluginHost(options: {
     waitForRefreshSettled: () => refresh.waitForRefreshSettled(),
     async close() {
       closed = true;
+      const marketplaceClosing = marketplaceIO.close();
       for (const s of subscriptions) {
         s.dispose?.();
         s.unsubscribe?.();
@@ -443,6 +469,7 @@ export function createNativePluginHost(options: {
         fn();
       }
       while (pending.size) await Promise.allSettled([...pending]);
+      await marketplaceClosing;
       await pluginManager.builtInMarketplaceRefreshPromise;
       await refresh.waitForRefreshSettled();
       if (!options.plugins?.pluginManager)

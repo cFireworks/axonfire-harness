@@ -12,7 +12,35 @@ if (operation === "hold") {
     process.once("message", () => resolve()),
   );
   await release();
-} else if (operation === "save") {
+} else if (operation === "save" || operation === "save-held") {
+  if (operation === "save-held") {
+    const native = f.storage.rawRename.bind(f.storage);
+    let first = true;
+    f.storage.rawRename = async (from: string, to: string) => {
+      if (first) {
+        first = false;
+        process.send?.("write-locked");
+        await new Promise<void>((resolve) =>
+          process.once("message", () => resolve()),
+        );
+      }
+      return native(from, to);
+    };
+  } else {
+    const native = f.nativeLock.isLockStale.bind(f.nativeLock);
+    let first = true;
+    f.nativeLock.isLockStale = async (file: string, timeout: number) => {
+      const stale = await native(file, timeout);
+      if (!stale && first) {
+        first = false;
+        process.send?.("contended");
+        await new Promise<void>((resolve) =>
+          process.once("message", () => resolve()),
+        );
+      }
+      return stale;
+    };
+  }
   for (let i = 0; i < 3; i++)
     await f.storage.saveMarketplace({
       name: name + i,
