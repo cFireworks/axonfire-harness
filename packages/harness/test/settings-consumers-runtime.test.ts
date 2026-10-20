@@ -259,9 +259,15 @@ for (const [destination, relative] of [
   );
 test("native replace/remove rules, setMode and directory mutations use destination scope and retain duplicates on disk", async (t) => {
   const root = await owned(t),
-    h = await createHarness(opts(root));
+    // This test isolates sequential permission transformations. The default
+    // environment's fire-and-forget reads deliberately retain the source cache
+    // race, covered with the complete original classes in product-environment.
+    h = await createHarness(
+      opts(root, { productRuntime: { watch: false, environment: false } }),
+    );
   try {
     const s = await h.openSession();
+    await h.settingsHost.flush();
     for (const value of [
       update("userSettings"),
       update("userSettings"),
@@ -277,11 +283,7 @@ test("native replace/remove rules, setMode and directory mutations use destinati
       }),
     ]) {
       await h.permissions.service.applyUpdate(s, value);
-      // This test asserts sequential rule transformations, not atomic read/modify/write.
-      // The original endpoint provider now runs fire-and-forget setting reads; join
-      // accepted readers between updates. Its stale-cache race has its own exact
-      // original-vs-port interleaving test in product-environment-runtime.
-      await h.productRuntime.environmentHost?.flush();
+      // Flush the real owned SettingsHost; this is not a transaction guarantee.
       await h.settingsHost.flush();
     }
     const p = await h.settingsManager.get("permissions", "user");

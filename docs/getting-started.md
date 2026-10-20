@@ -46,7 +46,7 @@ Web 的 `--cwd` 指定工具工作目录：`npm start -- --cwd /absolute/path/to
 
 ## 原生 MCP（嵌入 API）
 
-最新门槛见[还原状态](recovery-status.md)末尾。完整原MCP类群、ProductManager、文件/模型providers及企业模型策略已接入。插件loader、active snapshot提交和完整刷新事务、本地/Git/HTTP/ZIP市场与市场存储/文件锁/更新检查现已接入。Git/npm/subdir安装器、原OptionsStorage/ErrorCollector、SettingsManager和PluginPolicy现默认接入；内置seed/controller/validator已接显式资源根。权限/MCP/SDK设置消费者和Cloud product核心现已接入；真实账户、完整UserPromptService与产品bootstrap仍待补；原环境核心及两个providers、资源PromptService和九collector已接入，不能据此宣称所有产品链路完成。
+最新门槛见[还原状态](recovery-status.md)末尾。完整原MCP类群、ProductManager、文件/模型providers及企业模型策略已接入。插件loader、active snapshot提交和完整刷新事务、本地/Git/HTTP/ZIP市场与市场存储/文件锁/更新检查现已接入。Git/npm/subdir安装器、原OptionsStorage/ErrorCollector、SettingsManager和PluginPolicy现默认接入；内置seed/controller/validator已接显式资源根。权限/MCP/SDK设置消费者和Cloud product核心现已接入；真实账户、UserPromptService到原SessionManager/SDK的接线与产品bootstrap仍待补；原环境核心及两个providers、资源PromptService和九collector已接入，不能据此宣称所有产品链路完成。
 
 普通嵌入调用可在已有模型配置上添加：
 
@@ -279,7 +279,7 @@ try {
 
 默认产品来源是固定原product快照，不冒充完整Desktop应用的全局ProductManager；要消费动态产品/feature/model目录，请显式传入同一live productManager。默认无账户、无token、无BinaryManager，不扫描安装环境。可显式提供`auth`（getAccount/getToken）、`authentication.buildAuthHeaders`和`binaryManager.generatePromptContext`；它们仍是借用adapter，完整登录与二进制安装服务未完成。默认注册类型为样本python/node，扩展adapter可提供getRegisteredBinaryTypes。
 
-资源为`config/desktop-prompts/`的15份tpl+7份style，与115份product prompts分开逐字节校验。原kind/fallback、autoescape:false、scene优先于expertId、九collector顺序均保留。`templatesDir`只能指向可信模板。style/customPrompt/身份内容并非全部进入system prompt：原renderUserContext供首条用户上下文使用。完整WorkbuddyUserPromptService（first-turn/clear/meta、Teams、Connector、additional-data等）的实际SDK消息编排仍未接入；**不要把这三个独立渲染方法和变量文件可用当作首条隐藏上下文链已完整恢复**。work-mode插件抑制旧system-prompt的规则不改写，原插件合成仍需显式可信assetsRoot，不会因新增tpl就生成整套插件。
+资源为`config/desktop-prompts/`的15份tpl+7份style，与115份product prompts分开逐字节校验。原kind/fallback、autoescape:false、scene优先于expertId、九collector顺序均保留。`templatesDir`只能指向可信模板。style/customPrompt/身份内容并非全部进入system prompt：原renderUserContext供首条用户上下文使用。完整WorkbuddyUserPromptService及17个section现提供独立ACP组合API（见下节），但实际SessionManager→ACP/SDK消息编排仍未接入；**不要把这三个独立渲染方法和变量文件可用当作首条隐藏上下文链已完整恢复**。work-mode插件抑制旧system-prompt的规则不改写，原插件合成仍需显式可信assetsRoot，不会因新增tpl就生成整套插件。
 
 平台home映射为`<prompt-state>/home`；默认身份/归档根为`home/.workbuddy`，app配置为`home/.workbuddy/app/app-config.json`，与CLI的四scope SettingsManager不是同一存储。WORKBUDDY_CONFIG_DIR等仅消费显式env；不读取真实home/安装账户。身份首次渲染会按原wx写默认SOUL/IDENTITY/USER/BOOTSTRAP及workspace-state；删除BOOTSTRAP会完成onboarding且不再自动补种。默认文件内容保持原文。项目MEMORY.md读取沿会话cwd，用户级读取沿owned home；桥拒绝越界symlink，但不是OS沙箱。
 
@@ -371,3 +371,39 @@ npm start -- --settings /absolute/path/to/trusted-settings.jsonc --effort high
 可调用`await harness.pluginManager.disablePlugins(['name'],'market')`、`enablePlugins`、`uninstallPlugins`，默认写原enabledPlugins配置。写入后自动排队原settings-change刷新；需要立即等待消费者完成时调用`await harness.pluginRuntimeRefresh.waitForRefreshSettled()`，或显式reload。原PluginPolicy从ProductManager的builtInMarketPluginsMerge读取并监听更新；canRemove/canSwitchoff/canEdit只认精确false，版本/说明单独变化不触发策略事件，市场阻断检查按原实现恒false。
 
 损坏JSON重试后会标记scope并拒写，绝不自动修复/备份覆盖；手动修复后需clearCache并成功读取，单独clearCache不会移除损坏标志。缓存60秒，CLI scope不可经SettingsManager修改。文件锁复用原协议及其发布竞态/拿锁失败继续执行的边界，不能视为跨进程强事务；权限/MCP/SDK消费者现已接回该服务；分 scope 显式查询不应用setting-sources合并过滤，详见本页权限/MCP一节。
+
+## Desktop 用户上下文组合（独立 ACP API）
+
+`createUserPromptHost`运行完整原`WorkbuddyUserPromptService`及17个section，而非在问题前随意拼接身份字符串。输入/输出是ACP content blocks，**不是**OpenAI `AgentInputItem[]`，也不负责向模型发请求：
+
+```js
+import { createUserPromptHost } from '@axonfire/harness/prompts/user-prompt-host.js';
+
+const prompts = await createUserPromptHost({
+  stateDir: '/absolute/owned/state/user-prompts',
+  getWorkDir: () => '/absolute/owned/project',
+});
+try {
+  const blocks = await prompts.composeUserPrompt({
+    sessionId: 'owned-session',
+    cwd: '/absolute/owned/project',
+    desiredConfig: { mode: 'craft' },
+    hasPriorUserMessages: false,
+    prompt: [{ type: 'text', text: '检查这个项目' }],
+    _meta: { 'codebuddy.ai': { colorScheme: 'dark' } },
+  });
+  // 将blocks交给调用方自己的ACP协议层；不要强制转换成SDK items。
+} finally {
+  await prompts.close();
+}
+```
+
+`hasPriorUserMessages`由调用者明确提供；宿主不以计数器猜测成功/失败/重放后的首轮。`alreadyInjectedUserContext`、`isClearSession`、Teams的`projectId`及专家/模式元数据按原服务处理。原`UserCommandSection`会修改传入的`_meta['codebuddy.ai'].commandPrompt`，后面的section消费该结果；需要隔离调用方对象时先`structuredClone`请求（原SessionManager也在边界克隆）。不自动为请求添加上一位专家或项目ID。
+
+缺省拥有一个资源PromptHost，身份/记忆只写`stateDir`下；可借用`resourcePromptHost`，此时不关闭它。原Connector/ExpertPlugin/Product/Authentication接口和项目resolver可显式注入，不发现安装账号、不请求项目API、不启动文档编辑器。`productManager.getCurrentConfiguration`与资源服务`waitConfiguration/getEndpoint`是不同的源接口，需分别提供，不能把模型密钥当账户token。
+
+命令/专家文件只允许从owned state、工作目录、模板目录或显式`pluginReadRoots`读取；检查现存祖先和symlink，不宣称OS沙箱或无TOCTOU竞态。仅信任的插件内容可注入prompt。借用服务负责其自身网络、取消和资源生命周期；本宿主close先拒绝新调用并等待已接受的组合，再清缓存/释放owned资源，不擅自中止或关闭借用服务。
+
+Tencent Docs section、metadata/selection解析、feature gate和512项FIFO已按原文恢复；外部`@tencent/tencent-docs-ai-engine`渲染器和完整DocumentService还没有还原。启用原AI edit灰度时，需显式提供`tencentDocsEngine`及可选`tencentDocsDocumentService`适配器；缺engine会明确报错，不返回伪造的空文档上下文。测试替身只证明调用入参、门控和缓存分支，不证明外部引擎prompt字节。
+
+该API尚未自动接入`createAddonSession.prompt`或CLI/Web：原SessionManager的meta富化、历史首轮判定、附件/ACP codec及SDK消息/重放链仍待恢复。独立ACP组合成功，不等于完整产品消息pipeline已完成。

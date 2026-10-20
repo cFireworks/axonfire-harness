@@ -322,3 +322,5 @@ export * from './hooks/native-session-hook-manager.js';
 export * from './hooks/native-tool-hook-manager.js';
 export * from './hooks/native-tool-execution-pipeline.js';
 export * from './tools/native-tool-errors.js';
+export * from './prompts/native-user-prompt.js';
+export * from './prompts/user-prompt-host.js';

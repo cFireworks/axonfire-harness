@@ -20,7 +20,7 @@
     "demo": "node --env-file-if-exists=.env apps/cli/axonfire.mjs web --demo",
     "test": "npm test -w @axonfire/harness && npm run test:hosts",
     "test:hosts": "node --test apps/web/test/*.test.mjs",
-    "smoke:runtime": "npm run smoke:runtime -w @axonfire/harness && npm run smoke:settings -w @axonfire/harness && npm run smoke:builtin-seed -w @axonfire/harness && npm run smoke:cloud-product -w @axonfire/harness && npm run smoke:session-addons -w @axonfire/harness && npm run smoke:settings-consumers -w @axonfire/harness && npm run smoke:product-environment -w @axonfire/harness && npm run smoke:resource-prompts -w @axonfire/harness",
+    "smoke:runtime": "npm run smoke:runtime -w @axonfire/harness && npm run smoke:settings -w @axonfire/harness && npm run smoke:builtin-seed -w @axonfire/harness && npm run smoke:cloud-product -w @axonfire/harness && npm run smoke:session-addons -w @axonfire/harness && npm run smoke:settings-consumers -w @axonfire/harness && npm run smoke:product-environment -w @axonfire/harness && npm run smoke:resource-prompts -w @axonfire/harness && npm run smoke:user-prompts -w @axonfire/harness",
     "smoke:launchers": "node scripts/smoke-launchers.mjs",
     "verify:config": "npm run verify:config -w @axonfire/harness",
     "verify:recovery": "node scripts/verify-recovery.mjs"
