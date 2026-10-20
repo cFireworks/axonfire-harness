@@ -46,7 +46,7 @@ Web 的 `--cwd` 指定工具工作目录：`npm start -- --cwd /absolute/path/to
 
 ## 原生 MCP（嵌入 API）
 
-最新门槛为818核心 + 11宿主、740编译smoke、43组样本差分。完整原MCP类群、ProductManager、文件/模型providers及企业模型策略已接入。本地插件loader、active snapshot提交和完整刷新事务现已恢复；市场下载、资源seed与完整设置/安装服务仍是后续边界。
+最新门槛为842核心 + 11宿主、764编译smoke、44组样本差分。完整原MCP类群、ProductManager、文件/模型providers及企业模型策略已接入。本地插件loader、active snapshot提交和完整刷新事务现已恢复；本地目录市场与市场存储/文件锁也已接入。远端市场下载、资源seed与完整设置/安装服务仍是后续边界。
 
 普通嵌入调用可在已有模型配置上添加：
 
@@ -129,13 +129,27 @@ CLI：`npm run cli -- --plugin-dir /absolute/plugin --cwd /absolute/project`；W
 
 输入`/reload-plugins`可刷新同一active snapshot及MCP/LSP/工具/配置/命令/输出样式/Agent。已产生模型输出、当前Agent不含ToolSearch且MCP有效server名称集改变时，原处理器要求`/reload-plugins --force`。该检查按有效名称集合，不是任意配置变化检测。SDK新运行等待刷新队列完成，再取重新构建的托管Agent。Web与嵌入`harness.prompt`也走本地命令分派；结果写JSONL并返回/流式输出，不多调用模型。
 
-原PluginManager完整194个成员已移植，但不代表全部外部服务已恢复。默认独立宿主没有配置市场或managed-policy来源；市场安装器/MarketplaceFactory、MCPB下载、真实磁盘Settings/Options/策略服务和跨进程文件锁仍需显式适配器。Git/process安装执行默认不可用；Node文件桥不是原fs-extra，写入与清理限制在本次state，拒绝外部symlink路径。无需安装WorkBuddy即可使用上面的本地目录链路。
+原PluginManager完整194个成员已移植，但不代表全部外部服务已恢复。市场Factory、本地目录provider与LocalPluginInstaller、原Storage/ConfigManager/BuiltInProvider和FileLock现在默认接入；远端Git/HTTP/ZIP provider、MCPB下载、真实磁盘Settings/Options/策略服务仍需恢复或显式适配。Git/process安装执行默认不可用；Node文件桥不是原fs-extra，写入与清理限制在本次state，拒绝外部symlink路径。无需安装WorkBuddy即可使用上面的本地目录链路。
+
+### 本地目录市场（嵌入接口）
+
+市场根目录包含`.codebuddy-plugin/marketplace.json`（同样按原顺序兼容另两种metadata目录）。例如：
+
+```json
+{"name":"my-market","plugins":[{"name":"my-plugin","source":"./plugins/my-plugin"}]}
+```
+
+`plugins/my-plugin`仍采用上面的插件结构。嵌入时可显式提供`nativePlugins.settings`作用域视图：在`get('extraKnownMarketplaces', 'user')`返回`{"my-market":{"source":{"source":"directory","url":"/absolute/market"}}}`，在`get('enabledPlugins', 'user')`返回`{"my-plugin@my-market":true}`，其他scope返回`undefined`，并提供`clearCache()`。原ConfigManager的对象source读取的是`url`而不是`path`，此处刻意保持原行为。该只读例子支持启动加载；修改启用状态需要调用方另提供`settings.update`，不能把它称为完整原磁盘SettingsManager。
+
+`await harness.pluginManager.addMarketplace('/absolute/market')`也可添加可信目录；保存到`<state>/plugins/known_marketplaces.json`，重启后原manager恢复该记录。添加市场不等于批准/启用其全部插件。`pluginHost.marketplaceStorage`暴露原保存/移除API；修改后使用原刷新事务更新消费者。`/plugin`完整产品控制器/Web市场管理界面尚未恢复，当前CLI/Web仍可用更直接的`--plugin-dir`。
+
+跨进程锁位于`<state>/tmp/*.lock/lock.json`，只做PID的signal=0存活探测。市场存储拿锁失败时原逻辑会警告并降级为进程内锁；损坏JSON会先移动到`.broken-<timestamp>`，后续写入重建。原瞬时rename错误最多初次加5次重试。只加载可信市场：本地源路径检查为原词法边界，不能把它当作symlink隔离/插件沙箱。默认内置市场profile为空，不自动联网安装样本中的官方市场。
 
 `harness.pluginManager`为当前来源，`pluginRuntimeRefresh.refresh(reason, options)`为原队列服务，`pluginHost`暴露原类与宿主生命周期。已有`agentManager.plugins`只读adapter继续兼容，但不冒充完整manager，也不会自动启用原刷新事务；同时提供`nativePlugins`时必须明确共用同一个完整manager。显式LSP配置在插件刷新后由宿主重新注册，不被原LSP shutdown顺带清除。
 
 插件可能含可执行Hooks，加载即表示信任其内容；本地命令/Hook不是OS沙箱，也不是逐次工具审批。MCP自动接线只在显式`nativeMcp`宿主启用时生效；CLI/Web新增目录参数并未暗中扩大MCP/legacy工具allowlist。卸下插件可删除其manifest后reload；原plugin-tag实例会被清理，和普通文件Agent缓存残留行为不同。
 
-本批再次将Git暂存快照检出到全新空目录，不复制任何node_modules、原安装包或bundle：`npm ci`、`npm run check`、`npm run build`、CLI/Web launcher smoke与11项Web测试均通过。完整818核心/740编译smoke及43组差分在主验证目录运行；差分仍需用户自行提供固定SHA样本。新增semver按样本固定7.7.2，既有依赖版本不变，16项旧audit风险仍存在。
+本批再次将Git暂存快照检出到全新空目录，不复制任何node_modules、原安装包或bundle：`npm ci`、`npm run check`、`npm run build`、CLI/Web launcher smoke、48项插件/市场编译后测试与11项Web测试均通过。完整842核心/764编译smoke及44组差分在主验证目录运行；差分仍需用户自行提供固定SHA样本。semver仍固定7.7.2，本批仅按CLI样本新增async-mutex 0.5.0；既有依赖版本不变，16项旧audit风险仍存在。
 
 缓存默认用本宿主独立的原MemoryLocalStorage；可用`productRuntime.storage`注入自己拥有的get/set及可选getSync。缓存保留原gzip/base64、稳定快照与版本key，不自动读取原应用的本地存储。`productRuntime.env`是显式拥有的配置环境对象，默认空；原Env provider可处理其中的ACC_PRODUCT_CONFIG等字段，不会自动扫描进程中可能包含账号的产品配置环境。模型API key仍使用原CLI/Web自己的配置，不映射为产品账号。
 

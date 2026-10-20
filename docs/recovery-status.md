@@ -18,7 +18,7 @@
 |    1 | OpenAI Agents SDK | 完成                         | 精确锁定 `@openai/agents* 0.5.2`、`openai 6.25.0`；SDK 不重写                                                                                                                                                                                                                         |
 |    2 | Product config    | 100% 字节保留                | default/cloudhosted/internal/ioa/selfhosted/sandbox 六份原始 JSON；SHA 验证                                                                                                                                                                                                           |
 |    2 | ProductManager / providers | 原manager、merger及文件/模型provider默认接入 | 首批19类/112处AST/743次比较；文件/模型15类及helper为118处AST/263次比较。插件完整刷新队列现默认接入原manager并更新各消费者；Cloud product、市场/资源seed/环境服务和磁盘Settings仍待补，不等于完整产品bootstrap |
-|    2 | PluginManager / loaders / refresh | 完整核心类与本地目录主路径默认接入 | 14完整类含PluginManager 194成员、七loader、事务/reload命令/output style；294处完整AST、472次比较、3纯constant factory。原提交前MCP有效名称保护、队列失败恢复/SDK屏障、Hooks/MCP/LSP/Agent及命令刷新已验证；市场下载/安装/资源seed、文件锁/Options/策略与Settings持久化等外部服务未完整恢复 |
+|    2 | PluginManager / loaders / refresh | 完整核心类、本地目录与市场主路径默认接入 | 首批14完整类含PluginManager 194成员、七loader、事务/reload命令/output style；294处AST/472次比较/3纯constant factory。本批另9完整类含市场Storage/Config/Directory/LocalInstaller与FileLock：63处AST/381次比较/1纯policy factory。原MCP提交保护、刷新队列、真实SDK市场/重启与跨进程存储验证；远端下载/安装/资源seed、Options/完整策略与磁盘Settings仍待补 |
 |    2 | Prompt registry   | 100% 内容保留                | 115 模板、284,899 Unicode code point；Nunjucks `autoescape:false`、编译缓存、失败回退                                                                                                                                                                                                 |
 |    2 | Tool registry | 47个不同名称均有handler | 原48条声明含一条重复Agent。新增WeChatReply/WeComReply与bridge，默认CLI声明不变；WeCom连接沿原逻辑补入已构造Agent内存tools。47/47只是名称覆盖，已有工具的客户端/宿主分支、动态缓存/插件等仍待补；不是整体100% |
 |    2 | AgentManager | 完整原类移植，68个非constructor方法结构对照 | eager构建/ready与models屏障、pending/force重建/指纹、CLI/handoff/asTool、模型继承/related/env、插件replace/volatile expert/settings优先级、MCP首轮等待/原生defer/权限门槛已恢复；74个原YAML模块factory逐字保留。独立host明确适配DI/Deferred/Emitter，不等于完整ProductManager/插件loader/工具索引热刷新服务 |
@@ -643,3 +643,21 @@ Web/嵌入入口新增同CLI的本地命令分派，原executor结果先刷JSONL
 新增24项核心专项与1项Web测试：真实本地七loader、模型规则、快照校验/冻结/cache晚到/依赖guard、队列顺序/失败/背景LSP、命令文案和路径保护；真实SDK跨插件Agent/命令/输出样式/Hook刷新及删除、刷新屏障、MCP阻断前0次握手/force后自有HTTP连接；独立CLI进程和Web均验证reload不发模型请求。模型/HTTP/命令子进程与文件均为自有或fake，不读取安装账号或访问真实模型/联系人/桌面。
 
 门槛：818核心、11Web宿主、740编译JS smoke、43组样本差分、check/build/config及CLI/Web启动通过。下一批优先市场/资源seed和持久化依赖、Cloud product/环境服务，再推进SDK输入/启动/鉴权、Hook服务端、Auto backend与默认审批统一。完整核心类/本地主路径可运行不等于整个harness或产品bootstrap已100%恢复，整体目标继续进行。
+
+## 本地市场与持久化依赖批次
+
+直接移植9个完整类：FileLockServiceImpl `9144647..9146302`、BaseMarketplace `9536013..9537667`、DirectoryMarketplace `9538211..9539998`、MarketplaceFactory `9555538..9556101`、MarketplaceStorage `9556732..9563889`、MarketplaceConfigManager `9565529..9567108`、BuiltInMarketplaceProvider `9573457..9574515`、GitFallbackCoordinator `9579120..9579902`、LocalPluginInstaller `9780911..9782967`。上述为固定SHA样本的UTF-16索引；方法体只加TS注解，DI在外层绑定。module13423 `9805697..9807385`的原名称/官方来源/默认自动更新policy纯factory整体保留并校验AST与SHA，不用近似规则替代原白名单。
+
+市场存储恢复原进程内Promise写队列、mkdir/lock.json跨进程协议、PID signal=0、过期/损坏锁最多三次移除、路径截断、临时JSON/原子rename与100/200/400/800/1000ms退避、损坏`.broken-<timestamp>`备份和legacy cache引用迁移。原FileLock保留Mutex Map，不再用上一版tails近似；第三方async-mutex按CLI样本固定0.5.0。注意原Storage获取文件锁失败会降级为进程内锁；完整控制流恢复不等于所有失败下仍有跨进程强一致性。原init失败Promise也保持sticky，不自行重试。
+
+默认owned plugin host以原Factory加载已保存的本地目录市场；ConfigManager按user/project/project-local/CLI的原规则合并，显式作用域配置可在启动时添加市场。原LocalInstaller验证名字和词法路径边界，Directory provider合并插件manifest、缓存/coalesce及浅克隆均保留。Object source只读取`url`、manifest字段可覆盖条目、storageName写盘不保留name字段等原行为不修正。市场记录默认写`<state>/plugins/known_marketplaces.json`，锁写`<state>/tmp`，不读取安装应用账户或真实市场目录。
+
+BuiltInMarketplaceProvider为完整原类，独立host默认通过显式空profile关闭样本生产市场；原六份产品JSON完全不改。可显式注入`nativePlugins.builtInMarketplaces`及远端provider，不能据此宣称Git/HTTP/ZIP下载器已恢复。GitFallbackCoordinator对本地source直接返回原对象；远端detector/converter仍为明确的未配置依赖。原命名policy通过动态模块入口接入ConfigManager→PluginManager安装链，不绕过受保护名称校验。telemetry仅独立日志sink，不冒充网络transport。
+
+Node文件桥改成明确只读接口和受控写方法，移除展开fs.promises带来的未包装mutator；补move与utimes，阻止已有最终文件symlink向state外写入。该桥仍有TOCTOU和可信插件边界，不是OS沙箱，也不是原fs-extra。宿主追踪Storage/Config/BuiltIn返回的Promise，关闭等待已发起写入完成；不修改原类存储决策。
+
+REA再次分析从module65117精确截取的惰性输入，证据`ev_b68ebceab157f73c4b6dd34384736380ab7a81d2651dda2b3a93da5b0c843ab9`，500节点/每文件500节点、100 unknown及45秒上限。语义图因unknown上限为partial/truncated；不执行工厂或原bootstrap。此派生小片段证据仅补充文件锁语义图，不代表完整bundle或全部市场服务覆盖。
+
+`verify:marketplaces`核对9完整类/63成员的完整AST、1个原policy factory及381次有限比较。新增24项专项覆盖真实自有子进程锁竞争/并发写入、备份/迁移/退避/失败恢复、目录缓存/manifest覆盖、作用域合并、命名policy、默认host add/重启、配置驱动安装与close写入屏障；真实SDK两次启动均加载持久化市场的Agent/命令并消费Prompt。PID故障分支使用fake probe；模型为fake，未访问真实模型、生产市场、联系人或桌面。
+
+最新门槛：842核心、11Web宿主、764编译JS smoke、44组样本差分、check/build/config与实际CLI/Web启动。另在不含原应用/bundle/旧node_modules的暂存快照副本完成全新npm ci、check/build、CLI/Web启动、48项插件/市场编译后测试及11项Web测试。保留SDK/OpenAI锁定版本、六份原JSON、115个Prompt和memory policy摘要；旧audit仍16项，未强制升级。下一批继续远端Git/HTTP/ZIP provider、更新检查/原子替换/安装器及资源seed，再补Options/完整策略/磁盘Settings、Cloud product与其余产品bootstrap；整体目标尚未完成。

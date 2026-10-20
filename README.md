@@ -75,7 +75,7 @@ npm run verify:config
 npm run verify:recovery -- /absolute/path/to/codebuddy.js
 ```
 
-最新验证：818 项核心测试、11 项 Web 宿主测试、740 项编译后 smoke、43 组原样本差分通过。原 ProductManager 默认驱动配置合并、动态 provider 与 Agent/命令刷新；原文件/模型 providers、企业策略、PluginManager 的本地插件加载与跨服务刷新现已接入。CLI/Web 可直接执行 `/reload-plugins`；本地命令不发送给模型。市场下载/完整产品 bootstrap 仍未完成。完整权限服务和原审批控制器通过 `nativePermissions`、`nativeApprovals` 显式使用；`sdkControl` 或 `nativeMcp` 默认启用这两条 native 路径及原生 MCP 宿主。CLI/Web 默认保留兼容审批宿主。配置中的 115 个原始 prompt 和固定哈希保持不变。详细边界见 [还原状态](docs/recovery-status.md)，文件/插件配置与启动验证见 [使用说明](docs/getting-started.md)。
+最新验证：842 项核心测试、11 项 Web 宿主测试、764 项编译后 smoke、44 组原样本差分通过。原 ProductManager 默认驱动配置合并、动态 provider 与 Agent/命令刷新；原文件/模型 providers、企业策略、PluginManager 的本地插件加载与跨服务刷新现已接入。本地目录市场、市场配置持久化/修复与原文件锁也已接入；通过显式作用域配置可在启动时加载并在重启后恢复市场。CLI/Web 可直接执行 `/reload-plugins`；本地命令不发送给模型。远端市场下载/完整产品 bootstrap 仍未完成。完整权限服务和原审批控制器通过 `nativePermissions`、`nativeApprovals` 显式使用；`sdkControl` 或 `nativeMcp` 默认启用这两条 native 路径及原生 MCP 宿主。CLI/Web 默认保留兼容审批宿主。配置中的 115 个原始 prompt 和固定哈希保持不变。详细边界见 [还原状态](docs/recovery-status.md)，文件/插件配置与启动验证见 [使用说明](docs/getting-started.md)。
 
 本地工作台演示：
 

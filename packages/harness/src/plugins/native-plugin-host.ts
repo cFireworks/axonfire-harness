@@ -14,13 +14,19 @@ import { createNativeMcpUtils } from "../mcp/native-mcp-utils.js";
 import { CapturedJsonUtils } from "../vendor/captured-jsonc.js";
 import { createOwnedPluginFilesystem } from "./owned-plugin-filesystem.js";
 import { createMemoryRuleUtilities } from "../memory/memory-rule-utilities.js";
+import { FileLockService } from "../tasks/file-lock-service.js";
+import { createNativeMarketplace } from "./native-marketplace.js";
+import { createCapturedMarketplacePolicy } from "../vendor/captured-marketplace-policy.js";
 
 export type NativePluginHostOptions = {
   directories?: readonly string[];
   env?: NodeJS.ProcessEnv;
   settings?: any;
   pluginManager?: any;
-  /** Full product installers/marketplace/policy/locking services remain explicit. */
+  /** Explicit standalone profile; the installed product's remote markets are not enabled implicitly. */
+  builtInMarketplaces?: Record<string, any>;
+  marketplaceRuntime?: Record<string, any>;
+  /** Remote installers, product policy and persistent settings remain explicit. */
   dependencies?: Record<string, any>;
   managerRuntime?: Record<string, any>;
   loaderRuntime?: Record<string, any>;
@@ -103,6 +109,7 @@ export function createNativePluginHost(options: {
     },
   };
   const requireModule: any = (id: number) => {
+    if (id === 13423) return createCapturedMarketplacePolicy();
     if (id === 91943) return fs.promises;
     if (id === 16928) return path;
     if (id === 2845 && options.plugins?.dependencies?.pluginOptionsStorage)
@@ -168,6 +175,83 @@ export function createNativePluginHost(options: {
   Object.assign(utilities.PathUtils, {
     resolveFilePathToWorkDir: paths.resolveFilePathToWorkDir.bind(paths),
   });
+  const fsExtra = createOwnedPluginFilesystem(options.stateDir);
+  const lockDirectory = path.join(options.stateDir, "tmp");
+  const lockNative = new FileLockService(lockDirectory, { fs: fsExtra });
+  const fileLockService = {
+    async acquireFileLock(name: string, lockOptions?: any) {
+      await fsExtra.ensureDir(lockDirectory);
+      return lockNative.acquireFileLock(name, lockOptions);
+    },
+  };
+  const marketplaceClasses = createNativeMarketplace({
+    fsExtra,
+    env,
+    getHomePluginsDir: () => path.join(options.stateDir, "plugins"),
+    services: {
+      logger,
+      errorCollector,
+      productManager: {
+        getCurrentConfiguration() {
+          return {
+            ...productManager.getCurrentConfiguration(),
+            builtInMarketplaces: options.plugins?.builtInMarketplaces ?? {},
+          };
+        },
+      },
+    },
+    ...options.plugins?.marketplaceRuntime,
+  });
+  const localInstaller = Object.assign(
+    new marketplaceClasses.LocalPluginInstaller(),
+    { errorCollector },
+  );
+  marketplaceClasses.installers.push(localInstaller);
+  const marketplaceStorage = Object.assign(
+    new marketplaceClasses.MarketplaceStorage(),
+    { logger, errorCollector, fileLockService },
+  );
+  const marketplaceConfigManager = Object.assign(
+    new marketplaceClasses.MarketplaceConfigManager(),
+    {
+      logger,
+      marketplaceStorage,
+      settingsManager: ownedSettings,
+      cliSettingSourcesProvider: sourceSettings,
+    },
+  );
+  const builtInMarketplaceProvider = Object.assign(
+    new marketplaceClasses.BuiltInMarketplaceProvider(),
+    { logger },
+  );
+  const gitFallbackCoordinator = Object.assign(
+    new marketplaceClasses.GitFallbackCoordinator(),
+    {
+      logger,
+      detector: { isAvailable: () => unavailable("git availability detector") },
+      converter: { convert: () => unavailable("git-to-zip converter") },
+    },
+  );
+  marketplaceStorage.init();
+  marketplaceConfigManager.init();
+  builtInMarketplaceProvider.init();
+  for (const service of [
+    marketplaceStorage,
+    marketplaceConfigManager,
+    builtInMarketplaceProvider,
+  ]) {
+    for (const name of Object.getOwnPropertyNames(
+      Object.getPrototypeOf(service),
+    )) {
+      if (name === "constructor" || typeof service[name] !== "function")
+        continue;
+      const native = service[name].bind(service);
+      service[name] = (...args: any[]) => {
+        const value = native(...args);
+        return value?.then ? observe(value) : value;
+      };
+    }
+  }
   const managerClasses = createNativePluginManager({
     ...runtime,
     process: {
@@ -183,7 +267,7 @@ export function createNativePluginHost(options: {
         return process.kill(pid, 0);
       },
     },
-    fsExtra: createOwnedPluginFilesystem(options.stateDir),
+    fsExtra,
     setTimeout(fn: () => void, ms: number) {
       if (closed) return undefined;
       const h = setTimeout(() => {
@@ -218,9 +302,7 @@ export function createNativePluginHost(options: {
       },
       An: { tmpdir: () => path.join(options.stateDir, "tmp") },
       Aj: { McpOAuthManager: "mcpOAuth" },
-      MarketplaceFactory: {
-        createFromJSON: () => unavailable("MarketplaceFactory"),
-      },
+      MarketplaceFactory: marketplaceClasses.MarketplaceFactory,
     },
     ...options.plugins?.managerRuntime,
   });
@@ -241,23 +323,18 @@ export function createNativePluginHost(options: {
         },
         getMergedPlugins: () => [],
       },
-      marketplaceStorage: {
-        async getMarketplaces() {
-          return [];
-        },
-      },
-      builtInMarketplaceProvider: {
-        async getBuiltInMarketplaces() {
-          return [];
-        },
-      },
-      marketplaceConfigManager: {
-        async getMarketplacesToInstall() {
-          const v = await ownedSettings.get("extraKnownMarketplaces");
-          if (v && Object.keys(v).length)
-            return unavailable("MarketplaceConfigManager");
-          return [];
-        },
+      marketplaceStorage,
+      builtInMarketplaceProvider,
+      marketplaceConfigManager,
+      fileLockService,
+      installers: marketplaceClasses.installers,
+      gitFallbackCoordinator,
+      // Standalone telemetry sink, not the original network telemetry transport.
+      pluginTelemetryService: {
+        reportMarketplaceAction: (event: any) =>
+          logger.debug?.("Marketplace action", event),
+        reportPluginAction: (event: any) =>
+          logger.debug?.("Plugin action", event),
       },
       container: {
         get: (key: string) =>
@@ -315,6 +392,11 @@ export function createNativePluginHost(options: {
     loader,
     loaderClasses,
     managerClasses,
+    marketplaceClasses,
+    marketplaceStorage,
+    marketplaceConfigManager,
+    builtInMarketplaceProvider,
+    fileLockService,
     refresh,
     executor,
     outputStyles,
