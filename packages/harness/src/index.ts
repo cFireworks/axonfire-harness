@@ -328,3 +328,6 @@ export * from './protocol/captured-acp-modules.js';
 export * from './protocol/native-acp-input-renderer.js';
 export * from './protocol/acp-input-host.js';
 export * from './sessions/native-session-prompt.js';
+export * from './protocol/native-acp-agent.js';
+export * from './protocol/native-acp-view.js';
+export * from './protocol/native-acp-primitives.js';

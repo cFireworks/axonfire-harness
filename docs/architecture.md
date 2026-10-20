@@ -91,3 +91,5 @@ Addon默认从该服务取原变量和CLI语言，显式custom service/resolver�
 `promptAcp`先组合再记录原始prompt的合成事件，原CLI转换后把SDK items交给已有backend；后续SDK history inputSubject经原AcpUtils投影，驱动原updatePromptHistoryState。回放只record(isReplay:true)，保留新backend false标志，而不是统计SDK历史长度；首次发送即使失败也已置true。SDK压缩输出与session separator清false/清专家；成功且本轮未见compact才持久化本轮专家。storage桥用现有SDK session.meta/SessionStore，不猜原daemon账号数据库。
 
 IO只在外层owned fs/OS/env适配：剪贴板缓存和时间/原扩展名规则不改，文件读取限project/state/显式root；依赖模块未知会明确抛出所需adapter，不用静默空输出。无隐式ACP transport/broadcast、Electron或生产认证。完整AcpView.executePrompt/通知队列/连接guard、任务与Plan重放、daemon动态配置/自动重启等仍待恢复；CLI/Web默认入口与Addon.prompt均未变为ACP输入。
+
+后续协议核心阶段已恢复完整 `AcpAgentImpl`、`AcpView`、`AcpTeamBridge`、`DetachedMemberSseBridge`、`JsonStreamParser` 和 `AcpToolInterceptor` 等 8 类 217 成员，以及完整 ErrorUtils/协议 tokens/trace/历史定位/Deferred factory。三份 `native-acp-*` factory 保留原类体，只把模块解析和时钟/定时器留在外层；不执行原模块 74428 的巨大 bootstrap。其全文 AST 与固定 CLI 样本核对。真实 SDK 测试经既有 SessionManager/AgentService/TaskManager 跑 Read、流式文本与第二轮历史，但完整传输、广播和审批 owner 仍未接到默认宿主；前段的“executePrompt 待恢复”已收窄为完整类已恢复、生产依赖接线待完成。参见 [ACP 协议边界](acp-protocol.md)。

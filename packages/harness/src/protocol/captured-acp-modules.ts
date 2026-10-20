@@ -4133,6 +4133,7 @@ ${ec}
         });
   };
   return {
+    getModule: load,
     codec: load(18703),
     xml: load(80742),
     timestamps: load(38548),

@@ -915,3 +915,19 @@ REA静态证据`ev_677282a144de12af579ad9262517f0d232530cc36cf8dc803c0d504ed76f0
 剩余范围：完整AcpView/RPC/连接认证/广播/队列与cancel barrier、SessionManager任务/Plan/权限请求回放与真实HistoryStore、原全局配置/插件home共享、动态mode/runtime自动重启/回收、真实Auth与BinaryManager、腾讯文档外部engine等仍未恢复。本批SDK入口可用不代表整个产品消息pipeline和完整harness 100%；默认文本插件资产/全部第三方二进制也不能据此算完成。
 
 最终门槛：check/build、1127核心+11Web、1048编译JS smoke、54组源码/行为差分及config/CLI/Web启动全部通过。新的全暂存快照无原应用/bundle/旧node_modules，重新npm ci/check/build，通过175项编译后ACP/用户Prompt/资源Prompt/环境/设置消费者/Addon/Cloud相关测试、11项Web、CLI/Web seed/reload实际启动与原字节配置检查。115 product prompts、6 JSON、22 Desktop资源（304358字节）及SDK依赖未改。发布审计647文件，在所检查的凭据/运行文件规则内无发现；既有17项依赖告警（10中危/7高危）保留。后续继续完整原CLI AcpView/通知tracking与daemon会话控制，不把本批8个SessionManager方法与SDK示例当成整体目标完成。
+
+## 2026-10-20：完整 ACP Agent/View、团队桥与流式协议核心
+
+固定 CLI SHA 保持 `4120898f1ded86ac545316721d216c827a325c2513a8fae4bcd8c8bbbf211afd`。新增完整 AcpAgentImpl（95 成员）、JsonStreamParser（17）、AcpView（22）、AcpTeamBridge（21）、DetachedMemberSseBridge（13）、AcpToolInterceptor（28）、TelemetryUtils（9）、RequestError（12），合计 8 类 217 成员。Agent 16 个完整函数、View 2 个函数以及关联常量一并保留；另 5 个完整惰性 factory 包含 Deferred、协议 tokens、W3C trace、历史 fork/用户消息 ID 和 ErrorUtils。新 wrapper 只承担显式模块解析/时钟/定时器，完整类体与声明的编译后 AST 对照，不执行原 74428 巨大模块的 bootstrap。
+
+原生转发器不再只剩输入转换：保留 phase/progress/input/model/result/interruption 订阅、工具 pending/delta/done 与原 JsonStreamParser、tracking/compact generation/response-model 元数据、旧 result 忽略、interceptorGate/compact continue 抑制、团队终态与 session-idle 双重完成门槛、ModelBehaviorError 自校正、权限拒绝 cancelled 通知、审批 ACK 等待/客户端-abort-本地竞争和 WeakSet 去重。完整 ErrorUtils 恢复覆盖先前窄接口未导出的 getErrorMessage、stream timeout、empty stream、retryable model 等协议依赖。
+
+保留源边界：Agent 5000 毫秒 ACK 超时返回 false、View abort 抛 AbortError；取消后不足 500 毫秒（含负差值）短路；busy prompt 走 queued 分支；background drain 在运行前清空队列且失败不恢复；iterator return 后仍先读取已停放项；退出 plan 的先前模式恢复、Ask ID 512 上限、空/重复 denial ID 过滤不重写。完整声明恢复不意味着这些原行为全部理想或可直接当新产品默认策略。
+
+第55组 verify:acp-protocol 对 8 完整类/217 成员、29 声明、5 完整 factory 做 AST 核对；36 组有限差分包含增量 JSON 的全部切分位置、RPC/trace/mention/history/cache、ACK/abort、queue/iterator、审批各 outcome/本地竞争、compact/retry/team idle 和清理。协议客户端/外部服务为明确测试 doubles，不算原服务已上线。另一个真实 Agents SDK 集成通过既有 AgentService/SessionManager/TaskManager 跑 owned Read、工具结果、文本流和第二轮历史重放；只在该 fixture 显式 bypassPermissions，避免同时运行两个审批 owner，不修改默认安全策略。共37项新增测试。
+
+REA 对三份惰性模块的静态证据为 `ev_fad57295cf09e96e53ed43bdf1ace2615cd12bf0bc75828c7bf81803122e30e2`，35243 AST nodes、3文件、0 parse failures。semantic graph 上限750节点/150 unknown、45秒，仍 partial/truncated；不将静态图或有限差分当整体运行时等价证明。
+
+接线边界明确：公开 createNativeAcpAgent/createNativeAcpView/createNativeAcpPrimitives；依赖缺失明确抛错，不注入空业务服务。默认只含原 RequestError，不冒充完整 ACP transport SDK；外部 transport 需显式提供模块38113。CLI/Web、Addon.prompt 与上一阶段 promptAcp 默认链路不改。完整 View/Agent 类体已经恢复，但 RPC/连接 guard/广播、usage/title/friction 服务生产接线、审批 owner 切换仍待继续；Desktop SessionManager/HistoryStore/Plan 重放、daemon mode 自动重启、全局插件配置、真实认证/BinaryManager/外部 Docs 引擎等也未完成。SDK依赖、115 product prompts、6 JSON、22 Desktop资产字节未修改。参见 [ACP 协议核心](acp-protocol.md)。
+
+最终门槛：check/build、1164核心+11Web、1085项编译JS smoke、55组源码/行为验证、原字节配置及CLI/Web实际启动全部通过。新的全暂存快照不带原应用/bundle/旧node_modules，重新npm ci/check/build，通过212项编译后ACP协议/输入/用户Prompt/资源/环境/设置消费者/Addon/Cloud相关测试、11项Web及CLI/Web seed/reload实际启动和配置检查。发布审计656文件，在所检查的凭据/运行文件规则内无发现，不是安全证明；既有17项依赖告警（10中危/7高危）保留。下一批优先恢复完整 friction/title 等源依赖，明确审批归属，再接完整View/RPC/广播与daemon会话控制；整个目标仍未完成。

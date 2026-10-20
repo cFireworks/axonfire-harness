@@ -84,7 +84,9 @@
     "verify:user-prompts": "node --import tsx scripts/verify-user-prompts-recovery.ts",
     "smoke:user-prompts": "node --test dist/test/user-prompts-runtime.test.js",
     "verify:acp-input": "node --import tsx scripts/verify-acp-input-recovery.ts",
-    "smoke:acp-input": "node --test dist/test/acp-input-runtime.test.js"
+    "smoke:acp-input": "node --test dist/test/acp-input-runtime.test.js",
+    "verify:acp-protocol": "node --import tsx scripts/verify-acp-protocol-recovery.ts",
+    "smoke:acp-protocol": "node --test dist/test/acp-protocol-runtime.test.js"
   },
   "dependencies": {
     "@openai/agents": "0.5.2",
