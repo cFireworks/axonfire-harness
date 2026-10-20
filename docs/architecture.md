@@ -8,7 +8,9 @@
 
 原内部会话入口的完整控制器、SessionFactory、SessionMiddleWare 与 SandboxApprovalStore 作为 `sessions/native-session-ingress` 显式导出，仍需父 runtime 注入实际 SessionManager、设置、权限、Hook、路径匹配和 HTTP Context 等服务。源码声明和外部静态值均独立核对，不执行原 decorators。当前 Web 的多会话缓存不能直接替代原版单当前会话切换/订阅回收语义；新入口未自动挂到 Web HTTP listener，也不把模型 API key 认作原账户。见[会话入口边界](session-ingress.md)。
 
-完整原 CLI SessionManagerImpl/SessionStoreImpl/AbortedStreamDraftStore 现由 `sessions/native-session-stack` 提供，含完整反向 reader/sanitizer/持久化开关依赖；同 ID 保留对象、异 ID 完成十个旧 subjects、原 result gate、append/metadata/blob 等由完整类实现。原写锁保留、SessionStart settled 缓存、空 meta 冷加载及重复 saveHistory 追加等行为未修正。真实 SDK 集成用明确 facade 连接已有 AgentService（仅映射 ensureRunResultHandler 到源 handleRunResult），不代表默认独立后端已切换。仍需完整原 AgentService、父 context/资源所有权、认证与 View rendezvous。见[原生会话栈](native-session-stack.md)。
+完整原 CLI SessionManagerImpl/SessionStoreImpl/AbortedStreamDraftStore 现由 `sessions/native-session-stack` 提供，含完整反向 reader/sanitizer/持久化开关依赖；同 ID 保留对象、异 ID 完成十个旧 subjects、原 result gate、append/metadata/blob 等由完整类实现。原写锁保留、SessionStart settled 缓存、空 meta 冷加载及重复 saveHistory 追加等行为未修正。见[原生会话栈](native-session-stack.md)。
+
+完整原 AgentServiceImpl、31 个本地前置 interceptor 和 History/Input/Message/Purpose 工具 factory 现由 `agents/native-agent-run` 及 `native-agent-run-utilities` 显式提供。真实 SDK 集成直接连接完整原 Manager，不用旧 ensureRunResultHandler facade；原 History optional-meta 与 Telemetry 建立 meta 的阶段顺序支持空 meta 冷加载，并覆盖 Read、RunState 续轮、取消及 one-time。产品 SDK wrapper 只重导出 npm 依赖；外部服务仍须真实注入，不能把测试 adapters 当成恢复。仍需完整原 Runner 构造、父 context/资源所有权、认证与 View rendezvous，默认独立后端未切换。见[原生执行链](native-agent-run.md)。
 
 Web 使用单运行槽以避免用户在同一进程对多个会话并发修改共享运行状态；不是多用户服务。固定 IPv4 loopback 地址，拒绝其它 Host / Origin，写接口需要随机 CSRF token，不返回 API key、不序列化上游异常。默认工具审批只能保护当前宿主边界，不等同于原产品完整 ToolPermissionService 或 OS 隔离。
 

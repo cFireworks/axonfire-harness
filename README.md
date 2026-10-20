@@ -6,7 +6,7 @@
 
 原生 ACP [协议核心](docs/acp-protocol.md)、[标题/广播/usage 服务](docs/acp-services.md)与[连接/修改版协议 SDK](docs/acp-connections.md)已逐模块恢复。完整原生 [Agent/View 循环](docs/acp-view-host.md)可显式接入已有 SDK 会话，以单一审批归属完成真实 Write/拒绝/Defer、续轮、队列与关闭，不靠 bypassPermissions。
 
-内部 AgentController、SessionFactory、SessionMiddleWare、sandbox 审批存储及错误类已完整恢复，见[会话入口说明](docs/session-ingress.md)。本阶段继续恢复完整 CLI SessionManager/Store、取消草稿及反向读行依赖，并用真实 SDK 验证 Read、冷恢复和取消文本落盘，见[原生会话栈](docs/native-session-stack.md)。这些组件尚未接成完整新会话父 runtime；真实认证和默认入口切换仍待恢复。CLI/Web 继续使用已验证的独立宿主，OpenAI SDK 保留原依赖。
+内部 AgentController、SessionFactory、SessionMiddleWare、sandbox 审批存储及错误类见[会话入口说明](docs/session-ingress.md)；完整 CLI SessionManager/Store、取消草稿及反向读行依赖见[原生会话栈](docs/native-session-stack.md)。完整原 AgentService、31 个本地 interceptor 及历史/消息/输入工具链现已恢复，并通过真实 SDK 验证 Read、空 meta 冷恢复、RunState 续轮和取消落盘，见[原生执行链](docs/native-agent-run.md)。这些组件尚未接成完整新会话父 runtime；原 Runner 构造接线、真实认证和默认入口切换仍待恢复。CLI/Web 继续使用已验证的独立宿主，OpenAI SDK 保留原依赖。
 
 ## 快速开始
 

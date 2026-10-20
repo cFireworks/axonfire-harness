@@ -14,6 +14,8 @@
 
 ## 接口与默认入口
 
+后续[完整原生执行链](native-agent-run.md)现已直接连接本 Manager/Store 验证，不再需要下文历史批次中的旧 AgentService facade；其原 History/Telemetry 顺序也通过空 meta 冷加载。默认入口仍未切换。
+
 ```ts
 import { createNativeSessionStack } from "@axonfire/harness/sessions/native-session-stack.js";
 

@@ -1023,3 +1023,21 @@ REA对native-session-stack单文件的静态证据为`ev_c9c727f3e1ec3776f205ca6
 仓库分层/默认CLI/Web/已有ACP ViewHost不改；新smoke:session-stack纳入根smoke与CI，显式嵌入接口及边界见[原生会话栈](native-session-stack.md)。下一步仍需完整原AgentService/其前置interceptors、父HTTP Context→middleware→Agent.setSession/View rendezvous、真实AuthenticationManager/网关和默认启动切换；Desktop HistoryStore/daemon自动重启/Ask/Plan回放/telemetry与Docs等仍未完成。整体目标保持未完成，不能把完整CLI会话类等同于整个harness。
 
 最终门槛：check/build、1360核心+11Web、1281项编译JS smoke、60组源码/行为校验、原配置字节与真实CLI/Web seed/reload启动均通过。无原应用/bundle/旧node_modules的暂存快照重新npm ci/check/build，在harness workspace运行全部1360项编译后核心测试和11项Web通过，配置及CLI/Web实际启动通过。115 product prompts、6 JSON、22 Desktop资源（304358字节）和SDK固定版本未改。发布审计701文件，在所检查的凭据/运行文件规则内无发现，不是安全证明；既有17项依赖告警（10中危/7高危）保留。
+
+## 2026-10-21：完整原生 AgentService / 前置执行链 / History 输入工具
+
+固定 CLI SHA 不变。保存 AgentServiceImpl 完整 9 成员，及本聚合模块全部 31 个 interceptor 完整类，共 32 类169成员、45完整声明、9函数、19初始化值。原 constructor/name map 还借用此前恢复的 WorktreeContextInterceptor，共32个拦截器名称；不重复计算外部类。完整37个原export getter、模块绑定、配置判断与内嵌DeepResearch/Ultracode/teammate等prompt保留。未执行原decorators/应用bootstrap，未声称恢复整个66545聚合模块。
+
+完整factory69466/7340和77787/18553/21580/58830/46943/2623/4636，共9个，包含Agent tokens/constants、SessionUtils、AgentPurpose、产品SDK wrapper、HistoryUtils、InputItemUtils、MessageUtils、resend branch与summary/error。产品wrapper只重导出固定SDK、定义8种custom item及user ID补充，模块25301仍使用真实npm SDK，未复制SDK实现。Memory动态OS导入所需原namespace-loader IIFE单独完整保留；测试只注入owned身份fallback，不读真实Git/系统身份。
+
+run保留authentication initialized屏障、runner取得时机、maxTurns有限正数（含1.5）、严格true才移除bypass选项、原abort连接、resultSubject/signal发布；不主动设置state/安装第二stream消费者。原前置排序、History边界后插件刷新及同名托管Agent重绑、状态/span所有权与queue drain保持。one-time不发布主会话history/result，override原型派生/permission副作用、fork过滤与tools恢复亦保留。
+
+第61组verify:agent-run对完整声明/类体/factory/37getter/绑定/name map/namespace loader做AST核对，并执行47组成对有限场景与4组成对真实SDK测试。专项51项。原样本片段在同一显式DI边界独立运行，不执行产品入口；AST与确定性快照不冒充全功能穷尽证明。
+
+真实SDK组合完整原AgentService、15原interceptor、完整原Manager/Store/Factory、已还原AgentManager/Factory/Read/ProductPromptRenderer，执行Read→JSONL、全新Manager/ALS从空meta磁盘会话冷恢复、同RunState续轮、stream取消partial草稿与one-time usage。原system-reminder-md渲染后，owned规则文件实际进入模型输入。原History的optional meta配合原Telemetry在正确阶段创建rootRequestId等，解决上一批旧移植History冷meta不兼容；不改Store冷加载语义、不补假meta、不用旧ensureRunResultHandler facade。权限、HTTP、memory/telemetry外部服务明确为owned test adapters；没有生产认证快照/请求。
+
+REA 6.7.0对两个惰性源码文件的静态证据为`ev_267c38332ef956e2cfa2d763114bd32839136217310d07cefce464953318bda0`，29403 AST nodes、2 parsed files、0 parse failures。750节点/每文件750、150unknown、45秒限制下semantic graph仍partial/truncated，不执行bootstrap，静态图不作为运行时整体证明。
+
+保持apps/cli、apps/web、packages/harness、docs、scripts分层，根smoke与CI加入smoke:agent-run。接口与边界见[原生执行链](native-agent-run.md)。完整原RunnerFactory/Provider尚未接入：上述集成直接用固定SDK Runner。默认CLI/Web仍使用已验证的独立宿主，不能将完整类恢复等同于完整原生启动。下一步为原Runner构造、父HTTP Context→middleware→Agent.setSession/View rendezvous及资源所有权；真实认证/网关、Desktop HistoryStore、daemon重启、Ask/Plan回放、request-send服务和Docs仍未完成，整体目标保持进行中。
+
+最终门槛：check/build、1411核心+11Web、1332项编译JS smoke、61组源码/行为校验、原配置字节与真实CLI/Web seed/reload启动均通过。暂存快照不带原应用/bundle/旧node_modules，重新npm ci/check/build后，在harness workspace执行全部1411项编译核心测试、11项Web、配置和CLI/Web实际启动均通过。115 product prompts、6 JSON、22 Desktop资源（304358字节）与SDK固定版本未改。发布审计710文件，在已检查的凭据/运行文件规则内无发现，不是安全证明；既有17项依赖告警（10中危/7高危）保留。
