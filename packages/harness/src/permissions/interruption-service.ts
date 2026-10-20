@@ -5,6 +5,8 @@ import type {
   RunToolApprovalItem,
 } from "@openai/agents-core";
 import { BehaviorSubject, type Subscription } from "rxjs";
+import { AsyncLocalStorage } from "node:async_hooks";
+import { createNativeInterruptionResultDispatcher } from "./native-interruption-result-dispatcher.js";
 import { PermissionMode } from "./permission.js";
 import type { HarnessSession } from "../sessions/session.js";
 import type { SessionRunStateMachine } from "../sessions/run-state-machine.js";
@@ -68,6 +70,12 @@ export type PermissionBroadcastService = {
 };
 
 export type InterruptionServiceOptions = {
+  /** Complete native waitFor/result dispatch, with explicit standalone ownership. */
+  resultDispatch?: {
+    getDefaultAgent(): Promise<Agent<HarnessSession>>;
+    beforeResult?(session: HarnessSession, result: object): Promise<void>;
+    executeStopHooks(session: HarnessSession, result: unknown, options?: { stopReason?: string; stopHookActive?: boolean }): Promise<void>;
+  };
   recovery?: StreamRecoveryRuntime;
   logger?: InterruptionLogger;
   isAlwaysApproved?: (
@@ -191,11 +199,68 @@ export class InterruptionService {
   private readonly resultFailures = new WeakMap<object, unknown>();
   private readonly retryPolicy = new InterruptionRetryPolicy();
   private readonly recovery: InterruptionStreamRecovery | undefined;
+  readonly nativeResultDispatcher?: ReturnType<typeof createNativeInterruptionResultDispatcher>;
+  private readonly nativeSessions = new Set<HarnessSession>();
+  private readonly nativeResultContext = new AsyncLocalStorage<object>();
+  private readonly nativeContinuations = new WeakMap<object, Set<Promise<void>>>();
+  private readonly nativeTimers = new Set<ReturnType<typeof setTimeout>>();
 
   constructor(
     private readonly stateMachine: SessionRunStateMachine,
     private readonly options: InterruptionServiceOptions = {},
-  ) { this.recovery = options.recovery ? new InterruptionStreamRecovery(stateMachine, options.recovery) : undefined; }
+  ) {
+    this.recovery = options.recovery ? new InterruptionStreamRecovery(stateMachine, options.recovery) : undefined;
+    if (options.resultDispatch) {
+      const dispatch = options.resultDispatch, recovery = options.recovery;
+      if (!recovery) throw new Error("Native result dispatch requires explicit recovery service dependencies");
+      const before = async (session: HarnessSession) => {
+        const result = this.nativeResultContext.getStore() ?? session.resultSubject.value;
+        if (result && typeof result === "object") await dispatch.beforeResult?.(session, result);
+      };
+      const logger = Object.fromEntries(["info", "debug", "warn", "error"].map(name => [name, (...args: any[]) => {
+        const method = options.logger?.[name as keyof InterruptionLogger] as any;
+        method?.(...args);
+      }]));
+      this.nativeResultDispatcher = createNativeInterruptionResultDispatcher({
+        service: {
+          run: async (...args: any[]) => { await before(args[2].context); return (recovery.service.run as any)(...args); },
+          runDefault: async (...args: any[]) => { await before(args[1].context); return (recovery.service.runDefault as any)(...args); },
+        },
+        getDefaultAgent: () => dispatch.getDefaultAgent(), stateMachine,
+        getTasks: () => recovery.getTasks?.() ?? [], describeDeferredTool: name => recovery.describeDeferredTool?.(name),
+        isDeferredDispatchEnabled: () => recovery.isDeferredDispatchEnabled?.() ?? false,
+        sleep: recovery.sleep ?? (ms => new Promise(resolve => setTimeout(resolve, ms))), now: Date.now,
+        setImmediate: callback => {
+          const result = this.nativeResultContext.getStore();
+          let done!: () => void;
+          const completion = new Promise<void>(resolve => { done = resolve; });
+          if (result) { const pending = this.nativeContinuations.get(result) ?? new Set(); pending.add(completion); this.nativeContinuations.set(result, pending); }
+          return setImmediate(() => { void Promise.resolve().then(callback).catch(error => options.logger?.error?.("Native continuation host failed", error)).finally(done); });
+        },
+        setTimeout: (callback, ms) => { const timer = setTimeout(() => { this.nativeTimers.delete(timer); callback(); }, ms); this.nativeTimers.add(timer); return timer; },
+        clearTimeout: timer => { clearTimeout(timer); this.nativeTimers.delete(timer); },
+        subscribe: (session: HarnessSession, callback) => {
+          this.nativeSessions.add(session);
+          const subscription = session.resultSubject.subscribe((value: any) => {
+            if (!value || typeof value !== "object" || this.resultHandling.has(value)) return;
+            const handling = this.nativeResultContext.run(value, () => callback(value)).catch(error => {
+              this.resultFailures.set(value, error); options.logger?.error?.("Native result dispatch failed", error);
+            });
+            this.resultHandling.set(value, handling);
+          });
+          this.waitForSubscriptions.set(session, subscription);
+          return subscription;
+        },
+      }, {
+        logger, stateMachine, waitForSubscriptions: new WeakSet(),
+        parentIdToMainSession: this.parentIdToMainSession, childToMainSession: this.childToMainSession,
+        sessionHookManager: { executeStopHooks: async (session: HarnessSession, result: any, config: any) => {
+          await dispatch.beforeResult?.(session, result); await dispatch.executeStopHooks(session, result, config);
+        } },
+        handleInterruptions: (session: HarnessSession, items: RunToolApprovalItem[]) => this.handleInterruptions(session, items, session.resultSubject.value as any),
+      });
+    }
+  }
 
   hasRecentModelErrorRetry(session: HarnessSession): boolean { return this.retryPolicy.hasRecentModelErrorRetry(session); }
   hasRecentNetworkErrorRetry(session: HarnessSession): boolean { return this.retryPolicy.hasRecentNetworkErrorRetry(session); }
@@ -404,6 +469,7 @@ export class InterruptionService {
   }
 
   async waitFor(session: HarnessSession): Promise<void> {
+    if (this.nativeResultDispatcher) { await this.nativeResultDispatcher.waitFor(session); return; }
     if (this.waitForSubscriptions.has(session)) return;
     this.registerSession(session);
     const subscription = session.resultSubject.subscribe((value) => {
@@ -442,11 +508,16 @@ export class InterruptionService {
   /** Host completion barrier: includes approval decisions and continuation publication. */
   async waitForResultHandled(result: object): Promise<void> {
     await this.resultHandling.get(result);
+    const pending = this.nativeContinuations.get(result);
+    if (pending) { await Promise.all(pending); this.nativeContinuations.delete(result); }
   }
 
   disposeSession(session: HarnessSession): void {
     this.waitForSubscriptions.get(session)?.unsubscribe();
     this.waitForSubscriptions.delete(session);
+    this.nativeResultDispatcher?.waitForSubscriptions.delete(session);
+    this.nativeSessions.delete(session);
+    if (!this.nativeSessions.size) { for (const timer of this.nativeTimers) clearTimeout(timer); this.nativeTimers.clear(); }
     this.cancelAllForSession(
       this.findMainSession(session).id,
       "session disposed",

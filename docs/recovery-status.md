@@ -436,3 +436,23 @@ Web 固定监听 127.0.0.1，校验 Host/Origin/CSRF，限制请求体，审批�
 迁移后619项核心回归、541项编译 smoke、34组样本差分以及原配置哈希门槛通过。新增10项宿主测试，包括真实SDK通过Web调用Write的允许与拒绝、恢复与压缩、取消/断连、问答、输入和跨源校验。浏览器离线演示已实际运行并保存截图。样本差分的默认输入不再绑定本机目录，须显式提供原bundle路径或 WORKBUDDY_BUNDLE；原安装包/完整bundle不随仓库发布。
 
 下一批核心还原顺序保持不变：原 SessionManager onResult/onResultError/SDK interruption、审批缓存与 ToolPermissionService / Hook proxy，然后 ProductManager/插件刷新。新的使用界面不代表这些原产品边界已完成。
+
+## InterruptionService 完整结果分派批次
+
+先纠正归属：此前报告将 Stop 完成/错误的剩余分派统称为 SessionManager onResult/onResultError；固定样本中 `11047102..11089570` 的拥有者实际上是 InterruptionService。核心方法为完整 `waitFor` (`11062476..11077211`)，不是另一个尚未找到的同名 SessionManager 方法。原 SessionManager 的 stream/history/gate 已在既有 SessionResultLifecycle 内恢复，两条订阅路径应分别保留。
+
+新增 `native-interruption-result-dispatcher.ts`，直接移植完整 waitFor、continueAgentWithMessage、startupProfiler getter、sanitizeToolNotFoundMessage 及四个 retry helper。方法体仅把结果订阅替换为显式所有权桥接；容器查找、时钟、调度器和依赖工具在工厂闭包中注入，不拆分或重排原 catch/finally 分支。新入口默认接入 createHarness，移除 Root prompt 里另行执行 Stop、拼接续跑和错误补发 Stop 的代码。
+
+保留以下源码行为：默认 Agent 完成传 `stopReason: completed`，消费 session hookContexts 中一次性的 stopHookActive，续跑通过 setImmediate 调度；非默认 Agent 的 Stop 不传 options，丢弃 continuation；child 不执行 root Stop。headless deferred 可能在分支和 finally 重复 resolve，并非改造成一次性事件。结果中断标志在分派前打 stamp；最终 agent_end 只在 model_done/idle 发出，避免覆盖新 run。silentAbort 将没有结果的 call 标 incomplete、清 silentAbort 并不执行 failed Stop。完整错误分支保留 pending call 回填、网络/首 token/流超时/模型错误的优先顺序、次数上限、提示原文、队列开关与 finally 的 resultAbortSignalMap 删除。
+
+完整 continueAgentWithMessage 保留 5 秒 idle wait、前后两次 abort 检查和源码的计时器行为：异步 idle 变化回调不清 timeout，只有立即 idle 检查清除；宿主关闭时另外清理本次拥有的剩余计时器。独立宿主在调用服务或 Stop 前等待自己的历史消费者刷盘，并跟踪 setImmediate 续跑的发布完成，使 CLI/Web 不先返回旧回合结果；这些显式桥接不计作原产品逻辑或 SDK 重写。
+
+验证：8 个完整方法 AST、902 组固定 SHA 行为差分，覆盖默认/非默认/缺少 lastAgent、child/abort/interruption、Stop continuation/active/异常、final/非 final、队列开关，以及网络/模型/语法/包装错误/鉴权/流超时和 silentAbort。新增12项专项，包括真实SDK终止失败/取消恰好一次 Stop、网络重试后唯一 completed Stop、绕过 root prompt 的非默认 Agent 完成。既有默认 Stop 续跑、真实 SDK 工具审批与子 Agent 回归继续保留。
+
+边界仍明确：本批恢复的是完整结果分派，不是完整 InterruptionService 类。审批队列、handleInterruptions 的 ACP/SDK interrupt 拒绝路径、requestSdkPermission/PermissionRequest callbacks、完整 ToolPermissionService、PreToolUse 审批缓存和 MCP Hook proxy 仍待进一步移植；此前的兼容审批宿主仍提供可用功能，不能把它等同于原实现。ProductManager/插件热刷新随后推进。OpenAI Docs 仅核对审批应从 RunState 恢复的边界，继续锁定本地 SDK 0.5.2。
+
+REA 对本次选定单 bundle 的受限重分析在 45 秒预算内超时；不把失败输出视为新的证据或提高覆盖率。继续使用此前 REA 证据链、固定 SHA 校验、原方法 AST 与原样本 VM 差分。原安装包、完整 bundle、超时分析日志均不进入发布仓库。
+
+本批门槛：631项核心测试、10项Web宿主测试、553项编译JS smoke、35组样本差分、check/build/config和CLI/Web实际启动全部通过。六份配置JSON、115个prompt、memory policy及SDK依赖锁定版本保持不变，发布前基本凭据/运行记录扫描未发现命中。目标仍在进行，不宣称整个harness已100%恢复。
+
+下一批已定位的原类：ToolPermissionService `11948949..11968077`，包含 checkPermission/doCheckPermission/needsApproval、PermissionRequest/Denied、executeAndCachePreToolUseHooks/cachePreToolUseResult、策略/规则/危险命令与更新持久化等27个方法（含constructor）；另一个 preToolUseHookResults.set 位于 DeferExecute 包装 `12008364..12018235`，不可仅恢复前者便认为缓存链路完整。随后对接完整 handleInterruptions / requestSdkPermission，再继续 MCP Hook proxy 与 ProductManager/插件热刷新。这些定位本身不计为已恢复代码。

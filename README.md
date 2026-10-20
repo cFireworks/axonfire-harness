@@ -72,7 +72,7 @@ npm run verify:config
 npm run verify:recovery -- /absolute/path/to/codebuddy.js
 ```
 
-目录迁移前基线：619 项核心测试、541 项编译后 smoke、34 组原样本差分通过。配置中的 115 个原始 prompt 和固定哈希不因目录调整而重写。新增宿主测试与迁移验证记录见 [启动与验证](docs/getting-started.md)。
+最新验证：631 项核心测试、10 项 Web 宿主测试、553 项编译后 smoke、35 组原样本差分通过。完整结果分派已默认接入，配置中的 115 个原始 prompt 和固定哈希保持不变。详细边界见 [还原状态](docs/recovery-status.md)，安装与启动验证见 [使用说明](docs/getting-started.md)。
 
 本地工作台演示：
 

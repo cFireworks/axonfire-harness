@@ -439,6 +439,11 @@ export async function createHarness(options: HarnessOptions) {
   prompts.attachContextProvider(promptContext);
   let service!: AgentService;
   const interruptions:InterruptionService = new InterruptionService(stateMachine, {
+    resultDispatch: {
+      getDefaultAgent: () => agents.getDefault(),
+      beforeResult: (_session, result) => sessions.waitForResultHandled(result),
+      executeStopHooks: (session, result, config) => nativeHooks!.sessionManager.executeStopHooks(session, result, config),
+    },
     executeNotificationHooks:(session,message,kind)=>nativeHooks!.sessionManager.executeNotificationHooks(session,message,kind),
     ...(options.channels ? { channelPermissionAdapter: {
       createPermissionRequest: (...args: [string,string,string,string]) => channelPermissionAdapter.createPermissionRequest(...args).then((decision: any) => { if (decision === "allow" || decision === "allow_always") markChannelApproval(args[0]); else channelApprovalTargets.delete(args[0]); return decision; }),
@@ -700,7 +705,6 @@ export async function createHarness(options: HarnessOptions) {
       if (!session.isCompressing && event?.type === "output_text_delta") promptOptions.onText?.(event.delta);
     });
     try {
-      let stopHookActive=false;
       await service.runDefault(input, { context: session, ...(promptOptions.maxTurns ? { maxTurns: promptOptions.maxTurns } : {}) });
       if (promptOptions.signal?.aborted) abort();
       for (;;) {
@@ -724,12 +728,6 @@ export async function createHarness(options: HarnessOptions) {
           await sessions.waitForNextResult(session,result,session.abortSignal);
           continue;
         }
-        if (!result.interruptions?.length) {
-          if(session.hookContexts)delete session.hookContexts.continueRequest;
-          await nativeHooks!.sessionManager.executeStopHooks(session,result,{stopReason:"completed",stopHookActive});
-          const continuation=session.hookContexts?.continueRequest as any;
-          if(continuation){delete session.hookContexts!.continueRequest;stopHookActive=true;await service.runDefault([continuation.message],{context:session});continue;}
-        }
         session.meta.standalonePermissionMode = session.permissionModeSubject.value;
         await sessions.save(session);
         const output = result.interruptions?.length ? undefined : result.finalOutput;
@@ -741,7 +739,6 @@ export async function createHarness(options: HarnessOptions) {
         return typeof output === "string" ? output : output === undefined ? "" : JSON.stringify(output);
       }
     } catch (error) {
-      await nativeHooks!.sessionManager.executeStopHooks(session,session.resultSubject.value,{stopReason:session.abortSignal.aborted?"cancelled":"failed"});
       stateMachine.transition(session, "run_failed");
       throw error;
     } finally {
