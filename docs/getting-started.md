@@ -194,6 +194,42 @@ npm必须使用可信包和registry：原安装参数没有ignore-scripts，启�
 
 原ConfigWatch/McpWatch服务默认接线：文件watch setup延迟2秒、change debounce 3秒、rename即时刷新；MCP connected/disconnected合并后触发全量sync。用户/项目路径沿宿主state/工作目录，不监听安装应用目录；`productRuntime.watch:false`可禁用。原watcher unref，不靠它保持进程存活，关闭会取消订阅、watcher及pending任务，防止关闭中的初始化重新挂载。默认已连接原SettingsManager.clearCache；全局CWD变化也清理设置缓存。
 
+### Cloud 产品配置（嵌入接口）
+
+原CloudPre/CloudProvider默认位于同一ProductManager的9999/10000优先级。无账户或精确`ApiKey`类型不会请求云配置；模型API key不作为产品账户。不会读取已安装应用令牌，也不自动请求生产Cloud endpoint。现阶段CLI/Web不提供登录UI；如需云配置，嵌入时显式提供自己拥有的账户和transport：
+
+```ts
+import { BehaviorSubject } from 'rxjs';
+// createHarness 以及模型连接沿上文配置；以下只展示产品配置选项。
+const cloudURL = 'http://127.0.0.1:4080'; // 自己控制的配置服务
+const productRuntime = {
+  cloud: {
+    authenticationManager: {
+      currentSessionSubject: new BehaviorSubject({
+        account: { uid: 'my-owned-account' },
+        auth: { accessToken: 'owned-product-token', tokenType: 'Bearer' },
+      }),
+    },
+    transport: { baseURL: cloudURL },
+  },
+  providers: [{
+    priority: 6000,
+    async provide() {
+      return { endpoint: cloudURL, config: { url: cloudURL + '/v3/config' } };
+    },
+  }],
+};
+// await createHarness({ ...yourModelOptions, productRuntime });
+```
+
+服务返回`{"data":{"agents":[],"models":[]}}`，transport负责外层HTTP响应包装。上述示例不发送认证header；如服务需要，可在`transport.headers`明确配置自己的header，令牌不会自动从账户映射。transport限定显式origin、不跟随重定向、5秒超时覆盖body；这是新增owned Node HTTP边界，不是原CellJS/Axios认证中间件。
+
+远端models是权威列表，空数组会移除所有模型，实际使用须返回完整有效列表；要注册可用Agent还须含原`cli`标签和有效models。原CloudAgentsSmartMerge开启时同名Agent的本地字段优先，仅远端显式models覆盖。远端endpoint/stagingEndpoint/deploymentType不进入产品配置。产品配置endpoint与模型API baseURL不是同一配置，勿借前者隐式重定向模型请求。
+
+`harness.productRuntime.cloudHost.manager`暴露原fetch/reset等接口；清指定用户缓存再`await harness.productManager.sync(true)`及`await harness.agents.waitForRebuildSettled(0)`可显式应用新配置。仅force sync不会绕过8分钟缓存，重试成功也不会自行发布产品更新。关闭harness会取消owned HTTP并唤醒/收敛后台重试。`productRuntime.cloud:false`显式排除这两个provider。
+
+原`cloud_product_config_cache`默认落在本宿主的MemoryLocalStorage，方法名readDiskCache并不代表默认已持久化。需要跨重启时明确注入`cloud.localStorage`或`productRuntime.storage`的get/set协议；磁盘记录无过期检查，最多20条。Cloud缓存内容属于账户配置，不应提交到Git。
+
 ### 原生磁盘与 CLI 设置
 
 默认按USER→PROJECT→PROJECT_LOCAL→CLI合并，路径分别为`<state>/settings.json`、`<cwd>/.codebuddy/settings.json`、`<cwd>/.codebuddy/settings.local.json`；不读取`~/.codebuddy`或安装应用设置。支持JSONC注释/尾逗号，USER叠加原DEFAULT_SETTINGS，写入剔除默认差值并保留注释。数组按原Set并集，hooks/permissions/memory/sandbox递归合并，其他对象后项覆盖。原USER磁盘sandbox读入是浅覆盖默认值，不擅自改为深覆盖。

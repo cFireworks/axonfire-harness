@@ -4,6 +4,10 @@ import { BehaviorSubject } from "rxjs";
 import { createNativeProductWatchers } from "./native-product-watchers.js";
 import { ProductProviderPriority } from "./native-product-constants.js";
 import {
+  createNativeCloudProductHost,
+  type NativeCloudProductOptions,
+} from "./native-cloud-product-host.js";
+import {
   createNativeProductSourceHost,
   type NativeProductSourceOptions,
 } from "./native-product-source-host.js";
@@ -29,6 +33,7 @@ export type NativeProductHostOptions = {
   serverModelManager?: any;
   watchDependencies?: Record<string, any>;
   sources?: NativeProductSourceOptions;
+  cloud?: NativeCloudProductOptions | false;
 };
 /** Owns DI, publication and shutdown only; provider/merge/cache decisions remain native. */
 export function createNativeProductHost(options: NativeProductHostOptions) {
@@ -42,10 +47,9 @@ export function createNativeProductHost(options: NativeProductHostOptions) {
   let publicationError: unknown;
   let publicationRevision = 0;
   const logger: any = Object.fromEntries(
-    ["info", "debug", "warn", "error", "setContext"].map((key) => [
-      key,
-      (...args: any[]) => options.logger?.[key]?.(...args),
-    ]),
+    ["info", "debug", "warn", "error", "setContext", "time", "timeEnd"].map(
+      (key) => [key, (...args: any[]) => options.logger?.[key]?.(...args)],
+    ),
   );
   const schedule = options.runtime?.setTimeout ?? setTimeout,
     cancel = options.runtime?.clearTimeout ?? clearTimeout;
@@ -259,6 +263,18 @@ export function createNativeProductHost(options: NativeProductHostOptions) {
     sources: options.sources,
   });
   providers.push(...sourceHost.providers);
+  const cloudHost =
+    options.cloud === false
+      ? undefined
+      : createNativeCloudProductHost({
+          productManager: facade,
+          storage,
+          logger,
+          authenticationManager: sourceHost.authentication,
+          env: options.env,
+          ...(options.cloud ? { configuration: options.cloud } : {}),
+        });
+  if (cloudHost) providers.push(...cloudHost.providers);
   const watcherClasses = createNativeProductWatchers(runtime),
     configWatch = Object.assign(new watcherClasses.ConfigWatchServiceImpl(), {
       logger,
@@ -289,12 +305,14 @@ export function createNativeProductHost(options: NativeProductHostOptions) {
     mcpWatch,
     watcherClasses,
     sourceHost,
+    cloudHost,
     async start() {
       if (closed) throw Error("Product host is closed");
       if (!started) {
         started = true;
         manager.init();
         sourceHost.start();
+        cloudHost?.start();
       }
       await manager.promise;
       await flushPublications();
@@ -307,6 +325,7 @@ export function createNativeProductHost(options: NativeProductHostOptions) {
     async flush() {
       await drain();
       await sourceHost.flush();
+      await cloudHost?.flush();
       await drain();
       await flushPublications();
     },
@@ -323,8 +342,10 @@ export function createNativeProductHost(options: NativeProductHostOptions) {
       for (const timer of timers) cancel(timer);
       timers.clear();
       const sourceClosing = sourceHost.close();
+      const cloudClosing = cloudHost?.close();
       closing = (async () => {
         await sourceClosing;
+        await cloudClosing;
         await drain();
         manager.configuration.complete();
         if (!options.storage) storage.emitter?.dispose();

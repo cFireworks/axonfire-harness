@@ -40,7 +40,7 @@ CustomAgents/CustomCommands、Models/CustomModels、AgentModelResolver、Availab
 
 注意原AgentManager只淘汰plugin缓存：删除普通Agent文件后，新product快照不再包含它，但先前注册过的非插件SDK Agent仍可能由get(name)取出。命令删除会刷新命令表。这个原样本行为保持不变，不能把文件发现已恢复表述为所有旧实例都被清理。
 
-PluginManager完整194成员、七类extension loader及loader manager、PluginRuntimeRefreshService、reload命令和输出样式manager现已移植。默认owned plugin host启动原manager，只有显式目录进入inline来源；同一active snapshot供Product provider、AgentManager、Hooks、MCP及LSP消费。完整原刷新队列在beforeCommit比较MCP有效server名称，提交后刷新各服务；AgentService使用已有原join屏障，继续从同名托管Agent取新实例。本地/Git/HTTP/ZIP市场现由完整原provider/Factory、Storage、ConfigManager、BuiltInProvider、LocalInstaller、Git检测/转换/回退和FileLock/UpdateChecker实现。原Git/npm/subdir安装器、OptionsStorage和ErrorCollector也默认接入；原SettingsManager、CLI设置/来源队列及PluginPolicy现为默认依赖。内置资源物化/解析、PluginController与Validator已接入显式资源根；MCPB、Cloud product、完整产品bootstrap/session-addon编排仍未恢复。
+PluginManager完整194成员、七类extension loader及loader manager、PluginRuntimeRefreshService、reload命令和输出样式manager现已移植。默认owned plugin host启动原manager，只有显式目录进入inline来源；同一active snapshot供Product provider、AgentManager、Hooks、MCP及LSP消费。完整原刷新队列在beforeCommit比较MCP有效server名称，提交后刷新各服务；AgentService使用已有原join屏障，继续从同名托管Agent取新实例。本地/Git/HTTP/ZIP市场现由完整原provider/Factory、Storage、ConfigManager、BuiltInProvider、LocalInstaller、Git检测/转换/回退和FileLock/UpdateChecker实现。原Git/npm/subdir安装器、OptionsStorage和ErrorCollector也默认接入；原SettingsManager、CLI设置/来源队列及PluginPolicy现为默认依赖。内置资源物化/解析、PluginController与Validator已接入显式资源根；MCPB与完整产品bootstrap/session-addon编排仍未恢复；Cloud product原四类已接入，认证和REST保留显式宿主边界。
 
 seed链分开Desktop与CLI两种所有权：43个原函数负责source/不可变cache物化、复制和默认候选；5个原函数及完整候选initializer负责资源发现；原PluginController.reconcileWorkbuddyBuiltin通过builtin-seed队列包裹已有PluginManager锁定metadata事务。独立host只提供显式资源/state/version/platform、Promise/readline/同步FS边界与启动等待；没有执行Electron bootstrap，也不自动分发/运行资源附带的第三方二进制。原metadata成功而projection失败的返回值、回滚范围、同版本cache不刷新等边界保留。
 
@@ -64,4 +64,6 @@ CLI/Web共享本地命令分派，原reload executor负责caveat/input/output历
 
 插件刷新屏障位于产品服务与SDK运行之间，不重写SDK agent loop；职责边界参考[OpenAI Docs](https://developers.openai.com/api/docs/guides/agents/running-agents)。实际入参、stream完成与恢复行为仍以锁定0.5.2和本地真实SDK测试为准，不按现行文档升级依赖或替换原状态机。
 
-下一批优先市场/资源seed及持久化服务依赖、Cloud product/环境服务，随后SDK输入/启动/鉴权、Hook服务端和AutoMode backend。统一默认审批时还须验证原policy allow与独立guard的边界，不能只因为可选路径测试通过就声明默认已等价。新增Web UI不计为这些原产品服务已恢复。
+Cloud四个完整原类的22个成员保留用户投影、精确ApiKey门槛、缓存/重试/合并决策；只在外层提供账户Subject、存储、日志、时钟、HTTP和Promise生命周期。类constructor.name也保留样本e0/tG/e_/eE，避免误触发ProductManager按名称选择的预取/缓存分支。owned单origin HTTP不是原CellJS REST或登录实现，默认匿名无外部请求。关闭不会改写原reset语义；正常运行的reset仍不取消旧重试，只有宿主close终止资源。成功重试不自动sync，force sync也不跳过用户8分钟缓存。
+
+后续继续资源prompt/session-addon、环境及完整SDK输入/启动/鉴权、Hook服务端和AutoMode backend。统一默认审批时还须验证原policy allow与独立guard的边界，不能只因为可选路径测试通过就声明默认已等价。新增Web UI不计为这些原产品服务已恢复。

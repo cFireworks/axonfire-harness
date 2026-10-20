@@ -17,7 +17,7 @@
 | ---: | ----------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |    1 | OpenAI Agents SDK | 完成                         | 精确锁定 `@openai/agents* 0.5.2`、`openai 6.25.0`；SDK 不重写                                                                                                                                                                                                                         |
 |    2 | Product config    | 100% 字节保留                | default/cloudhosted/internal/ioa/selfhosted/sandbox 六份原始 JSON；SHA 验证                                                                                                                                                                                                           |
-|    2 | ProductManager / providers | 原manager、merger及文件/模型provider默认接入 | 首批19类/112处AST/743次比较；文件/模型15类及helper为118处AST/263次比较。插件刷新队列与原SettingsManager/PluginPolicy现默认接入，seed物化/交接已接显式资源根；Cloud product、资源打包/会话addon和环境服务仍待补，不等于完整产品bootstrap |
+|    2 | ProductManager / providers | 原manager、merger及文件/模型provider默认接入 | 首批19类/112处AST/743次比较；文件/模型15类及helper为118处AST/263次比较。插件刷新队列与原SettingsManager/PluginPolicy现默认接入，seed物化/交接已接显式资源根；Cloud四类22成员/8常量/38次比较现已默认接入，认证/REST为显式边界；资源打包/会话addon和环境服务仍待补，不等于完整产品bootstrap |
 |    2 | PluginManager / loaders / refresh | 完整核心类、市场、安装器和设置/策略主路径默认接入 | 首批14完整类含PluginManager194成员与七loader/事务/reload/style：294处AST/472次比较；市场/锁15类+19helper：129处AST/584次比较；Git/npm/subdir/Options/ErrorCollector5类：45处AST/120次比较。原PluginPolicy与Settings/CLI服务已默认连接，支持磁盘启停/卸载/重启及实时产品策略；资源seed/MCPB与完整产品控制器仍待补 |
 |    2 | Settings / PluginPolicy | 6完整类与原常量默认接入 | SettingsManager/Controller/ValidateMiddleWare、CliSettings/SettingSourcesProvider、PluginPolicy，另3个helper共66处完整AST、9个pure factory与94次有限行为比较；JSONC/作用域/缓存/损坏拒写/锁/Hook/CLI队列和策略事件保留。权限/MCP局部内存适配、完整路由bootstrap未据此宣称恢复 |
 |    2 | Builtin seed / plugin controller | 原物化与metadata交接链已接入 | 43个Desktop seed/复制函数、5个资源解析函数/7级候选、完整PluginController23方法及Validator/Error类：78处AST、12初始化表达式、113次有限比较。显式资源根启动接原manager事务/刷新；第三方二进制不分发，完整Electron/daemon/session-addon未据此标为恢复 |
@@ -749,3 +749,21 @@ CLI/Web新增`--builtin-assets`，嵌入为`nativePlugins.builtinSeed`及`plugin
 REA对惰性Desktop函数片段生成`ev_6a384acd64576685eca56eab8e395268fc3931c3b7fd69d73e5e793bb91c5a37`，750节点/每文件750节点、150unknown、45秒；semantic graph为partial/truncated。六份JSON、115 Prompt、memory policy摘要、SDK/OpenAI版本和依赖锁均未变。
 
 最新门槛：952核心、11Web、873编译JS smoke（821既有+23设置+29seed）、47组样本差分、check/build/config与实际CLI/Web启动全部通过。无原应用/bundle/旧node_modules的全新暂存快照通过npm ci/check/build、165项编译后插件/市场/设置/审批/seed测试、11项Web测试及实际seed/reload启动；不借助本机已安装资源即可编译和运行owned演示。发布审计578文件未发现所检查的凭据/运行文件，非安全证明；既有17项audit风险未强制升级。下一批继续Cloud product、资源prompt/会话Addon编排、权限/MCP专用settings消费者及剩余产品bootstrap；整体目标未完成。
+
+## Cloud 产品配置、用户投影与缓存/重试批次
+
+完整移植四类：UserinfoProviderImpl `7241866..7242195`、CloudPreProductProvider `9907133..9907405`、CloudProductManagerImpl `15252547..15256941`、CloudProductProvider `15258449..15260416`，仍为固定CLI SHA样本的UTF-16索引。完整22个成员AST去除TS注解后与原样本一致；另独立核对8个初始化表达式/字符串和原匿名class的e0/tG/e_/eE名称。类名不是纯可读性问题，改成可读name会改变ProductManager按constructor.name判断的预取/缓存分支，因此显式保留样本名。
+
+四类默认接入现有ProductManager与来源provider，不是单独未使用代码。预门槛priority9999，Cloud priority10000；有效accessToken且tokenType不等于精确ApiKey才通过。Userinfo只认truthy account.uid，保留缺失auth时的原TypeError，不将模型API key伪装成账户。默认独立匿名账户不访问远端。登录/完整原REST中间件没有据此恢复；需要嵌入者显式传入账户Subject和REST或单origin HTTP transport，不读取安装应用令牌。
+
+保留原缓存和失败边界：内存只按userId索引，不按URL/endpoint；8分钟有效期，到期等于边界即失效，返回同一对象引用。远端失败先退过期内存/存储记录，再由全局retrying门槛按1/2/4/8/16秒重试，错误日志大于60秒才重报；匿名不缓存/不重试。磁盘协议key为cloud_product_config_cache，最多20条，读命中移到尾部但不检查年龄/刷新ts/写回内存。默认仍是原MemoryLocalStorage而非凭方法名宣称磁盘持久化；跨重启通过显式owned get/set adapter实测。reset只清内存和retrying/configuration，不删磁盘也不取消旧worker，可能允许重试并行；宿主close另收敛资源。重试成功只暖缓存，不自动ProductManager.sync；force sync也不绕过Cloud内存TTL。
+
+CloudProvider原位删除远端endpoint/stagingEndpoint，再浅排除deploymentType；内存别名因而也被修改。CODEBUDDY_REMOTE_CONFIG_DISABLED只认1/true。CommandsSmartMerge取远端nullish回退本地，disabled/失败不重置cached strategy。CloudAgentsSmartMerge下同名Agent本地字段优先，远端显式models例外；models按远端列表遍历合并，同id远端字段覆盖，未出现的本地模型被删除，null/无id保留。不开启smart标志时不擅自补Agent列表。
+
+新增owned Node HTTP只负责显式origin、可选显式header、repos[]参数、JSON响应包装、5000ms超时、取消/response与timer关闭屏障，不冒充原CellJS/Axios或生产认证。拒绝跨origin和redirect，不自动把账户token加到HTTP/模型请求。ProductHost的独立Promise桥追踪原fire-and-forget、在close唤醒sleep并等待旧任务，正常reset保留原语义。任意外部adapter若忽略signal，close仍须等待其settle；不宣称可强杀任意第三方Promise。
+
+`verify:cloud-product`新增第48组源码校验：22完整成员、8独立常量、38组原完整方法体/port有限行为比较；覆盖精确账户/env门槛、缓存别名/过期回退/LRU、全局重试/重置并行、原TypeError、权威模型列表/Agent合并/策略状态、日志与错误格式。不是所有并发/生产账户/服务端策略状态空间穷举。22项专项运行测试另含真实owned loopback HTTP、body超时/abort、close无后续I/O、显式存储重启，以及真实SDK消费Cloud Agent/模型和两次显式同步后的prompt变化，产品token不进入模型请求。
+
+REA对四类惰性片段再次分析，证据`ev_d040e81908e84846b52c594362210aa335501f03305da79a5b914e6f3c019f11`；750节点/每文件750节点、150unknown、45秒上限，semantic graph为partial/truncated。未执行原bootstrap。六份JSON、115原Prompt/memory policy摘要、SDK/OpenAI版本和依赖锁均未变。
+
+最新门槛：974核心、11Web、895编译JS smoke（821既有+23设置+29seed+22Cloud）、48组源码差分、check/build/config与实际CLI/Web启动全部通过。无原应用/bundle/旧node_modules的全新暂存快照重新npm ci/check/build，246项编译后Cloud/产品/插件/市场/设置/审批/seed测试及11项Web测试、CLI/Web实际seed/reload启动全部通过。发布审计585文件在所检查规则内无发现，不是安全证明；既有17项audit告警（10中危/7高危）不强制升级。后续继续资源prompt/会话Addon编排、权限/MCP专用settings消费者、环境服务与剩余产品启动/鉴权链；整体目标未完成。
