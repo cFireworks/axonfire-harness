@@ -3,6 +3,7 @@ import * as rxjs from "rxjs";
 import * as operators from "rxjs/operators/index.js";
 import { URI } from "vscode-uri";
 import { createNativeAuthenticationRuntime } from "../../src/auth/native-authentication.js";
+import { createNativeAuthenticationHost } from "../../src/auth/native-authentication-host.js";
 import { createNativeHttpRuntime } from "../../src/http/native-http-runtime.js";
 
 export function authenticationFixture(
@@ -93,16 +94,12 @@ export function authenticationFixture(
         ...patch.modules,
       },
     };
-  const native = factory(runtime);
-  Object.assign(common, native.core);
-  const C = native.classes,
-    A = native.constants;
   const config: any = {
     authentication: { type: "owned-provider", attributes: {} },
     productFeatures: {},
     ...patch.config,
   };
-  const product = {
+  const product = patch.product ?? {
     configuration: new rxjs.BehaviorSubject(config),
     waitConfiguration: async (force?: boolean) => {
       calls.push(["configuration", force]);
@@ -124,7 +121,6 @@ export function authenticationFixture(
     };
     return value;
   }
-  const storage = new C.DefaultAuthenticationStorage();
   const provider: any = {
     support: async () => true,
     getAuthenticationType: async () => ["owned-provider"],
@@ -134,32 +130,40 @@ export function authenticationFixture(
     switchAccount: async (_target: any, value: any) => value,
   };
   const providers: any[] = [provider];
-  const manager = new C.AuthenticationManagerImpl();
-  Object.assign(manager, {
-    logger,
-    authenticationStorages: [storage],
-    authenticationProvider: { get: () => providers },
-    productManager: product,
-    productEnvService: {
-      switchBySession: async (value: any) => {
-        calls.push(["switchBySession", value?.account?.uid]);
+  const host = createNativeAuthenticationHost({
+    runtime,
+    sourceFactory: factory,
+    providers,
+    beforeClose: patch.beforeClose,
+    dependencies: {
+      logger,
+      productManager: product,
+      productEnvService: {
+        switchBySession: async (value: any) => {
+          calls.push(["switchBySession", value?.account?.uid]);
+        },
+        switch: async (value: any) => calls.push(["switchEnv", value]),
       },
-      switch: async (value: any) => calls.push(["switchEnv", value]),
-    },
-    eventService: {
-      report: (...args: any[]) => calls.push(["event", ...args]),
-    },
-    traceService: { startTrace: span },
-    notifier: Object.fromEntries(
-      ["info", "warn", "error"].map((key) => [
-        key,
-        (...args: any[]) => calls.push(["notify", key, ...args]),
-      ]),
-    ),
-    filePathService: {
-      setCurrentUserId: (id: string) => calls.push(["user-root", id]),
+      eventService: {
+        report: (...args: any[]) => calls.push(["event", ...args]),
+      },
+      traceService: { startTrace: span },
+      notifier: Object.fromEntries(
+        ["info", "warn", "error"].map((key) => [
+          key,
+          (...args: any[]) => calls.push(["notify", key, ...args]),
+        ]),
+      ),
+      filePathService: {
+        setCurrentUserId: (id: string) => calls.push(["user-root", id]),
+      },
     },
   });
+  const { native, manager, storage } = host,
+    C = host.classes,
+    A = native.constants;
+  // Reference scopes loaded by the source-pair verifier see the same core graph.
+  runtime.modules[80699] = host.common;
   function session(uid = "owned-user", extra: any = {}) {
     return {
       auth: {
@@ -185,11 +189,7 @@ export function authenticationFixture(
     for (let i = 0; i < 80; i++) await Promise.resolve();
   }
   function external() {
-    const p = new C.ExternalLinkAuthenticationProvider();
-    Object.assign(p, {
-      logger,
-      productManager: product,
-      productEnvService: manager.productEnvService,
+    return host.createExternalLink({
       clientInfoProvider: {
         get: async () => ({ pluginVersion: "owned-version" }),
       },
@@ -209,27 +209,18 @@ export function authenticationFixture(
         },
       },
     });
-    p.init();
-    return p;
   }
   function custom() {
-    const s = new C.CustomTokenAuthenticationStorageImpl(),
-      p = new C.CustomTokenAuthenticationProvider();
-    Object.assign(s, { productManager: product, logger });
-    Object.assign(p, {
-      productManager: product,
-      logger,
-      customTokenAuthenticationStorage: s,
-    });
-    return { storage: s, provider: p };
+    return host.createCustomToken();
   }
   return {
     factory,
+    host,
     native,
     runtime,
     C,
     A,
-    common,
+    common: host.common,
     env,
     manager,
     storage,
@@ -260,11 +251,12 @@ export function authenticationFixture(
       await settle();
     },
     async close() {
-      manager.dispose();
-      await settle();
-      product.configuration.complete();
-      for (const value of [storage.storeSessionSubject]) value.complete();
-      timers.clear();
+      try {
+        await host.close();
+      } finally {
+        if (!patch.product) product.configuration.complete();
+        timers.clear();
+      }
     },
   };
 }

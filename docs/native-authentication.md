@@ -56,7 +56,7 @@ const manager = new Manager();
 
 这是接口示意，不是无需依赖即可启动的认证 server。`native.getModule` 惰性解析，`native.classes` 会加载全部恢复 scope，因而要求其外部依赖齐备。默认 env 为空，动态 require 缺失会明确失败；缺依赖不会偷偷读取真实 process.env/安装账户或打开系统浏览器。调用方提供的 adapters 是受信任代码，不是 OS 沙箱。
 
-当前 CLI/Web 仍经已有 standalone 宿主正常启动；本阶段没有切换默认认证或接通生产登录。`Agent.setSession` / AcpView 新会话 rendezvous、真实 REST/磁盘 auth storage、父资源回收与完整 bootstrap 仍待继续，不能将完整认证类等同于整个认证/父 harness 已完成。
+当前 CLI/Web 仍经已有 standalone 宿主正常启动，没有切换默认产品认证或接通生产登录。后续原 `Agent.setSession` / AcpView 新会话 rendezvous 已接通完整父链，且[公开认证父宿主](native-authentication-host.md)现拥有实例创建/资源回收，并与真实Product配置合并验证；生产 REST/磁盘 auth storage、默认完整 bootstrap 仍待继续，不能将完整认证类等同于整个认证/父 harness 已完成。
 
 ## 验证
 

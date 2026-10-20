@@ -104,7 +104,7 @@
     "verify:native-http": "node --import tsx scripts/verify-native-http-recovery.ts",
     "smoke:native-http": "node --test dist/test/native-http-runtime.test.js dist/test/native-agent-http-host.test.js",
     "verify:authentication": "node --import tsx scripts/verify-authentication-recovery.ts",
-    "smoke:authentication": "node --test dist/test/authentication-runtime.test.js",
+    "smoke:authentication": "node --test dist/test/authentication-runtime.test.js dist/test/native-authentication-host.test.js",
     "verify:acp-parent": "node --import tsx scripts/verify-acp-parent-recovery.ts",
     "smoke:acp-parent": "node --test dist/test/acp-parent-runtime.test.js dist/test/acp-rendezvous-host.test.js",
     "verify:interaction-services": "node --import tsx scripts/verify-interaction-services-recovery.ts",

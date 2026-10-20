@@ -1207,3 +1207,17 @@ REA最终证据 `ev_8c1bd7a8fc5c0c390563d5482ac9538b37dfc96a9edf4a2ab9559b862d63
 下一步继续默认原生父认证/配置/ACP与全部interceptor服务图、默认CLI入口和独立OS进程恢复，再推进生产auth/REST、跨cwd/全部模式、Desktop HistoryStore/回放及其他外围/并发前沿。三个公开父宿主已能组合原链，但普通CLI/Web尚未切成完整原生默认bootstrap，整体目标继续进行中。
 
 最终门槛：check/build、1639核心+11Web、1560编译JS smoke、67组源码/行为验证通过；最后专用Runner观察接线后，AgentService/Runner/ACP父/回放四组再单独通过。最终暂存代码干净检出重新npm ci/check/build后，1639编译核心+11Web、原配置校验和CLI/Web seed/reload实际启动通过，无原应用/bundle/旧node_modules依赖。SDK、6 JSON/115 product prompts/22 Desktop资源（304358字节）不变；770文件发布审计在已检查规则内无发现，不是安全证明。既有17依赖告警（10中危/7高危）仍保留。
+
+## 2026-10-21：公开原认证父装配与实际 Product 配置交接
+
+新增[公开认证宿主](native-authentication-host.md) `createNativeAuthenticationHost`，默认构造完整原Manager/DefaultStorage，显式创建CustomToken/ExternalLink/Wx/用户变量及安装HTTP interceptor；核心8类94成员、44业务块和15原factory未改。惰性classes不伪造JWT/IDE，common采用不修改借入namespace的overlay；providers默认空、创建不隐式注册/登录。authenticationFixture已只保留时钟/DI/network/JWT/IDE测试边界，原组件、真实owned HTTP和ACP父链/恢复图均经过公开实例装配。
+
+保留原init失败仅warn、initialized继续pending，host.start观察实际doInit并可拒绝但不改变原barrier。custom env/spilled为优先级信号，token仍来自合并配置。宿主拥有配置/URL订阅、原工作Promise/刷新/轮询timer与本次HTTP IDs；原dispose取消当前sign/revision/refresh，不logout/clean/delete。关闭等待原串行持久化tail与race败选分支，不能提前清掉awaited sleep；外部transport/IDE/browser由明确beforeClose和其owner收尾，共享Product Subject不完成。匿名waitAuthSession保留原pending，但订阅由owner回收，不当作有限关闭工作。
+
+17项新增专项覆盖原身份、初始化成功/失败/关闭准入、匿名waiter、配置与浏览器失败订阅、HTTP IDs/部分安装/清理失败、慢restore、迟到登录、刷新/轮询、借入this/不logout、失败后串行tail与原300000ms超时仍存在的REST败选分支。实测原timeout在browser未打开时重分类OpenExternalLinkError，不用桥替换错误。另在自有home/work目录启动真实ProductHost/EnvProductProvider/merger，ACC V3合并后经原custom storage/Manager发布token、uid、enterprise，确认没有误用CODEBUDDY_AUTH_TOKEN信号；JWT依赖仍为明确decoder double，不冒称签名/生产认证。
+
+全部67组源码/行为验证通过，含认证34+真实HTTP1+原ACP gate1、父链12、恢复4+异常4的原factory成对比较。REA最终证据 `ev_764df34ba635212c199f20b15b658edaf8932875d063077b5a871d37abafea75`：6171 AST nodes、3 parsed、0 skipped/parse failures；750 semantic/每文件750、150 unknown/每文件150、45秒限制下partial/truncated，不是完整等价证明。只用owned文件/随机loopback/确定模型，未读取安装账户或调用生产服务。
+
+下一步继续完整默认native父配置/ACP/全部interceptor接线、可运行CLI入口和独立OS进程生命周期，再推进生产REST/账户磁盘库、跨cwd/全部模式、Desktop HistoryStore及其余并发/外围前沿。现有CLI/Web仍可启动，但尚未替换为完整原生默认bootstrap；整体目标继续进行中。
+
+最终门槛：check/build、1577项编译JS smoke、全部67组源码/行为验证、原配置字节校验及CLI/Web seed/reload实际启动通过。本轮代码从暂存区干净检出，重新npm ci/check/build后，全部1656编译核心+11Web、配置和实际启动再次通过，无原应用/bundle/旧node_modules依赖，并确认检出测试与最终代码逐字节相同。SDK及6 JSON/115 product prompts/22 Desktop资源（304358字节）不变；773文件发布审计在已检查规则内无发现，不是安全证明。既有17项依赖告警（10中危/7高危）保留，未为隐藏告警升级样本依赖。

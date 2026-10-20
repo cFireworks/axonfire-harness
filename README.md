@@ -16,6 +16,8 @@
 
 [公开原 AgentService/Runner 装配](docs/native-agent-run-host.md)已提供原Service、interceptor与Factory/Provider/loop的实例创建及资源收尾；原ACP父链和SDK验证已改接。Provider缓存及SDK对象身份保留，被动跟踪主run和新建专用Runner的一次性完成，不额外消费stream。默认认证/配置/全部服务图和CLI父入口仍待继续接线。
 
+[公开原认证装配](docs/native-authentication-host.md)已把原Manager/Storage/Provider/HTTP interceptor创建和回收迁入运行时，父链验证已改接，并验证真实Product配置合并→custom-token restore。保留原初始化失败屏障、优先级和超时语义，不读取安装账户、不等同生产登录或完整默认bootstrap。
+
 [完整原 AskService / PlanStorage](docs/native-interaction-services.md) 已替换公开兼容入口的行为重写；原 ACP 父链现通过真实扩展 RPC 跑通问答、跳过、取消与计划批准/拒绝/退出，参考侧也使用原类验证。完整默认产品启动链与全部配置/并发分支仍在推进。
 
 ## 快速开始

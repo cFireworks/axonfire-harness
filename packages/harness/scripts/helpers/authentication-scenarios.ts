@@ -139,8 +139,7 @@ export const AUTHENTICATION_CASES = [
   scenario(
     "source user info context publishes only id/nickname when current auth exists",
     async (f) => {
-      const resolver = new f.C.UserInfoContextVariableResolver();
-      resolver.authenticationManager = f.manager;
+      const resolver = f.host.createUserInfoResolver();
       assert.equal(await resolver.priority({}, {}), 0);
       assert.equal(await resolver.resolve({}, {}), undefined);
       f.manager.currentSessionSubject.next(f.session());
@@ -173,11 +172,8 @@ export const AUTHENTICATION_CASES = [
             attributes: {},
           },
         });
-        const p = new owned.C.WxAuthenticationProvider(),
-          requests: any[] = [];
-        Object.assign(p, {
-          productManager: owned.product,
-          logger: owned.manager.logger,
+        const requests: any[] = [];
+        const p = owned.host.createWx({
           restOperations: {
             post: async (url: string) => {
               requests.push(url);
@@ -199,7 +195,6 @@ export const AUTHENTICATION_CASES = [
             }),
           },
         });
-        p.init();
         assert.equal(await p.support(), true);
         const result = await p.createSession({
           abortController: new AbortController(),
