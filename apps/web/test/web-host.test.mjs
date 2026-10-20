@@ -181,6 +181,30 @@ test("validates bodies, session paths, and bounds request size", async (t) => {
   );
   assert.equal((await post("/api/prompt", { prompt: " " })).status, 400);
 });
+test("Web native local reload command streams its result without requesting a model", async (t) => {
+  let modelRequests = 0;
+  const directory = await mkdtemp(join(tmpdir(), "axonfire-web-plugin-"));
+  const { post } = await setup(t, {
+    configured: true,
+    harness: {
+      workDir: directory,
+      modelProvider: {
+        getModel() {
+          modelRequests++;
+          throw Error("Local command must not request a model");
+        },
+      },
+      recordReplayEnv: {},
+    },
+  });
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const response = await consume(
+    await post("/api/prompt", { prompt: "/reload-plugins --force" }),
+  );
+  assert.equal(response.at(-1).type, "done");
+  assert.match(response.at(-1).data.text, /Plugins reloaded successfully:/);
+  assert.equal(modelRequests, 0);
+});
 test("real SDK and recovered harness stream, persist, restore and compact through Web", async (t) => {
   const directory = await mkdtemp(join(tmpdir(), "axonfire-web-sdk-"));
   t.after(() => rm(directory, { recursive: true, force: true }));

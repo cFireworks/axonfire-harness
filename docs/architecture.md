@@ -40,4 +40,12 @@ CustomAgents/CustomCommands、Models/CustomModels、AgentModelResolver、Availab
 
 注意原AgentManager只淘汰plugin缓存：删除普通Agent文件后，新product快照不再包含它，但先前注册过的非插件SDK Agent仍可能由get(name)取出。命令删除会刷新命令表。这个原样本行为保持不变，不能把文件发现已恢复表述为所有旧实例都被清理。
 
-下一批优先插件跨服务刷新事务及Cloud product/环境服务，随后SDK输入/启动/鉴权、Hook服务端、AutoMode backend和SettingsManager持久化。统一默认审批时还须验证原policy allow与独立guard的边界，不能只因为可选路径测试通过就声明默认已等价。新增Web UI不计为这些原产品服务已恢复。
+PluginManager完整194成员、七类extension loader及loader manager、PluginRuntimeRefreshService、reload命令和输出样式manager现已移植。默认owned plugin host启动原manager，只有显式目录进入inline来源；同一active snapshot供Product provider、AgentManager、Hooks、MCP及LSP消费。完整原刷新队列在beforeCommit比较MCP有效server名称，提交后刷新各服务；AgentService使用已有原join屏障，继续从同名托管Agent取新实例。市场来源、下载、MCPB、跨进程锁和持久化Settings仍为明确的外部边界，不因完整类可调用就宣称产品安装服务已恢复。
+
+新宿主只拥有路径、数据/平台adapter、订阅/定时器/immediate及所有原方法返回Promise的追踪，关闭时先拒绝新刷新，释放MCP/LSP I/O，再等待事务和旧任务，最后关闭ProductManager。Node fs桥写入限于owned state；signal=0只读存活检查保留，不允许通过该接口发送终止信号。原source的方法体与字符串不替换成宿主逻辑。原reload/builtin-seed的LSP刷新故意后台执行，host额外持有关闭屏障；默认显式LSP config由宿主补回，属于standalone配置兼容而非原方法变更。
+
+CLI/Web共享本地命令分派，原reload executor负责caveat/input/output历史和force/ToolSearch/已有输出门槛，命令不经过SDK模型。Web同源/CSRF和单运行槽不变。插件可含自动执行Hook，必须显式信任目录，逐次工具审批不能作为插件沙箱。
+
+插件刷新屏障位于产品服务与SDK运行之间，不重写SDK agent loop；职责边界参考[OpenAI Docs](https://developers.openai.com/api/docs/guides/agents/running-agents)。实际入参、stream完成与恢复行为仍以锁定0.5.2和本地真实SDK测试为准，不按现行文档升级依赖或替换原状态机。
+
+下一批优先市场/资源seed及持久化服务依赖、Cloud product/环境服务，随后SDK输入/启动/鉴权、Hook服务端和AutoMode backend。统一默认审批时还须验证原policy allow与独立guard的边界，不能只因为可选路径测试通过就声明默认已等价。新增Web UI不计为这些原产品服务已恢复。

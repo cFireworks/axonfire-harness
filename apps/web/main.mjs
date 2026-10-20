@@ -9,12 +9,13 @@ export async function main(args) {
       demo: { type: "boolean" },
       port: { type: "string" },
       cwd: { type: "string" },
+      "plugin-dir": { type: "string", multiple: true },
       help: { type: "boolean", short: "h" },
     },
   });
   if (values.help) {
     console.log(
-      "axonfire web [--demo] [--port 3080] [--cwd /path]\nLocal-only Web host. Model credentials stay in server environment / .env.",
+      "axonfire web [--demo] [--port 3080] [--cwd /path] [--plugin-dir /trusted/plugin]\nLocal-only Web host. Explicit plugins may contain executable Hooks. Model credentials stay in server environment / .env.",
     );
     return;
   }
@@ -30,6 +31,7 @@ export async function main(args) {
   );
   const harness = {
     workDir,
+    ...(values["plugin-dir"] ? { nativePlugins: { directories: values["plugin-dir"] } } : {}),
     stateDir: resolve(
       process.env.AXONFIRE_STATE_DIR ??
         resolve(workDir, ".axonfire", demo ? "demo" : "live"),

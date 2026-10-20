@@ -17,7 +17,8 @@
 | ---: | ----------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |    1 | OpenAI Agents SDK | 完成                         | 精确锁定 `@openai/agents* 0.5.2`、`openai 6.25.0`；SDK 不重写                                                                                                                                                                                                                         |
 |    2 | Product config    | 100% 字节保留                | default/cloudhosted/internal/ioa/selfhosted/sandbox 六份原始 JSON；SHA 验证                                                                                                                                                                                                           |
-|    2 | ProductManager / providers | 原manager、merger及文件/模型provider默认接入 | 首批19类/112处AST/743次比较；新增15类与变量helper共118处AST/263次比较及7个原纯factory。CustomAgents/Commands发现、Models/CustomModels、模型解析/过滤与企业策略默认接入，真实SDK验证文件刷新与本地模型HTTP。Cloud product、完整插件刷新事务/环境服务和磁盘Settings仍待补，不等于完整产品bootstrap |
+|    2 | ProductManager / providers | 原manager、merger及文件/模型provider默认接入 | 首批19类/112处AST/743次比较；文件/模型15类及helper为118处AST/263次比较。插件完整刷新队列现默认接入原manager并更新各消费者；Cloud product、市场/资源seed/环境服务和磁盘Settings仍待补，不等于完整产品bootstrap |
+|    2 | PluginManager / loaders / refresh | 完整核心类与本地目录主路径默认接入 | 14完整类含PluginManager 194成员、七loader、事务/reload命令/output style；294处完整AST、472次比较、3纯constant factory。原提交前MCP有效名称保护、队列失败恢复/SDK屏障、Hooks/MCP/LSP/Agent及命令刷新已验证；市场下载/安装/资源seed、文件锁/Options/策略与Settings持久化等外部服务未完整恢复 |
 |    2 | Prompt registry   | 100% 内容保留                | 115 模板、284,899 Unicode code point；Nunjucks `autoescape:false`、编译缓存、失败回退                                                                                                                                                                                                 |
 |    2 | Tool registry | 47个不同名称均有handler | 原48条声明含一条重复Agent。新增WeChatReply/WeComReply与bridge，默认CLI声明不变；WeCom连接沿原逻辑补入已构造Agent内存tools。47/47只是名称覆盖，已有工具的客户端/宿主分支、动态缓存/插件等仍待补；不是整体100% |
 |    2 | AgentManager | 完整原类移植，68个非constructor方法结构对照 | eager构建/ready与models屏障、pending/force重建/指纹、CLI/handoff/asTool、模型继承/related/env、插件replace/volatile expert/settings优先级、MCP首轮等待/原生defer/权限门槛已恢复；74个原YAML模块factory逐字保留。独立host明确适配DI/Deferred/Emitter，不等于完整ProductManager/插件loader/工具索引热刷新服务 |
@@ -614,3 +615,31 @@ constructor.name是本批独立核查点。原manager用可读provider名称字�
 新增19项专项含真实SDK文件命令改写/刷新/删除、原Agent缓存行为、models.json经原WorkBuddyModelProvider到自有loopback Chat Completions SSE，以及真实models.json watch/debounce/close。所有文件/HTTP/账号/时钟均自有或fake，不访问原应用账户、真实企业/模型服务、联系人或桌面。
 
 本批794核心、10Web宿主、716编译JS smoke、42组样本差分、check/build/config与CLI/Web实际启动通过。SDK/OpenAI、依赖锁、六份JSON/115 Prompt与memory policy不变；旧依赖audit风险不因本批功能恢复消失。下一批优先插件跨服务刷新事务、Cloud product与环境服务，再推进SDK输入/启动/鉴权、Hook服务端、Auto classifier backend和SettingsManager持久化。核心方法/字符串的有限AST与差分结果不等于整个harness已100%恢复，整体目标继续进行。
+
+## 完整插件管理类、本地组件加载与跨服务刷新批次
+
+沿用固定5.3.14样本SHA及原REA证据，不执行安装应用bootstrap。另以完整原module28579的惰性factory片段运行REA静态分析，得到派生Evidence `ev_f226988140af2bc7a440a361edb602a2c24000edd0d9f1b77f47888c89f758ed`；该fragment有原UTF-16来源说明，500-node/100-unknown边界下关系覆盖明确为partial，不把它当完整应用控制流证据。后续移植与差分仍逐项核对固定原bundle。
+
+完整PluginManagerImpl `9624900..9758187`含constructor及193个方法，PluginDependencyResolutionError `9624672..9624889`；恢复初始化/缓存代次/installed registry迁移与原子写入/路径及seed判定/版本和依赖闭包/安装启停与策略流程/inline来源/组件cache和active快照等全部成员。完整类存在不等于每条外部服务已接通；默认独立host只使用owned路径和显式本地目录，不下载市场内容。
+
+完整PluginLoaderManager `9617689..9621098`；七loader分别为Agent `9583201..9587093`、Command `9588330..9591824`、Skill `9593102..9597847`、Hook `9599266..9602081`、MCP `9603335..9608128`、LSP `9609592..9612038`、OutputStyle `9613296..9616389`。manifest路径配置/默认目录/递归与去重、完整YAML与简单frontmatter、插件命名/model id/name差异、Hook schema和环境/user_config、MCP JSONC与缺type推断/LSP env/输出样式namespace及settings.json覆写均保留；MCPB动态模块仍需下载/提取backend，不伪造可用。
+
+完整PluginRuntimeRefreshService `9832687..9835683`、PluginMcpToolChangeBlockedError `9832171..9832559`、pluginMcpServerConfigs `9832560..9832680`。队列按refreshTail串行；prepareDesiredState先执行；startup/prewarm/builtin/reload的desired-state与repair分支保持原样。reload的beforeCommit比较投影与期望有效MCP名称，按排序added/removed抛逐字错误；先校验再更新registry/active snapshot，失败不提交。提交后按原序刷新MCP、LSP、工具cache、full/volatile Product、命令、样式和Agent；reload/builtin LSP故意后台，启动等其他原因等待。失败调用本身拒绝，但settled tail吞该错误并允许下一事务，不沿用ProductManager的sticky-rejection队列语义。
+
+完整ReloadPluginsCommandExecutor `7626670..7628827`和OutputStyleManagerImpl `9420919..9423931`恢复。reload保留原force/ToolSearch/已有outputTokens门槛、caveat/input/output与计数文案；本地命令不发模型请求。输出样式保留built-in先、ancestor根到当前、plugin最后且首次同名保留的原顺序，不改成“最近目录覆盖”。原source仅比较MCP有效名称，不检测同名配置内容变化；依赖修复后的第二次active提交原本不再运行同一MCP阻断校验，两点均明确测试保留。
+
+原helper包括mapWithConcurrencyLimit、resolveDependencyClosure、cache-marker exit注册、parseFrontmatterHooks和extended Hook env gate、两个filesystem并发函数，以及8组原Zod3 schema表达式。module6527/47962/26106三个纯constant factory原文保留，合成SHA-256 `edd7b1253f42337215c19e8f8c684283c6108e60949e093dadfe0ade5c1d67cb`；metadata不是完整bundle或SDK源码。新增精确固定样本`semver 7.7.2`依赖，其他既有依赖、SDK/OpenAI、六份JSON/115 Prompt和memory policy均不变；audit仍为16项旧风险。
+
+默认createHarness拥有原PluginManager及loader，空配置时不扫描任何安装插件；CLI/Web的repeatable `--plugin-dir`与嵌入nativePlugins.directories传入显式可信目录。共享active snapshot进入Product/Agent/Hooks/MCP/LSP，接上AgentService已有原refresh join与托管Agent替换屏障；删除插件manifest并reload会清除plugin-tag Agent/命令/Hook/style。legacy只读agentManager.plugins保持原来兼容边界，不冒充完整事务manager。完整manager adapter可显式共用，避免两个不一致的plugin owner。
+
+新增owned host区分原方法与平台bootstrap：默认市场/managed-policy来源未配置，原Installer/MarketplaceFactory、资源seed/MCPB、真实磁盘Settings/Options/跨进程锁/Git执行仍需后续服务，不把空数据来源记为这些服务完成。Node文件桥不是原fs-extra；写入/删除限制到本次state并检查外部symlink，进程接口仅允许signal0只读存活检查。原启动5秒auto-update timer、immediate/订阅/原方法返回Promise与background LSP均由宿主跟踪；close拒绝新刷新，释放I/O后等事务，再关闭Product并清理自有cache marker。LSP显式standalone配置在原reload后重新注册，属于宿主适配。
+
+补保留module94377 `13019243..13020520`完整semver包装factory：Bun的order/satisfies/valid快速分支、Node fallback以及始终委派semver的range/coerce等方法不合并成一套近似算法。Node依赖锁定7.7.2；另验证原factory的AST/摘要并用受控Bun适配器测试分支，不据此宣称完整Bun产品bootstrap已恢复。
+
+Web/嵌入入口新增同CLI的本地命令分派，原executor结果先刷JSONL再返回/流式输出，不调用第二套loop。Web同源/CSRF/单运行槽不变；可信插件可自动执行Hook，逐次工具审批不是插件沙箱，不自动扩展legacy工具/MCP allowlist。
+
+`verify:plugins`核对14完整类及全部方法体、helper/并发函数/8组schema共294处完整AST，3纯factory另核对；472次有限比较覆盖reason/desired reload/修复/失败矩阵、MCP有效名称、manager路径/registry/scope/version/依赖闭包。原完整方法体使用同一owned DI边界，不独立执行完整产品bootstrap，也未穷举全部194方法的磁盘/安装/并发状态空间。
+
+新增24项核心专项与1项Web测试：真实本地七loader、模型规则、快照校验/冻结/cache晚到/依赖guard、队列顺序/失败/背景LSP、命令文案和路径保护；真实SDK跨插件Agent/命令/输出样式/Hook刷新及删除、刷新屏障、MCP阻断前0次握手/force后自有HTTP连接；独立CLI进程和Web均验证reload不发模型请求。模型/HTTP/命令子进程与文件均为自有或fake，不读取安装账号或访问真实模型/联系人/桌面。
+
+门槛：818核心、11Web宿主、740编译JS smoke、43组样本差分、check/build/config及CLI/Web启动通过。下一批优先市场/资源seed和持久化依赖、Cloud product/环境服务，再推进SDK输入/启动/鉴权、Hook服务端、Auto backend与默认审批统一。完整核心类/本地主路径可运行不等于整个harness或产品bootstrap已100%恢复，整体目标继续进行。

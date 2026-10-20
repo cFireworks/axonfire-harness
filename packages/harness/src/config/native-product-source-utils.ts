@@ -345,8 +345,8 @@ export function createNativeProductSourceUtilities(runtime: any) {
     function createPluginEnvironmentContext(
       eA: any,
       el: any,
-      ec: any,
-      eu: any,
+      ec?: any,
+      eu?: any,
       ed: any = eg.PathUtils.getWorkDir(),
     ): any {
       return {

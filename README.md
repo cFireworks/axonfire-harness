@@ -36,6 +36,9 @@ npm run cli -- --cwd /absolute/path/to/project
 npm run cli -- -p "了解这个项目" --cwd /absolute/path/to/project
 # 非交互模式只允许明确批准的工具，例如：
 npm run cli -- -p "读取 README.md" --allow-tools Read --cwd /absolute/path/to/project
+# 显式加载可信本地插件；可重复 --plugin-dir
+npm run cli -- --plugin-dir /absolute/path/to/plugin --cwd /absolute/path/to/project
+# Web 同样支持该参数：npm start -- --plugin-dir /absolute/path/to/plugin
 ```
 
 Web 工具调用逐次审批，支持流式回复、历史恢复、取消、上下文压缩和 Agent 问答。会话默认保存在工作目录的 `.axonfire/`；CLI 兼容原 standalone 宿主的 `.workbuddy-harness/`。这些目录均被 Git 忽略。
@@ -72,7 +75,7 @@ npm run verify:config
 npm run verify:recovery -- /absolute/path/to/codebuddy.js
 ```
 
-最新验证：794 项核心测试、10 项 Web 宿主测试、716 项编译后 smoke、42 组原样本差分通过。原 ProductManager 默认驱动配置合并、动态 provider 与 Agent/命令刷新；现已接入原 CustomAgents/CustomCommands 文件发现、Models/CustomModels、模型解析/过滤及企业策略。支持 SDK 初始化覆盖、原 MCP prompt renderer，以及项目 `.codebuddy/agents/`、`commands/`、`models.json`（路径与缓存边界见使用说明）。完整权限服务和原审批控制器通过 `nativePermissions`、`nativeApprovals` 显式使用；`sdkControl` 或 `nativeMcp` 默认启用这两条 native 路径及原生 MCP 宿主。stdio / HTTP / SSE 使用显式配置，SDK MCP 通过 initialize 注册。CLI/Web 默认保留兼容审批宿主。配置中的 115 个原始 prompt 和固定哈希保持不变。详细边界见 [还原状态](docs/recovery-status.md)，安装与启动验证见 [使用说明](docs/getting-started.md)。
+最新验证：818 项核心测试、11 项 Web 宿主测试、740 项编译后 smoke、43 组原样本差分通过。原 ProductManager 默认驱动配置合并、动态 provider 与 Agent/命令刷新；原文件/模型 providers、企业策略、PluginManager 的本地插件加载与跨服务刷新现已接入。CLI/Web 可直接执行 `/reload-plugins`；本地命令不发送给模型。市场下载/完整产品 bootstrap 仍未完成。完整权限服务和原审批控制器通过 `nativePermissions`、`nativeApprovals` 显式使用；`sdkControl` 或 `nativeMcp` 默认启用这两条 native 路径及原生 MCP 宿主。CLI/Web 默认保留兼容审批宿主。配置中的 115 个原始 prompt 和固定哈希保持不变。详细边界见 [还原状态](docs/recovery-status.md)，文件/插件配置与启动验证见 [使用说明](docs/getting-started.md)。
 
 本地工作台演示：
 
@@ -81,6 +84,8 @@ npm run verify:recovery -- /absolute/path/to/codebuddy.js
 ## 范围与安全
 
 这是有本地文件 / Shell 能力的开发工具，**审批不是操作系统沙箱**。只在可信工作目录运行；不要审批不了解的命令。Web 固定监听 `127.0.0.1`，检查 Host、Origin 和 CSRF token，不提供公网部署、多用户认证或远程访问。不要直接通过反向代理暴露。
+
+只加载可信插件：插件可以包含自动执行的 Hook、MCP/LSP 配置和指令；Hook 命令不等同于逐次模型工具审批。默认不扫描已安装 WorkBuddy 的插件或账号，也不自动安装市场插件。
 
 仓库不包含安装包、完整原始 bundle、个人凭据和运行记录。配置/还原片段来自分析样本；不能据此认定其全部拥有可重新授权的开源许可证。仅在你有权使用的范围内研究、验证和使用，保留依赖自身的许可证与通知。
 

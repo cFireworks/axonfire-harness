@@ -46,7 +46,7 @@ Web 的 `--cwd` 指定工具工作目录：`npm start -- --cwd /absolute/path/to
 
 ## 原生 MCP（嵌入 API）
 
-最新门槛为794核心 + 10宿主、716编译smoke、42组样本差分。stdio / HTTP / SSE override、SdkMcpTransport / SdkMcpServer、底层manager和结果处理之后，现已接入完整顶层McpManager、ConfigManager/Store、连接/模型/权限/toggle、Ready/CLI配置初始化、环境展开/diagnostics与plugin registry类。ProductManager、MCP状态watcher和prompt命令已接入；文件/模型providers及企业模型策略见文末。产品插件加载器的完整刷新事务仍是后续边界。
+最新门槛为818核心 + 11宿主、740编译smoke、43组样本差分。完整原MCP类群、ProductManager、文件/模型providers及企业模型策略已接入。本地插件loader、active snapshot提交和完整刷新事务现已恢复；市场下载、资源seed与完整设置/安装服务仍是后续边界。
 
 普通嵌入调用可在已有模型配置上添加：
 
@@ -120,6 +120,22 @@ await harness.agents.waitForRebuildSettled(0);
 企业来源仅通过`productRuntime.sources.authenticationManager`（含`currentSessionSubject`）与`restOperations.get`显式注入；原模型接口/策略URL、缓存与失败处理保持样本行为。默认无企业账号，永不从模型API key推断产品账号。策略磁盘缓存写入本次owned home下`.codebuddy/.policy-cache.json`，不是原应用缓存。`productRuntime.watch:false`禁用宿主watch，仍可手动sync。
 
 删除普通Agent文件会移除配置快照中的定义；原AgentManager已注册的非插件实例缓存仍可能残留，这是保留的样本行为。自定义模型文件可能包含密钥，请勿提交实际凭据。`models.json`不是安全沙箱或受信任来源验证器。
+
+## 可信本地插件与刷新
+
+CLI：`npm run cli -- --plugin-dir /absolute/plugin --cwd /absolute/project`；Web：`npm start -- --plugin-dir /absolute/plugin`。参数可重复，路径相对于工作目录解析。嵌入时使用`nativePlugins: { directories: [...] }`，环境变量替换只消费显式`nativePlugins.env`，不自动复制安装应用账号或宿主环境。
+
+插件目录中应有`.codebuddy-plugin/plugin.json`（也保留`.workbuddy-plugin`、`.claude-plugin`搜索顺序），至少声明`name`。原loader支持默认或manifest指定的Agent/command/skill目录、`hooks/hooks.json`、`.mcp.json`、`.lsp.json`、`output-styles`与`settings.json`。命令名为`/<plugin>:<command>`；插件Agent只认可当前模型id，命令另支持模型显示名转id，行为不同。Hooks和带user_config的配置保留原变量、敏感值隐藏及原Zod3校验。
+
+输入`/reload-plugins`可刷新同一active snapshot及MCP/LSP/工具/配置/命令/输出样式/Agent。已产生模型输出、当前Agent不含ToolSearch且MCP有效server名称集改变时，原处理器要求`/reload-plugins --force`。该检查按有效名称集合，不是任意配置变化检测。SDK新运行等待刷新队列完成，再取重新构建的托管Agent。Web与嵌入`harness.prompt`也走本地命令分派；结果写JSONL并返回/流式输出，不多调用模型。
+
+原PluginManager完整194个成员已移植，但不代表全部外部服务已恢复。默认独立宿主没有配置市场或managed-policy来源；市场安装器/MarketplaceFactory、MCPB下载、真实磁盘Settings/Options/策略服务和跨进程文件锁仍需显式适配器。Git/process安装执行默认不可用；Node文件桥不是原fs-extra，写入与清理限制在本次state，拒绝外部symlink路径。无需安装WorkBuddy即可使用上面的本地目录链路。
+
+`harness.pluginManager`为当前来源，`pluginRuntimeRefresh.refresh(reason, options)`为原队列服务，`pluginHost`暴露原类与宿主生命周期。已有`agentManager.plugins`只读adapter继续兼容，但不冒充完整manager，也不会自动启用原刷新事务；同时提供`nativePlugins`时必须明确共用同一个完整manager。显式LSP配置在插件刷新后由宿主重新注册，不被原LSP shutdown顺带清除。
+
+插件可能含可执行Hooks，加载即表示信任其内容；本地命令/Hook不是OS沙箱，也不是逐次工具审批。MCP自动接线只在显式`nativeMcp`宿主启用时生效；CLI/Web新增目录参数并未暗中扩大MCP/legacy工具allowlist。卸下插件可删除其manifest后reload；原plugin-tag实例会被清理，和普通文件Agent缓存残留行为不同。
+
+本批再次将Git暂存快照检出到全新空目录，不复制任何node_modules、原安装包或bundle：`npm ci`、`npm run check`、`npm run build`、CLI/Web launcher smoke与11项Web测试均通过。完整818核心/740编译smoke及43组差分在主验证目录运行；差分仍需用户自行提供固定SHA样本。新增semver按样本固定7.7.2，既有依赖版本不变，16项旧audit风险仍存在。
 
 缓存默认用本宿主独立的原MemoryLocalStorage；可用`productRuntime.storage`注入自己拥有的get/set及可选getSync。缓存保留原gzip/base64、稳定快照与版本key，不自动读取原应用的本地存储。`productRuntime.env`是显式拥有的配置环境对象，默认空；原Env provider可处理其中的ACC_PRODUCT_CONFIG等字段，不会自动扫描进程中可能包含账号的产品配置环境。模型API key仍使用原CLI/Web自己的配置，不映射为产品账号。
 

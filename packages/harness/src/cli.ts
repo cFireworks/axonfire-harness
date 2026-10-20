@@ -25,6 +25,7 @@ Usage: npm run cli -- [options]
   --allow-tools <names>        Comma-separated names approved by this CLI host
   --memory-extraction          Enable recovered background memory extraction
   --prompt-vars-file <file>    Version-1 primitive variables; cannot override built-ins
+  --plugin-dir <directory>     Load an explicit trusted local plugin (repeatable)
   -h, --help                   Show this help (no credentials/network needed)
 
 Credentials: CODEBUDDY_API_KEY or OPENAI_API_KEY.
@@ -45,7 +46,7 @@ export async function main(args = process.argv.slice(2)): Promise<void> {
     print: { type: "string", short: "p" }, help: { type: "boolean", short: "h" },
     cwd: { type: "string" }, "state-dir": { type: "string" }, model: { type: "string" }, "fallback-model": { type: "string" }, "base-url": { type: "string" }, "web-endpoint": { type: "string" }, "media-endpoint": { type: "string" },
     resume: { type: "string" }, "max-turns": { type: "string" }, "permission-mode": { type: "string" },
-    "allow-tools": { type: "string" }, "memory-extraction": { type: "boolean" }, "prompt-vars-file": { type: "string" },
+    "allow-tools": { type: "string" }, "memory-extraction": { type: "boolean" }, "prompt-vars-file": { type: "string" }, "plugin-dir": { type: "string", multiple: true },
     "team-backend": { type: "string" }, serve: { type: "boolean" }, "teammate-mode": { type: "boolean" },
     "team-name": { type: "string" }, "agent-name": { type: "string" }, "agent-type": { type: "string" }, "agent-color": { type: "string" },
     "parent-session-id": { type: "string" }, "leader-endpoint": { type: "string" },
@@ -81,6 +82,7 @@ export async function main(args = process.argv.slice(2)): Promise<void> {
   let approvals: Promise<unknown> = Promise.resolve();
   const runtime = await createHarness({
     workDir: resolve(values.cwd ?? process.cwd()),
+    ...(values["plugin-dir"] ? { nativePlugins: { directories: values["plugin-dir"] } } : {}),
     ...(mediaEndpoint || mediaAccessToken ? { mediaTools: { ...(mediaEndpoint ? { endpoint: mediaEndpoint } : {}), ...(mediaAccessToken ? { accessToken: mediaAccessToken } : {}) } } : {}),
     ...(values["state-dir"] ? { stateDir: resolve(values["state-dir"]) } : {}),
     ...(apiKey ? { apiKey } : {}), ...(baseURL ? { baseURL } : {}), ...(model ? { model } : {}),
