@@ -53,6 +53,22 @@ async function nextTurn(): Promise<void> {
   await new Promise<void>((resolve) => setImmediate(resolve));
 }
 
+test("compatibility approval owns early denial while an asynchronous Notification Hook is still pending", async () => {
+  let finishNotification!: () => void;
+  const notification = new Promise<void>(resolve => { finishNotification = resolve; });
+  const service = new InterruptionService(new SessionRunStateMachine(), {executeNotificationHooks: () => notification});
+  const session = new HarnessSession("early-denial");
+  const state = stateDouble(); session.state = state.value; session.status = "model_done";
+  const item = approval("Read", "early-denial");
+  const handling = service.handleInterruptions(session, [item]);
+  await nextTurn(); assert.equal(service.reject(item), true);
+  // A full event-loop turn would surface an unowned rejection before the
+  // notification settles. Denial must still reach the normal state handler.
+  await nextTurn(); finishNotification(); await handling;
+  assert.deepEqual(state.rejected, [item]); assert.deepEqual(state.approved, []);
+  assert.equal(service.pending$.value, undefined);
+});
+
 test("child agent approval is displayed and resolved on the main session", async () => {
   const machine = new SessionRunStateMachine();
   let continued = 0;

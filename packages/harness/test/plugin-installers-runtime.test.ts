@@ -811,7 +811,7 @@ test(
     assert.equal(
       (
         await fs.readFile(
-          join(stateDir, "plugins", "plugin-options.json"),
+          join(stateDir, "settings.json"),
           "utf8",
         )
       ).includes("owned-secret"),

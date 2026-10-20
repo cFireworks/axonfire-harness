@@ -26,6 +26,9 @@ Usage: npm run cli -- [options]
   --memory-extraction          Enable recovered background memory extraction
   --prompt-vars-file <file>    Version-1 primitive variables; cannot override built-ins
   --plugin-dir <directory>     Load an explicit trusted local plugin (repeatable)
+  --settings <json-or-file>    Original CLI settings provider (JSONC supported)
+  --setting-sources <list>     user,project,local or none; CLI settings still apply
+  --effort <level>             minimal, low, medium, high, xhigh, max
   -h, --help                   Show this help (no credentials/network needed)
 
 Credentials: CODEBUDDY_API_KEY or OPENAI_API_KEY.
@@ -48,6 +51,7 @@ export async function main(args = process.argv.slice(2)): Promise<void> {
     resume: { type: "string" }, "max-turns": { type: "string" }, "permission-mode": { type: "string" },
     "allow-tools": { type: "string" }, "memory-extraction": { type: "boolean" }, "prompt-vars-file": { type: "string" }, "plugin-dir": { type: "string", multiple: true },
     "team-backend": { type: "string" }, serve: { type: "boolean" }, "teammate-mode": { type: "boolean" },
+    settings:{type:"string"},"setting-sources":{type:"string"},effort:{type:"string"},
     "team-name": { type: "string" }, "agent-name": { type: "string" }, "agent-type": { type: "string" }, "agent-color": { type: "string" },
     "parent-session-id": { type: "string" }, "leader-endpoint": { type: "string" },
     "dangerously-skip-permissions": { type: "boolean", short: "y" },
@@ -63,6 +67,7 @@ export async function main(args = process.argv.slice(2)): Promise<void> {
   if (webEndpoint && !["http:", "https:"].includes(new URL(webEndpoint).protocol)) throw new Error("--web-endpoint must use HTTP or HTTPS");
   if (values["teammate-mode"]) {
     await runStandaloneTeammate(args, { workDir: resolve(values.cwd ?? process.cwd()),
+      nativeSettings:{cliOptions:{...(values.settings!==undefined?{settings:values.settings}:{}),...(values["setting-sources"]!==undefined?{settingSources:values["setting-sources"]}:{}),...(values.effort!==undefined?{effort:values.effort}:{})}},
       ...(mediaEndpoint || mediaAccessToken ? { mediaTools: { ...(mediaEndpoint ? { endpoint: mediaEndpoint } : {}), ...(mediaAccessToken ? { accessToken: mediaAccessToken } : {}) } } : {}),
       ...(webEndpoint || webAccessToken ? { webTools: { ...(webEndpoint ? { endpoint: webEndpoint } : {}), ...(webAccessToken ? { accessToken: webAccessToken } : {}) } } : {}),
       ...(values["state-dir"] ? { stateDir: resolve(values["state-dir"]) } : {}),
@@ -82,6 +87,7 @@ export async function main(args = process.argv.slice(2)): Promise<void> {
   let approvals: Promise<unknown> = Promise.resolve();
   const runtime = await createHarness({
     workDir: resolve(values.cwd ?? process.cwd()),
+    nativeSettings:{cliOptions:{...(values.settings!==undefined?{settings:values.settings}:{}),...(values["setting-sources"]!==undefined?{settingSources:values["setting-sources"]}:{}),...(values.effort!==undefined?{effort:values.effort}:{})}},
     ...(values["plugin-dir"] ? { nativePlugins: { directories: values["plugin-dir"] } } : {}),
     ...(mediaEndpoint || mediaAccessToken ? { mediaTools: { ...(mediaEndpoint ? { endpoint: mediaEndpoint } : {}), ...(mediaAccessToken ? { accessToken: mediaAccessToken } : {}) } } : {}),
     ...(values["state-dir"] ? { stateDir: resolve(values["state-dir"]) } : {}),

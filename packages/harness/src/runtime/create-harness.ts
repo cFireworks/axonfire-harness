@@ -1,6 +1,7 @@
 import { NoopTrace, withTrace, type AgentInputItem, type ModelProvider } from "@openai/agents-core";
 import { mkdir } from "node:fs/promises";
 import { createChannelHost, type ChannelHostOptions } from "../channels/channel-host.js";
+import type { NativeSettingsHostOptions } from "../config/native-settings-host.js";
 import { ChannelManagerImpl } from "../channels/channel-manager.js";
 import { ChannelPermissionAdapterImpl } from "../channels/channel-permission-adapter.js";
 import { noopChannelLogger } from "../channels/channel-runtime.js";
@@ -224,6 +225,7 @@ export type HarnessOptions = {
   agentManager?:AgentManagerHostOptions;
   /** Native plugin manager/loaders; only explicit trusted directories, no installed account discovery. */
   nativePlugins?: NativePluginHostOptions;
+  nativeSettings?: NativeSettingsHostOptions;
   /** Explicit blob I/O override; native defaults stay within this harness stateDir. */
   blobs?: Partial<BlobRuntime>;
   /** Trusted, pre-existing clients only; no credential discovery or automatic connection. */
@@ -277,18 +279,22 @@ export async function createHarness(options: HarnessOptions) {
   const nativeApprovals = options.nativeApprovals ?? (!!sdkControl || !!options.nativeMcp), nativePermissions = options.nativePermissions ?? (!!sdkControl || !!options.nativeMcp);
   const sdkPermissionClient = options.approvalController?.sdkPermissionClient ?? sdkControl?.permission;
   const sdkSettings = new Map<string, any>();
+  let pluginSettings: any;
   const product = await loadProductConfiguration();
   let productRuntime: ReturnType<typeof createNativeProductHost> | undefined;
   const prompts = new ProductPromptRenderer(product);
   const mcp = new McpRegistry();
-  const settings: SettingsManager = {
-    async list() { return await options.settings?.list?.() ?? {}; },
+  const settings: SettingsManager & {clearCache(scope?:string):void} = {
+    async list() { return {...await pluginSettings?.list(),...await options.settings?.list?.()}; },
+    clearCache(scope?:string) { pluginSettings?.clearCache(scope); (options.settings as any)?.clearCache?.(scope); },
     async get<T>(key: string): Promise<T | undefined> {
       if (sdkSettings.has(key)) return sdkSettings.get(key);
       if(key==='model'&&options.model!==undefined)return options.model as T;
-      if (key === "env" && options.baseURL) return { ...await options.settings?.get<Record<string, string>>(key), CODEBUDDY_BASE_URL: options.baseURL } as T;
-      if (key === "memory" && options.memoryExtraction !== undefined) return { ...await options.settings?.get<object>(key), memoryExtraction: options.memoryExtraction } as T;
-      return options.settings?.get<T>(key);
+      const provided=await options.settings?.get<T>(key);
+      const value:any=provided!==undefined?provided:await pluginSettings?.get(key);
+      if (key === "env" && options.baseURL) return { ...value, CODEBUDDY_BASE_URL: options.baseURL } as T;
+      if (key === "memory" && options.memoryExtraction !== undefined) return { ...value, memoryExtraction: options.memoryExtraction } as T;
+      return value;
     },
   };
   const pluginProductChanges = new NativeEmitter();
@@ -302,9 +308,13 @@ export async function createHarness(options: HarnessOptions) {
   // A legacy read-only source is retained as such; it cannot impersonate the full native manager.
   const pluginHost = options.agentManager?.plugins && !options.nativePlugins ? undefined : createNativePluginHost({
     stateDir, getWorkDir, productManager: pluginProductManager, promptRenderer: prompts,
-    settings, plugins: options.nativePlugins,
+    settings, plugins: options.nativePlugins, cwdService,
+    configuration:{...options.nativeSettings,cliOptions:{...(options.model?{model:options.model}:{}),...options.nativeSettings?.cliOptions}},
     logger: { info: (...args:any[]) => options.logger?.info?.(args.map(String).join(' ')), warn: (...args:any[]) => options.logger?.warn(args.map(String).join(' ')), error: (...args:any[]) => options.logger?.warn(args.map(String).join(' ')) },
   });
+  // Legacy nativePlugins.settings may implement only the scoped plugin view.
+  // The global harness settings facade always uses the complete native service.
+  pluginSettings=pluginHost?.settingsHost.manager;
   const pluginSource = options.agentManager?.plugins ?? pluginHost?.pluginManager;
   const stateMachine = new SessionRunStateMachine();
   const messageQueue = new MessageQueueManager();
@@ -818,7 +828,7 @@ export async function createHarness(options: HarnessOptions) {
     },
   });
   if (pluginHost) {
-    pluginHost.attach({ skillProductProvider: skillProvider, toolManager: tools, commandManager, outputStyleManager: pluginHost.outputStyles,
+    pluginHost.attach({ hookManager:nativeHooks!.manager,skillProductProvider: skillProvider, toolManager: tools, commandManager, outputStyleManager: pluginHost.outputStyles,
       agentManager: agents, sessionManager: sessions, lspManager: { async reloadPluginServers() {
         if (closed) throw Error("Harness is closed");
         await lspManager.reloadPluginServers();
@@ -1036,7 +1046,7 @@ export async function createHarness(options: HarnessOptions) {
   channelClients?.initializeConfigured();
   channelHost.start();
   return { product, agents, agentFactory, tools, mcp, sessions, store, service, stateMachine, interruptions, compactor, memory, memoryRules, autoMemory, hooks:nativeHooks, permissions, shell, taskManager, taskStorage, taskTools, agentTool, taskOutputTools, plans, planTools, asks, askTool, promptContext, createWorkflowSubagentSpawner, createWorkflowRuntime, workflowTool, backgroundTaskNotifier, recordingStore, recordReplayProvider: provider, webFetchTool, webSearchTool, webRuntime,
-    sdkControl, sdkHandlers, nativeMcp, connectNativeMcp, productRuntime, productManager: productRuntime.facade, pluginHost, pluginManager: pluginSource, pluginRuntimeRefresh: pluginHost?.refresh, channelHost, channelClients, channelManager, channelPermissionAdapter, wechatReplyTool, wecomReplyTool,
+    sdkControl, sdkHandlers, nativeMcp, connectNativeMcp, productRuntime, productManager: productRuntime.facade, settingsHost:pluginHost?.settingsHost,settingsManager:pluginSettings,pluginHost, pluginManager: pluginSource, pluginRuntimeRefresh: pluginHost?.refresh, channelHost, channelClients, channelManager, channelPermissionAdapter, wechatReplyTool, wecomReplyTool,
     delegateToolManager, delegateToolsChangedHandler, delegateTool,
     lspManager, lspTool,
     mediaRuntime, imageService, videoService, imageGenTool, imageEditTool, videoGenTool, imageToolHookInputProcessor,

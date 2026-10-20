@@ -66,7 +66,9 @@
     "verify:product-sources": "node --import tsx scripts/verify-product-sources-recovery.ts",
     "verify:plugins": "node --import tsx scripts/verify-plugin-runtime-recovery.ts",
     "verify:marketplaces": "node --import tsx scripts/verify-marketplace-recovery.ts",
-    "verify:plugin-installers": "node --import tsx scripts/verify-plugin-installers-recovery.ts"
+    "verify:plugin-installers": "node --import tsx scripts/verify-plugin-installers-recovery.ts",
+    "verify:settings": "node --import tsx scripts/verify-settings-recovery.ts",
+    "smoke:settings": "node --test dist/test/settings-runtime.test.js"
   },
   "dependencies": {
     "@openai/agents": "0.5.2",

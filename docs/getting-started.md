@@ -139,7 +139,7 @@ CLI：`npm run cli -- --plugin-dir /absolute/plugin --cwd /absolute/project`；W
 {"name":"my-market","plugins":[{"name":"my-plugin","source":"./plugins/my-plugin"}]}
 ```
 
-`plugins/my-plugin`仍采用上面的插件结构。嵌入时可显式提供`nativePlugins.settings`作用域视图：在`get('extraKnownMarketplaces', 'user')`返回`{"my-market":{"source":{"source":"directory","url":"/absolute/market"}}}`，在`get('enabledPlugins', 'user')`返回`{"my-plugin@my-market":true}`，其他scope返回`undefined`，并提供`clearCache()`。原ConfigManager的对象source读取的是`url`而不是`path`，此处刻意保持原行为。该只读例子支持启动加载；修改启用状态需要调用方另提供`settings.update`，不能把它称为完整原磁盘SettingsManager。
+`plugins/my-plugin`仍采用上面的插件结构。默认可在`<state>/settings.json`配置`extraKnownMarketplaces`和`enabledPlugins`（见下方设置说明），无需注入存储。兼容的显式`nativePlugins.settings`作用域视图仍可用：在`get('extraKnownMarketplaces', 'user')`返回`{"my-market":{"source":{"source":"directory","url":"/absolute/market"}}}`，在`get('enabledPlugins', 'user')`返回`{"my-plugin@my-market":true}`，其他scope返回`undefined`，并提供`clearCache()`。原ConfigManager的对象source读取的是`url`而不是`path`，此处刻意保持原行为。显式只读视图不能承担修改启用状态；若覆盖默认服务，须自行提供需要的`update/set/list`接口。
 
 `await harness.pluginManager.addMarketplace('/absolute/market')`也可添加可信目录；保存到`<state>/plugins/known_marketplaces.json`，重启后原manager恢复该记录。添加市场不等于批准/启用其全部插件。`pluginHost.marketplaceStorage`暴露原保存/移除API；修改后使用原刷新事务更新消费者。`/plugin`完整产品控制器/Web市场管理界面尚未恢复，当前CLI/Web仍可用更直接的`--plugin-dir`。
 
@@ -163,16 +163,33 @@ ZIP第三方依赖固定样本`yauzl 3.2.0`，新增一项[中危时间戳解析
 
 npm必须使用可信包和registry：原安装参数没有ignore-scripts，启用插件会运行npm生命周期脚本。默认HOME/npmrc/cache均重定向到本次state，但脚本不是沙箱，仍可访问宿主权限允许的资源。源码保留的名称正则接受前导连字符，不要把其视作完整argv安全校验。原npm.update还有嵌套prefix计算边界，未静默改成另一套更新算法。
 
-声明userConfig的插件可经`await harness.pluginManager.savePluginOptions(name, marketplace, values)`保存，`getPluginOptions(name, marketplace)`读取。随后`await harness.pluginRuntimeRefresh.refresh('reload-command')`使loader重新消费。默认非敏感值写`<state>/plugins/plugin-options.json`；敏感值按原实现转字符串、明文写`<state>/credentials.json`的pluginSecrets，首次创建mode0600，不加密、不读取已安装应用凭据。敏感标志只认精确true，未传入的旧值仍保留；跨存储写入不是事务，部分失败可能已写新secret但缓存仍旧。
+声明userConfig的插件可经`await harness.pluginManager.savePluginOptions(name, marketplace, values)`保存，`getPluginOptions(name, marketplace)`读取。随后`await harness.pluginRuntimeRefresh.refresh('reload-command')`使loader重新消费。默认非敏感值现写`<state>/settings.json`的USER/pluginConfigs；敏感值按原实现转字符串、明文写`<state>/credentials.json`的pluginSecrets，首次创建mode0600，不加密、不读取已安装应用凭据。敏感标志只认精确true，未传入的旧值仍保留；跨存储写入不是事务，部分失败可能已写新secret但缓存仍旧。
 
-`pluginHost.pluginOptionsStorage`暴露原load/save/delete/has/clear/substitute方法，`pluginHost.errorCollector`暴露原错误检索与清理。默认非敏感存储只支持USER/pluginConfigs；若提供nativePlugins.settings，请提供原OptionsStorage需要的get/set/list。仅get的视图仍可加载，但保存/删除将按原失败分支处理。此窄适配不等于完整磁盘SettingsManager，启停插件等需settings.update的API仍需调用方提供，不能据安装链可用宣称所有产品控制器已恢复。
+`pluginHost.pluginOptionsStorage`暴露原load/save/delete/has/clear/substitute方法，`pluginHost.errorCollector`暴露原错误检索与清理。默认依赖完整原SettingsManager；旧`plugins/plugin-options.json`如存在会保留，并只迁移USER/pluginConfigs中缺失的插件项，不覆盖新文件已有项，不做跨存储事务。显式提供nativePlugins.settings时请提供原OptionsStorage需要的get/set/list；仅get的视图仍可加载，但保存/删除按原失败分支处理。完整`/plugin`控制器与市场管理UI仍未恢复。
 
 `harness.pluginManager`为当前来源，`pluginRuntimeRefresh.refresh(reason, options)`为原队列服务，`pluginHost`暴露原类与宿主生命周期。已有`agentManager.plugins`只读adapter继续兼容，但不冒充完整manager，也不会自动启用原刷新事务；同时提供`nativePlugins`时必须明确共用同一个完整manager。显式LSP配置在插件刷新后由宿主重新注册，不被原LSP shutdown顺带清除。
 
 插件可能含可执行Hooks，加载即表示信任其内容；本地命令/Hook不是OS沙箱，也不是逐次工具审批。MCP自动接线只在显式`nativeMcp`宿主启用时生效；CLI/Web新增目录参数并未暗中扩大MCP/legacy工具allowlist。卸下插件可删除其manifest后reload；原plugin-tag实例会被清理，和普通文件Agent缓存残留行为不同。
 
-本批再次将Git暂存快照检出到全新空目录，不复制任何node_modules、原安装包或bundle：`npm ci`、`npm run check`、`npm run build`、CLI/Web launcher smoke、105项插件/市场/安装器编译后测试与11项Web测试均通过。完整899核心/821编译smoke及45组差分在主验证目录运行；差分仍需用户自行提供固定SHA样本。semver仍7.7.2、async-mutex仍0.5.0、yauzl仍3.2.0，本批未改变依赖锁，audit风险仍17项，详见远端市场边界。
+上一批全新空目录验证包括105项插件/市场/安装器编译后测试与11项Web测试；设置模块的最新门槛与干净快照结果见[还原状态](recovery-status.md)末尾。差分需用户自行提供固定SHA样本，日常构建/启动不需要原应用。semver仍7.7.2、async-mutex仍0.5.0、yauzl仍3.2.0，未改变依赖锁，audit风险仍17项，详见远端市场边界。
 
 缓存默认用本宿主独立的原MemoryLocalStorage；可用`productRuntime.storage`注入自己拥有的get/set及可选getSync。缓存保留原gzip/base64、稳定快照与版本key，不自动读取原应用的本地存储。`productRuntime.env`是显式拥有的配置环境对象，默认空；原Env provider可处理其中的ACC_PRODUCT_CONFIG等字段，不会自动扫描进程中可能包含账号的产品配置环境。模型API key仍使用原CLI/Web自己的配置，不映射为产品账号。
 
-原ConfigWatch/McpWatch服务默认接线：文件watch setup延迟2秒、change debounce 3秒、rename即时刷新；MCP connected/disconnected合并后触发全量sync。用户/项目路径沿宿主state/工作目录，不监听安装应用目录；`productRuntime.watch:false`可禁用。原watcher unref，不靠它保持进程存活，关闭会取消订阅、watcher及pending任务，防止关闭中的初始化重新挂载。缺少完整SettingsManager的clearCache与插件加载器服务时，不会用空实现假称已完成那些服务。
+原ConfigWatch/McpWatch服务默认接线：文件watch setup延迟2秒、change debounce 3秒、rename即时刷新；MCP connected/disconnected合并后触发全量sync。用户/项目路径沿宿主state/工作目录，不监听安装应用目录；`productRuntime.watch:false`可禁用。原watcher unref，不靠它保持进程存活，关闭会取消订阅、watcher及pending任务，防止关闭中的初始化重新挂载。默认已连接原SettingsManager.clearCache；全局CWD变化也清理设置缓存。
+
+### 原生磁盘与 CLI 设置
+
+默认按USER→PROJECT→PROJECT_LOCAL→CLI合并，路径分别为`<state>/settings.json`、`<cwd>/.codebuddy/settings.json`、`<cwd>/.codebuddy/settings.local.json`；不读取`~/.codebuddy`或安装应用设置。支持JSONC注释/尾逗号，USER叠加原DEFAULT_SETTINGS，写入剔除默认差值并保留注释。数组按原Set并集，hooks/permissions/memory/sandbox递归合并，其他对象后项覆盖。原USER磁盘sandbox读入是浅覆盖默认值，不擅自改为深覆盖。
+
+```sh
+npm run cli -- -p "你好" --setting-sources none --settings '{"reasoningEffort":"high"}'
+npm start -- --settings /absolute/path/to/trusted-settings.jsonc --effort high
+```
+
+`--setting-sources user,project,local`可调整顺序；`none`只排除磁盘scope，CLI仍应用。`--settings`识别JSON对象字符串或相对cwd文件；`--effort`只接受minimal/low/medium/high/xhigh/max。它们在CLI和Web启动器均可用。文件可含自动执行Hook，只加载可信设置，none不是OS沙箱。原logger可能记录CLI设置对象，不要在设置JSON中放账户密钥；模型密钥仍用环境变量。
+
+嵌入接口：`harness.settingsManager`为完整服务，提供get/list/set/add/remove/update/clearCache；`harness.settingsHost`拥有CLI队列和关闭屏障。`nativeSettings.cliOptions`可提供`settings/settingSources/model/effort`。显式`options.settings`仍是全局只读覆盖；显式`nativePlugins.settings`仅覆盖插件作用域视图，两者不是同一接口。仅使用旧`agentManager.plugins`且不启用nativePlugins时保留旧只读路径，不自动创建此设置宿主。
+
+可调用`await harness.pluginManager.disablePlugins(['name'],'market')`、`enablePlugins`、`uninstallPlugins`，默认写原enabledPlugins配置。写入后自动排队原settings-change刷新；需要立即等待消费者完成时调用`await harness.pluginRuntimeRefresh.waitForRefreshSettled()`，或显式reload。原PluginPolicy从ProductManager的builtInMarketPluginsMerge读取并监听更新；canRemove/canSwitchoff/canEdit只认精确false，版本/说明单独变化不触发策略事件，市场阻断检查按原实现恒false。
+
+损坏JSON重试后会标记scope并拒写，绝不自动修复/备份覆盖；手动修复后需clearCache并成功读取，单独clearCache不会移除损坏标志。缓存60秒，CLI scope不可经SettingsManager修改。文件锁复用原协议及其发布竞态/拿锁失败继续执行的边界，不能视为跨进程强事务；权限/MCP局部内存适配尚未全部切换为该服务。

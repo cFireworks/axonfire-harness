@@ -175,6 +175,10 @@ class Deferred {
       resolvePromise = resolve;
       rejectPromise = reject;
     });
+    // Compatibility host: a synchronous human denial can arrive while the
+    // notification Hook is awaiting disk settings. Own the rejection now;
+    // callers still await the original rejecting promise and handle denial.
+    void this.promise.catch(() => undefined);
     this.resolvePromise = resolvePromise;
     this.rejectPromise = rejectPromise;
   }

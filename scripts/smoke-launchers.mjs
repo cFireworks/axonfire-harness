@@ -23,7 +23,21 @@ console.log("PASS compiled CLI launcher help (no credentials)");
 const directory = await mkdtemp(join(tmpdir(), "axonfire-launcher-"));
 const child = spawn(
   process.execPath,
-  ["apps/cli/axonfire.mjs", "web", "--demo", "--port", "0", "--cwd", directory],
+  [
+    "apps/cli/axonfire.mjs",
+    "web",
+    "--demo",
+    "--port",
+    "0",
+    "--cwd",
+    directory,
+    "--setting-sources",
+    "none",
+    "--settings",
+    '{"reasoningEffort":"low"}',
+    "--effort",
+    "max",
+  ],
   { cwd, env, stdio: ["ignore", "pipe", "pipe"] },
 );
 const exited = new Promise((resolve, reject) => {

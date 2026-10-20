@@ -10,12 +10,15 @@ export async function main(args) {
       port: { type: "string" },
       cwd: { type: "string" },
       "plugin-dir": { type: "string", multiple: true },
+      settings: { type: "string" },
+      "setting-sources": { type: "string" },
+      effort: { type: "string" },
       help: { type: "boolean", short: "h" },
     },
   });
   if (values.help) {
     console.log(
-      "axonfire web [--demo] [--port 3080] [--cwd /path] [--plugin-dir /trusted/plugin]\nLocal-only Web host. Explicit plugins may contain executable Hooks. Model credentials stay in server environment / .env.",
+      "axonfire web [--demo] [--port 3080] [--cwd /path] [--plugin-dir /trusted/plugin] [--settings JSON-or-file] [--setting-sources user,project,local|none] [--effort level]\nLocal-only Web host. Explicit plugins and settings may contain executable Hooks. Model credentials stay in server environment / .env.",
     );
     return;
   }
@@ -31,7 +34,18 @@ export async function main(args) {
   );
   const harness = {
     workDir,
-    ...(values["plugin-dir"] ? { nativePlugins: { directories: values["plugin-dir"] } } : {}),
+    nativeSettings: {
+      cliOptions: {
+        ...(values.settings !== undefined ? { settings: values.settings } : {}),
+        ...(values["setting-sources"] !== undefined
+          ? { settingSources: values["setting-sources"] }
+          : {}),
+        ...(values.effort !== undefined ? { effort: values.effort } : {}),
+      },
+    },
+    ...(values["plugin-dir"]
+      ? { nativePlugins: { directories: values["plugin-dir"] } }
+      : {}),
     stateDir: resolve(
       process.env.AXONFIRE_STATE_DIR ??
         resolve(workDir, ".axonfire", demo ? "demo" : "live"),

@@ -2,7 +2,6 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { createHash } from "node:crypto";
 import { EventEmitter } from "node:events";
-import { NativeEmitter } from "../agents/native-agent-manager-runtime.js";
 import { createNativePluginManager } from "./native-plugin-manager.js";
 import { createNativePluginLoaders } from "./native-plugin-loaders.js";
 import { createNativePluginRuntime } from "./native-plugin-runtime.js";
@@ -21,6 +20,11 @@ import { createOwnedMarketplaceIO } from "./owned-marketplace-io.js";
 import { createNativePluginInstallers } from "./native-plugin-installers.js";
 import { createNativePluginStorage } from "./native-plugin-storage.js";
 import { createOwnedPluginOptionSettings } from "./owned-plugin-option-settings.js";
+import {
+  createNativeSettingsHost,
+  type NativeSettingsHostOptions,
+} from "../config/native-settings-host.js";
+import { createNativePluginPolicy } from "./native-plugin-policy.js";
 
 export type NativePluginHostOptions = {
   directories?: readonly string[];
@@ -43,6 +47,8 @@ export function createNativePluginHost(options: {
   settings: any;
   logger?: any;
   plugins?: NativePluginHostOptions | undefined;
+  configuration?: NativeSettingsHostOptions;
+  cwdService?: any;
 }) {
   let closed = false,
     started = false;
@@ -51,8 +57,6 @@ export function createNativePluginHost(options: {
     processEvents = new EventEmitter();
   const timers = new Set<any>(),
     immediates = new Map<any, () => void>();
-  const settingEvents = new NativeEmitter(),
-    policyEvents = new NativeEmitter();
   function ownSubscription(sub: any) {
     if (closed) {
       sub?.dispose?.();
@@ -79,12 +83,29 @@ export function createNativePluginHost(options: {
         }
       : {}),
   };
-  const ownedSettings = options.plugins?.settings ?? {
-    get: (key: string, scope?: any) => options.settings.get(key, scope),
-    // The embedding settings view has no native disk cache. Forward only if supplied.
-    clearCache: () => options.settings.clearCache?.(),
-  };
   const fsExtra = createOwnedPluginFilesystem(options.stateDir);
+  const lockDirectory = path.join(options.stateDir, "tmp");
+  const lockNative = new FileLockService(lockDirectory, { fs: fsExtra });
+  const fileLockService = {
+    async acquireFileLock(name: string, lockOptions?: any) {
+      await fsExtra.ensureDir(lockDirectory);
+      return lockNative.acquireFileLock(name, lockOptions);
+    },
+  };
+  const settingsHost = createNativeSettingsHost({
+    stateDir: options.stateDir,
+    getWorkDir: options.getWorkDir,
+    fileLockService,
+    logger,
+    ...(options.configuration ? { configuration: options.configuration } : {}),
+  });
+  const ownedSettings = options.plugins?.settings ?? settingsHost.manager;
+  if (options.cwdService?.onDidChangeCwd)
+    ownSubscription(
+      options.cwdService.onDidChangeCwd.subscribe(() =>
+        ownedSettings.clearCache?.(),
+      ),
+    );
   const storageClasses = createNativePluginStorage({
     fsExtra,
     getHomeDir: () => options.stateDir,
@@ -103,17 +124,18 @@ export function createNativePluginHost(options: {
       settingsManager:
         options.plugins?.settings ??
         options.plugins?.dependencies?.pluginOptionSettings ??
-        optionSettings,
+        settingsHost.manager,
     });
   if (!options.plugins?.dependencies?.pluginOptionsStorage)
     pluginOptionsStorage.init();
-  const sourceSettings = {
-    waitUntilSettled: async () => {},
-    isScopeAllowed: async () => true,
-    onDidChange(fn: any) {
-      return ownSubscription(settingEvents.event(fn));
+  const sourceSettings = new Proxy(settingsHost.sources, {
+    get(target, key) {
+      if (key === "onDidChange")
+        return (fn: any) => ownSubscription(target.onDidChange(fn));
+      const value = Reflect.get(target, key);
+      return typeof value === "function" ? value.bind(target) : value;
     },
-  };
+  });
   const productManager = new Proxy(options.productManager, {
     get(target, key) {
       if (key === "onDidChange")
@@ -122,6 +144,16 @@ export function createNativePluginHost(options: {
       return typeof v === "function" ? v.bind(target) : v;
     },
   });
+  const policyClasses = createNativePluginPolicy({
+    dependencies: { productManager },
+  });
+  const pluginPolicyService =
+    options.plugins?.dependencies?.pluginPolicyService ??
+    Object.assign(new policyClasses.PluginPolicyServiceImpl(), { logger });
+  if (!options.plugins?.dependencies?.pluginPolicyService) {
+    const event = pluginPolicyService.onDidChange;
+    pluginPolicyService.onDidChange = (fn: any) => ownSubscription(event(fn));
+  }
   const runtime: any = {
     fs,
     env,
@@ -204,14 +236,6 @@ export function createNativePluginHost(options: {
     Object.assign(new Native(), { logger, errorCollector }),
   );
   for (const installer of extraInstallers) installer.init?.();
-  const lockDirectory = path.join(options.stateDir, "tmp");
-  const lockNative = new FileLockService(lockDirectory, { fs: fsExtra });
-  const fileLockService = {
-    async acquireFileLock(name: string, lockOptions?: any) {
-      await fsExtra.ensureDir(lockDirectory);
-      return lockNative.acquireFileLock(name, lockOptions);
-    },
-  };
   const marketplaceClasses = createNativeMarketplace({
     ...marketplaceIO,
     fsExtra,
@@ -365,14 +389,9 @@ export function createNativePluginHost(options: {
       settingsManager: ownedSettings,
       consoleManager: { warn: (...args: any[]) => logger.warn?.(...args) },
       cliSettingSourcesProvider: sourceSettings,
-      cliSettingsProvider: sourceSettings,
+      cliSettingsProvider: settingsHost.cli,
       startupProfiler: { markStart() {}, markEnd() {} },
-      pluginPolicyService: {
-        onDidChange(fn: any) {
-          return ownSubscription(policyEvents.event(fn));
-        },
-        getMergedPlugins: () => [],
-      },
+      pluginPolicyService,
       marketplaceStorage,
       builtInMarketplaceProvider,
       marketplaceConfigManager,
@@ -418,7 +437,7 @@ export function createNativePluginHost(options: {
     pluginManager,
     productManager,
     settingsManager: ownedSettings,
-    cliSettingsProvider: sourceSettings,
+    cliSettingsProvider: settingsHost.cli,
     cliSettingSourcesProvider: sourceSettings,
   });
   const executor = Object.assign(new classes.ReloadPluginsCommandExecutor(), {
@@ -440,6 +459,18 @@ export function createNativePluginHost(options: {
     closed
       ? Promise.reject(Error("Plugin host is closed"))
       : observe(nativeRefresh(...args));
+  let bootstrapped = false;
+  if (!options.plugins?.settings)
+    ownSubscription(
+      ownedSettings.onDidChange(() => {
+        if (!bootstrapped || closed) return;
+        void refresh
+          .refresh("settings-change")
+          .catch((error: any) =>
+            logger.warn?.("Settings plugin refresh failed", error),
+          );
+      }),
+    );
   return {
     pluginManager,
     loader,
@@ -449,6 +480,10 @@ export function createNativePluginHost(options: {
     storageClasses,
     installerClasses,
     pluginOptionsStorage,
+    settingsHost,
+    settingsManager: ownedSettings,
+    pluginPolicyService,
+    policyClasses,
     optionSettings,
     errorCollector,
     marketplaceIO,
@@ -468,6 +503,8 @@ export function createNativePluginHost(options: {
     },
     runtime,
     attach(dependencies: Record<string, any>) {
+      if (dependencies.hookManager)
+        settingsHost.attach({ hookManager: dependencies.hookManager });
       Object.assign(refresh, dependencies);
       if (dependencies.mcpPluginRegistry)
         pluginManager.mcpPluginRegistry = dependencies.mcpPluginRegistry;
@@ -486,11 +523,35 @@ export function createNativePluginHost(options: {
       if (started) return;
       started = true;
       await fsExtra.ensureDir(lockDirectory);
+      await settingsHost.start();
+      // Standalone compatibility only: retain the old adapter file and merge missing USER entries.
+      if (
+        !options.plugins?.settings &&
+        !options.plugins?.dependencies?.pluginOptionSettings &&
+        !options.plugins?.dependencies?.pluginOptionsStorage &&
+        (await fsExtra.pathExists(optionSettings.file))
+      ) {
+        const legacy = await optionSettings.get("pluginConfigs", "user");
+        if (legacy && typeof legacy === "object")
+          await ownedSettings.update(
+            "pluginConfigs",
+            (current: any) => {
+              const merged = { ...current };
+              for (const [id, value] of Object.entries(legacy))
+                if (!(id in merged)) merged[id] = value;
+              return merged;
+            },
+            "user",
+          );
+      }
+      if (!options.plugins?.dependencies?.pluginPolicyService)
+        pluginPolicyService.init();
       if (!options.plugins?.pluginManager) {
         pluginManager.init();
         await observe(pluginManager.whenReady());
       }
       await refresh.refresh("startup");
+      bootstrapped = true;
     },
     waitForRefreshSettled: () => refresh.waitForRefreshSettled(),
     async close() {
@@ -511,14 +572,15 @@ export function createNativePluginHost(options: {
       while (pending.size) await Promise.allSettled([...pending]);
       await marketplaceClosing;
       await optionSettings.close();
+      await settingsHost.close();
       await pluginManager.builtInMarketplaceRefreshPromise;
       await refresh.waitForRefreshSettled();
       if (!options.plugins?.pluginManager)
         pluginManager.onDidChangeEmitter.dispose();
       processEvents.emit("exit");
       processEvents.removeAllListeners();
-      settingEvents.dispose();
-      policyEvents.dispose();
+      if (!options.plugins?.dependencies?.pluginPolicyService)
+        pluginPolicyService.onDidChangeEmitter.dispose();
       if (!options.plugins?.dependencies?.errorCollector)
         errorCollector.onDidChangeEmitter.dispose();
     },
@@ -530,7 +592,8 @@ export function createNativePluginHost(options: {
         timers.size +
         immediates.size +
         subscriptions.size +
-        marketplaceIO.ownedHandleCount
+        marketplaceIO.ownedHandleCount +
+        settingsHost.ownedHandleCount
       );
     },
     get closed() {
