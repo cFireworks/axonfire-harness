@@ -2,6 +2,8 @@
 
 固定 CLI SHA-256 为 `4120898f1ded86ac545316721d216c827a325c2513a8fae4bcd8c8bbbf211afd`。`packages/harness/src/agents/native-agent-run.ts` 保留完整惰性声明，不执行原 DI decorators、应用 bootstrap 或安装账户查找。偏移为原 UTF-16 位置。
 
+后续[公开原Service/Runner父装配](native-agent-run-host.md)已把Service、utilities、interceptor及原Runner Factory/Provider/loop实例化移入运行时；原SDK与完整ACP父链/恢复已改接公开宿主。认证/配置/全部默认服务图与CLI父启动仍待迁移，不把选定集成或新增所有权桥称为原产品bootstrap。
+
 ## 恢复范围
 
 - 完整 AgentServiceImpl：构造器及全部方法，包含 runDefault、run、前置链、插件刷新屏障、one-time、override 与 fork。

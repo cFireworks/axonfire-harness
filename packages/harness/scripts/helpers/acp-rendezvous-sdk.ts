@@ -493,32 +493,28 @@ export async function acpRendezvousSdk(
         18553: f.originalSdk,
       };
       for (const id of [67330, 3927, 40038]) delete modules[id];
-      const runnerNative = factories.runner({
-        modules,
-        getModule: f.utilities.getModule,
-        env: {},
-        Date: f.runtime.Date,
-      });
-      f.di.set(runnerNative.getModule(67330).ContextCompactSummarizer, {
-        compactAndSummarize: async () => {
-          throw Error("Unexpected parent compact");
+      const runnerAssembly = f.runHost.createRunner({
+        sourceFactory: factories.runner,
+        runtime: {
+          modules,
+          getModule: f.utilities.getModule,
+          env: {},
+          Date: f.runtime.Date,
         },
-      });
-      const detector = new runnerNative.ToolCallLoopDetectorImpl();
-      detector.logger = f.logger;
-      const runnerFactory = new runnerNative.RunnerFactoryImpl();
-      Object.assign(runnerFactory, {
         modelProvider: { getModel: () => model },
         sessionManager: f.manager,
         agentManager: agents,
         productManager: { waitConfiguration: async () => product.raw },
         stateMachine: f.manager.stateMachine,
-        toolCallLoopDetector: detector,
         logger: f.logger,
       });
-      const runnerProvider = new runnerNative.RunnerProviderImpl();
-      runnerProvider.runnerFactory = runnerFactory;
-      f.service.runnerProvider = runnerProvider;
+      const runnerNative = runnerAssembly.native;
+      f.di.set(runnerNative.getModule(67330).ContextCompactSummarizer, {
+        compactAndSummarize: async () => {
+          throw Error("Unexpected parent compact");
+        },
+      });
+      f.service.runnerProvider = runnerAssembly.provider;
       for (const name of [
         "UserInputAgentRunInterceptor",
         "MessageQueueAgentRunInterceptor",

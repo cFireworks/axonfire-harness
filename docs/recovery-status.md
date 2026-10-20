@@ -30,8 +30,8 @@
 |    3 | SessionStore | 完整原CLI类及真实磁盘恢复已验证 | 完整28成员保留JSONL/meta、逆向64KB reader/边界/损坏行/storeId/legacy修复/跨项目查找/图片和工具结果外置；冷图真实读盘恢复历史和meta，fork续跑不改源JSONL/meta。原项目路径服务、全部媒体/跨工作目录父场景仍待补；不把CLI permissionMode Subject说成已持久化 |
 |    3 | Run state machine | 原始迁移表与事件投影差分通过 | 原生 13 状态/20 事件的完整表、非法迁移忽略、legacy agentState/phase metadata、日志、busy/idle/queue-busy、force idle 与 runStateSubject 去重已恢复；`getChange$(session,true)` 原语义是跳过当前值并发出 void，不是 emitCurrent。有限事件矩阵已与原类逐项比较；完整产品 UI projection service/宿主接线仍待补 |
 |    3 | AgentFactory / lifecycle | 原生 Agent 事件接线差分通过 | Agent start/end/tool/handoff、activeRunContext 与旧回合结束过滤、9 个 bypass 名称与仅 pre-message summary purpose gate、工具参数原正则递归重写、MCP AsyncLocalStorage call context 已恢复；真实 SDK 保持 0.5.2，不改 SDK 内部。独立 bootstrap 注入 factory，手动构造 AgentManager 时需显式传入 |
-|    4 | AgentService      | 主控制流高覆盖               | `run`、`runDefault`、`runOneTime`、override、fork、插件刷新点、旧 run 中止、stream result 发布已实现                                                                                                                                                                                  |
-|    5 | RunnerFactory     | 关键过滤器高覆盖             | 完整 loop detector 尾部扫描/4与40次阈值/Read 同文件/停止 Prompt/marker，1,411 组原类差分通过；自动 compact 判定、30s cooldown、JSON/jsonrepair/`">"` 修复、精确重试 Prompt 已实现 |
+|    4 | AgentService | 完整原类/本地interceptors与公开父装配已提供 | 原run/runDefault/one-time/override/fork/插件刷新/发布/取消链保持完整；原SDK与ACP父链已改用公开宿主，拥有自有调度并被动等待本次SDK完成。不把选定5/15个interceptor集成当成完整产品全部服务图；默认认证/配置/CLI父启动仍待接线 |
+|    5 | RunnerFactory | 完整原Factory/Provider/loop与公开父装配已提供 | 原缓存、loop/停止Prompt/marker、自动compact/30s cooldown、JSON/jsonrepair/精确重试Prompt均保留；公开执行宿主默认创建原类，真实SDK/ACP已改接，不复制SDK。CLI/Web既有独立Runner宿主仍兼容，完整默认原生父图未完成 |
 |    5 | ModelConfig interceptor | 本批主逻辑差分通过 | priority=900、request > CLI > default、未知 ID 继承基础配置、1.0 默认 temperature、100k output cap、递归 handoff、session/global thinking、MAX_THINKING_TOKENS、default effort/max→xhigh、summary/verbosity/fallback 已恢复；972 组样本类对照通过，独立 env cap 单测通过；日志/遥测侧效应未移植 |
 |    5 | ModelProvider     | transport 主路径高覆盖       | endpoint 优先级、`/chat/completions` 归一化、凭证/cache/SDK model、会话与内部 header、providerData/extra_vars、自定义模型兼容、reasoning summary、连接级单次 retry、首 token/idle timeout、finish grace、SSE tool-call ID 去重均已接入；Axios/OTel/遥测侧效应待补 |
 |    5 | Core file tools   | 主路径高覆盖                 | 三个原始 Zod schema、1-based paging、2000 行/字符限制、256KB/100MB 限制、binary/Notebook/image、行号格式、读后写和外部修改保护、CRLF/BOM、唯一/全量替换已实现；原ImageUtils完整类/Jimp0.22.12与Read图片方法、模型/二进制门槛、blob去重已恢复；非UTF编码全集、其他文本Read原方法/错误码复核及遥测待补                                                                            |
@@ -1191,3 +1191,19 @@ REA最终证据 `ev_7587479b42bf2c0a05978e70b7f80f6a1d647f49999713c2a510a7bda141
 下一步继续原AgentService/Runner/认证/配置的公开父装配、默认CLI入口及独立OS进程恢复，再推进生产auth/REST、跨cwd/全部配置、Desktop HistoryStore/回放和其他外围/并发前沿。普通CLI/Web仍可用但未切到完整原生默认父图，整体目标保持进行中。
 
 最终门槛：check/build、1622核心+11Web、1543编译JS smoke、全部67组源码/行为验证、原配置字节校验与CLI/Web seed/reload实际启动通过。最终暂存代码干净检出重新npm ci/check/build后，1622编译核心+11Web、配置与启动再次通过，无原应用/bundle/旧node_modules依赖。SDK、6 JSON/115 product prompts/22 Desktop资源（304358字节）不变；767文件发布审计在已检查规则内无发现，不是安全证明。17项既有依赖告警（10中危/7高危）仍保留。
+
+## 2026-10-21：公开原 AgentService / Runner 父装配
+
+新增[公开执行宿主](native-agent-run-host.md) `createNativeAgentRunHost`：默认使用完整原Service/utility factories、原interceptor constructors与原Runner Factory/Provider/loop。agentRunFixture、nativeRunnerFixture/nativeRunnerSdk以及完整ACP父Runner实例化均已改接，核心类体/Prompt/配置未重写；Provider仍缓存实际同一Runner，module25301仍是锁定npm SDK，原产品wrapper不等于复制SDK。外部模块/DI、认证、配置、interceptor provider和其余服务仍为明确借入，不拿doubles冒充默认服务。
+
+宿主在原sessionManager.run交接处登记signal lease，仅被动观察本次原resultAbortSignalMap匹配的completed；不额外消费SDK stream、不改state/gate/usage或审批。旧BehaviorSubject重放、无lease与不同signal结果不误纳入。runOneTime不发布主result，故另在原Factory新建的专用Runner实例边界观察原run返回值与私有completed，调用原方法并保留Promise/Runner身份和Provider缓存，关闭恢复descriptor；借入Runner不修改，也不宣称已管理任意第三方私有流程。
+
+队列drain/自动compaction的未开始immediate可取消，已开始Promise等待收尾。原50ms等待可承担接受工作Promise的resolve，关闭前不能提前清空timeout造成死锁；先等待工作/SDK完成，再清未来通知timer和订阅/ALS。正常调用者可处理的拒绝和expected SDK completed失败不被重分类成owner错误；detached同步/异步异常清理后AggregateError报告。关闭不擅自abort或close借入会话/auth/models/插件，也不伪造idle/成功，父owner须提供可结束的View/SDK/审批/刷新/transport。
+
+17项新增专项覆盖原类/SDK身份、result发布非完成、禁止额外消费、SDK错误分类、旧/无关/不同signal结果、认证等待与拒绝、queue/timer回收、原50ms等待、detached错误、Provider缓存、compaction取消/等待、关闭准入和不close借入资源，以及私有one-time完成和Runner descriptor恢复。后者使用明确自有SDK边界适配器；另4组真实SDK与12组完整ACP等集成继续证明实际执行链。原AgentService 47+4、Runner41+4及ACP父12/恢复4+4参考成对验证未删timestamp/usage。
+
+REA最终证据 `ev_8c1bd7a8fc5c0c390563d5482ac9538b37dfc96a9edf4a2ab9559b862d637151`：10558 AST nodes、3 parsed、0 skipped/parse failures；750 semantic/每文件750、150unknown/每文件150、45秒限制下partial/truncated，不是运行时等价证明。仅owned磁盘/loopback/确定模型，无安装账户或生产请求。
+
+下一步继续默认原生父认证/配置/ACP与全部interceptor服务图、默认CLI入口和独立OS进程恢复，再推进生产auth/REST、跨cwd/全部模式、Desktop HistoryStore/回放及其他外围/并发前沿。三个公开父宿主已能组合原链，但普通CLI/Web尚未切成完整原生默认bootstrap，整体目标继续进行中。
+
+最终门槛：check/build、1639核心+11Web、1560编译JS smoke、67组源码/行为验证通过；最后专用Runner观察接线后，AgentService/Runner/ACP父/回放四组再单独通过。最终暂存代码干净检出重新npm ci/check/build后，1639编译核心+11Web、原配置校验和CLI/Web seed/reload实际启动通过，无原应用/bundle/旧node_modules依赖。SDK、6 JSON/115 product prompts/22 Desktop资源（304358字节）不变；770文件发布审计在已检查规则内无发现，不是安全证明。既有17依赖告警（10中危/7高危）仍保留。

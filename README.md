@@ -14,6 +14,8 @@
 
 [公开原生会话栈装配](docs/native-session-stack-host.md)进一步接入完整原Factory/Manager/Store/Ingress/Controller，统一拥有会话Subject、写盘、RX和调度；原父链/冷恢复已改用此运行时。create不隐式激活/保存，关闭不删除或追加历史。完整AgentService/认证/配置的默认父装配仍在推进。
 
+[公开原 AgentService/Runner 装配](docs/native-agent-run-host.md)已提供原Service、interceptor与Factory/Provider/loop的实例创建及资源收尾；原ACP父链和SDK验证已改接。Provider缓存及SDK对象身份保留，被动跟踪主run和新建专用Runner的一次性完成，不额外消费stream。默认认证/配置/全部服务图和CLI父入口仍待继续接线。
+
 [完整原 AskService / PlanStorage](docs/native-interaction-services.md) 已替换公开兼容入口的行为重写；原 ACP 父链现通过真实扩展 RPC 跑通问答、跳过、取消与计划批准/拒绝/退出，参考侧也使用原类验证。完整默认产品启动链与全部配置/并发分支仍在推进。
 
 ## 快速开始

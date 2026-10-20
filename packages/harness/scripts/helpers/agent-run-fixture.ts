@@ -3,6 +3,7 @@ import * as sdk from "@openai/agents-core";
 import * as fs from "node:fs";
 import * as io from "node:fs/promises";
 import * as path from "node:path";
+import { createNativeAgentRunHost } from "../../src/agents/native-agent-run-host.js";
 import { createNativeAgentRun } from "../../src/agents/native-agent-run.js";
 import { createNativeAgentRunUtilities } from "../../src/agents/native-agent-run-utilities.js";
 import { createCapturedAcpModules } from "../../src/protocol/captured-acp-modules.js";
@@ -38,9 +39,9 @@ export async function agentRunFixture(
     calls: any[] = [],
     scheduled: Array<() => Promise<any>> = [],
     env: any = { ...patch.env },
-    settings: any = { ...patch.settings },
-    modules: any = { ...f.modules },
-    common = modules[80699];
+    settings: any = { ...patch.settings };
+  let modules: any = { ...f.modules };
+  const common = modules[80699];
   const logger = Object.fromEntries(
     ["info", "debug", "warn", "error", "setContext"].map((key) => [
       key,
@@ -78,62 +79,6 @@ export async function agentRunFixture(
     fs,
     os: { EOL: "\n" },
   });
-  const utilities = factories.utilities({
-    modules,
-    Date: f.runtime.Date,
-    env,
-    platform: patch.platform ?? "linux",
-    getModule: base.getModule,
-  });
-  const n: any = factories.factory({
-    modules,
-    env,
-    Date: f.runtime.Date,
-    platform: patch.platform ?? "linux",
-    getModule: utilities.getModule,
-    setTimeout: f.timers.setTimeout,
-    clearTimeout: f.timers.clearTimeout,
-    setImmediate: (operation: () => Promise<any>) => {
-      scheduled.push(operation);
-      return scheduled.length;
-    },
-  });
-  Object.assign(cliTokens, n.getModule(69466));
-  modules[69466] = n.getModule(69466);
-  const primitives = createNativeAcpPrimitives({
-    modules,
-    Date: f.runtime.Date,
-    getModule: utilities.getModule,
-  });
-  const services = createNativeAcpServices({
-    modules,
-    Date: f.runtime.Date,
-    getModule: utilities.getModule,
-  });
-  Object.assign(modules[66805], {
-    extractVisibleUserPromptFromAgentInput:
-      services.extractVisibleUserPromptFromAgentInput,
-  });
-  const originalSdk = utilities.getModule(18553);
-  Object.assign(modules[93039], {
-    SessionUtils: n.getModule(7340).SessionUtils,
-    InputItemUtils: utilities.getModule(58830).InputItemUtils,
-    HistoryUtils: utilities.getModule(21580).HistoryUtils,
-    MessageUtils: utilities.getModule(46943).MessageUtils,
-    QueueDispatchUtils: {
-      isDeferredDispatchEnabledSync: () => patch.deferred === true,
-    },
-    ModelUtils: {
-      getMaxOutputTokens: (_name: string, maximum: number) => maximum,
-    },
-    TelemetryUtils: primitives.TelemetryUtils,
-    UsageUtils: services.UsageUtils,
-    TokenUtils,
-    GitUtils: { getGitUserName: () => undefined },
-  });
-  // Force this source factory's AB binding to use the original 598-character product SDK wrapper.
-  // The wrapped SDK itself is still the pinned npm dependency, never copied or reimplemented.
-  modules[18553] = originalSdk;
   const agent: any = new sdk.Agent({
     name: "cli",
     instructions: "owned agent fixture",
@@ -177,7 +122,6 @@ export async function agentRunFixture(
     getAgentConfig: async () => ({}),
     getSettingsAgentName: () => undefined,
   };
-  f.di.set(n.getModule(69466).AgentManager, agentManager);
   const fakeResult: any = {
     state: { owned: true },
     lastAgent: agent,
@@ -203,38 +147,92 @@ export async function agentRunFixture(
       return patch.run ? patch.run(a, input, options) : fakeResult;
     },
   };
-  const service: any = new n.AgentServiceImpl();
   const interceptors: any[] = [];
-  Object.assign(service, {
-    logger,
-    authenticationManager: {
-      initialized: patch.authInitialized ?? Promise.resolve(),
-    },
-    runnerProvider: {
-      get: async () => {
-        calls.push(["runnerProvider"]);
-        return runner;
+  const runHost = createNativeAgentRunHost({
+    runtime: {
+      modules,
+      env,
+      Date: f.runtime.Date,
+      platform: patch.platform ?? "linux",
+      getModule: base.getModule,
+      setTimeout: f.timers.setTimeout,
+      clearTimeout: f.timers.clearTimeout,
+      setImmediate(operation: () => Promise<any>) {
+        scheduled.push(operation);
+        return scheduled.length;
       },
     },
-    sessionManager: f.manager,
-    stateMachine: f.manager.stateMachine,
-    agentManager,
-    agentRunInterceptorProvider: {
-      sortSync: () => [...interceptors].sort((a, b) => b.priority - a.priority),
-    },
-    pluginRuntimeRefreshService: {
-      waitForRefreshSettled: async () => {
-        calls.push(["refresh"]);
-        await patch.refresh?.();
+    sourceFactory: factories.factory,
+    utilitiesFactory: factories.utilities,
+    dependencies: {
+      logger,
+      authenticationManager: {
+        initialized: patch.authInitialized ?? Promise.resolve(),
+      },
+      runnerProvider: {
+        get: async () => {
+          calls.push(["runnerProvider"]);
+          return runner;
+        },
+      },
+      sessionManager: f.manager,
+      stateMachine: f.manager.stateMachine,
+      agentManager,
+      agentRunInterceptorProvider: {
+        sortSync: () =>
+          [...interceptors].sort((a, b) => b.priority - a.priority),
+      },
+      pluginRuntimeRefreshService: {
+        waitForRefreshSettled: async () => {
+          calls.push(["refresh"]);
+          await patch.refresh?.();
+        },
       },
     },
   });
+  const n = runHost.native,
+    utilities = runHost.utilities,
+    service = runHost.service;
+  modules = runHost.modules;
+  Object.assign(cliTokens, n.getModule(69466));
+  modules[69466] = n.getModule(69466);
+  const primitives = createNativeAcpPrimitives({
+    modules,
+    Date: f.runtime.Date,
+    getModule: utilities.getModule,
+  });
+  const services = createNativeAcpServices({
+    modules,
+    Date: f.runtime.Date,
+    getModule: utilities.getModule,
+  });
+  Object.assign(modules[66805], {
+    extractVisibleUserPromptFromAgentInput:
+      services.extractVisibleUserPromptFromAgentInput,
+  });
+  const originalSdk = utilities.getModule(18553);
+  Object.assign(modules[93039], {
+    SessionUtils: n.getModule(7340).SessionUtils,
+    InputItemUtils: utilities.getModule(58830).InputItemUtils,
+    HistoryUtils: utilities.getModule(21580).HistoryUtils,
+    MessageUtils: utilities.getModule(46943).MessageUtils,
+    QueueDispatchUtils: {
+      isDeferredDispatchEnabledSync: () => patch.deferred === true,
+    },
+    ModelUtils: {
+      getMaxOutputTokens: (_name: string, maximum: number) => maximum,
+    },
+    TelemetryUtils: primitives.TelemetryUtils,
+    UsageUtils: services.UsageUtils,
+    TokenUtils,
+    GitUtils: { getGitUserName: () => undefined },
+  });
+  // Force this source factory's AB binding to use the original 598-character product SDK wrapper.
+  // The wrapped SDK itself is still the pinned npm dependency, never copied or reimplemented.
+  modules[18553] = originalSdk;
+  f.di.set(n.getModule(69466).AgentManager, agentManager);
   function interceptor(name: string) {
-    const C = n.interceptorClasses[name];
-    if (typeof C !== "function")
-      throw Error("Unknown original interceptor " + name);
-    const instance = new C();
-    Object.assign(instance, {
+    return runHost.createInterceptor(name, {
       logger,
       agentManager,
       sessionManager: f.manager,
@@ -255,7 +253,6 @@ export async function agentRunFixture(
           calls.push(["capture", s.id, text]),
       },
     });
-    return instance;
   }
   function context(input: any, seed: any = {}) {
     return {
@@ -276,7 +273,19 @@ export async function agentRunFixture(
   return {
     ...f,
     get errors() {
-      return f.errors;
+      return [...f.errors, ...runHost.errors];
+    },
+    runHost,
+    async drain() {
+      await runHost.drain();
+      await f.drain();
+    },
+    async close() {
+      try {
+        await runHost.close();
+      } finally {
+        await f.close();
+      }
     },
     sessionNative: f.n,
     n,

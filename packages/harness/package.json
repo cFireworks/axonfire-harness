@@ -98,7 +98,7 @@
     "verify:session-stack": "node --import tsx scripts/verify-session-stack-recovery.ts",
     "smoke:session-stack": "node --test dist/test/session-stack-runtime.test.js dist/test/native-session-stack-host.test.js",
     "verify:agent-run": "node --import tsx scripts/verify-agent-run-recovery.ts",
-    "smoke:agent-run": "node --test dist/test/agent-run-runtime.test.js",
+    "smoke:agent-run": "node --test dist/test/agent-run-runtime.test.js dist/test/native-agent-run-host.test.js",
     "verify:native-runner": "node --import tsx scripts/verify-native-runner-recovery.ts",
     "smoke:native-runner": "node --test dist/test/native-runner-runtime.test.js dist/test/native-runner-host.test.js",
     "verify:native-http": "node --import tsx scripts/verify-native-http-recovery.ts",

@@ -1,5 +1,7 @@
 # 完整原生 Runner 创建链
 
+后续[公开原AgentService/Runner父装配](native-agent-run-host.md)已把原Factory/Provider/loop实例化从组件和SDK/ACP父链helper移入运行时，保留原Provider缓存及真实Runner身份，并拥有其deferred工作和新建专用Runner的被动完成观察。原默认父认证/配置/全部服务图和CLI启动入口仍待迁移。
+
 固定 CLI SHA-256：`4120898f1ded86ac545316721d216c827a325c2513a8fae4bcd8c8bbbf211afd`。`packages/harness/src/runner/native-runner.ts` 只保存完整惰性声明，原 decorators、聚合模块入口和应用 bootstrap 不执行；偏移为 UTF-16。
 
 ## 范围

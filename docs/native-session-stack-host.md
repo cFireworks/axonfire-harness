@@ -68,6 +68,8 @@ await sessions.close();
 
 ## 已改接的验证
 
+后续[公开原AgentService/Runner装配](native-agent-run-host.md)已继续迁出执行链实例化与调度收尾。它借用本会话owner，不擅自close或abort本层；真实SDK/ACP仍由原类执行。默认认证/配置/全部父服务图仍未完成。
+
 原sessionStackFixture现在把所有实际实例/Subject/RX/timer所有权委托给公开宿主，只保留临时根、显式外缘服务和测试时钟等边界。原48组件差分+2真实SDK会话栈成对验证继续使用完整原类；ACP父链12场景和4冷恢复+4异常入口也实际经过公开会话宿主与公开HTTP宿主，第65/67组仍替换完整原参考图。
 
 18项新增专项覆盖原类身份/create语义、Store冷载入对象回收、关闭JSONL/meta字节不变、未完成append及晚建timer、长期scope与drain区分、被动RX等待/descriptor恢复/异常、权限初始化失败与晚完成创建、release异常后完整回收、Controller immediate取消/等待、真实60秒timer回收、借入服务this与非拥有close、关闭后准入，以及AgentService/Runner组合fixture诊断getter不能被对象spread固化成旧数组。

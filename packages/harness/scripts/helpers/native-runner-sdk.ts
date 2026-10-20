@@ -18,27 +18,19 @@ export function nativeRunnerSdk(
         18553: f.originalSdk,
       };
       for (const id of [67330, 3927, 40038]) delete modules[id];
-      const n = factory({
-        modules,
-        env: {},
-        Date: f.runtime.Date,
-        getModule: f.utilities.getModule,
-      });
-      f.di.set(n.getModule(67330).ContextCompactSummarizer, {
-        compactAndSummarize: async () => {
-          throw Error("Unexpected compaction of low-token owned conversation");
+      const assembled = f.runHost.createRunner({
+        sourceFactory: factory,
+        runtime: {
+          modules,
+          env: {},
+          Date: f.runtime.Date,
+          getModule: f.utilities.getModule,
         },
-      });
-      const loop = new n.ToolCallLoopDetectorImpl();
-      loop.logger = f.logger;
-      const original = new n.RunnerFactoryImpl();
-      Object.assign(original, {
         modelProvider: { getModel: () => model },
         sessionManager: manager,
         agentManager: agents,
         productManager: { waitConfiguration: async () => product.raw },
         stateMachine: manager.stateMachine,
-        toolCallLoopDetector: loop,
         logger: f.logger,
         telemetryService: {
           reportUserTaskFailedCreditRefund: async () => {
@@ -46,8 +38,13 @@ export function nativeRunnerSdk(
           },
         },
       });
-      const provider = new n.RunnerProviderImpl();
-      provider.runnerFactory = original;
+      const n = assembled.native;
+      f.di.set(n.getModule(67330).ContextCompactSummarizer, {
+        compactAndSummarize: async () => {
+          throw Error("Unexpected compaction of low-token owned conversation");
+        },
+      });
+      const provider = assembled.provider;
       // Preserve the original provider object and methods. Observe, don't replace its caching policy.
       const get = provider.get.bind(provider);
       provider.get = async () => {

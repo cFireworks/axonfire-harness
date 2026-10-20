@@ -8,7 +8,7 @@ export async function nativeRunnerFixture(
   patch: any = {},
 ) {
   const f = await agentRunFixture(undefined, patch),
-    scheduled: Array<() => Promise<void>> = [],
+    scheduled = f.scheduled,
     calls: any[] = [],
     configs: any[] = [],
     modules = { ...f.modules };
@@ -22,16 +22,6 @@ export async function nativeRunnerFixture(
   modules[18553] = patch.realSdk
     ? f.originalSdk
     : { ...f.originalSdk, Runner: RunnerProbe };
-  const n = factory({
-    modules,
-    getModule: f.utilities.getModule,
-    env: f.env,
-    Date: f.runtime.Date,
-    setImmediate: (op: () => Promise<void>) => {
-      scheduled.push(op);
-      return scheduled.length;
-    },
-  });
   const compactor = {
     compactAndSummarize: async (s: any, options: any) => {
       calls.push(["compact", s.id, options]);
@@ -39,11 +29,14 @@ export async function nativeRunnerFixture(
       return true;
     },
   };
-  f.di.set(n.getModule(67330).ContextCompactSummarizer, compactor);
-  const loop: any = new n.ToolCallLoopDetectorImpl();
-  loop.logger = f.logger;
-  const runnerFactory: any = new n.RunnerFactoryImpl();
-  Object.assign(runnerFactory, {
+  const assembled = f.runHost.createRunner({
+    runtime: {
+      modules,
+      getModule: f.utilities.getModule,
+      env: f.env,
+      Date: f.runtime.Date,
+    },
+    sourceFactory: factory,
     modelProvider: { getModel: () => patch.model },
     sessionManager: f.manager,
     agentManager: f.agentManager,
@@ -61,7 +54,6 @@ export async function nativeRunnerFixture(
         patch.transition?.(s, event);
       },
     },
-    toolCallLoopDetector: loop,
     logger: f.logger,
     telemetryService: {
       reportUserTaskFailedCreditRefund: async (s: any, reason: string) => {
@@ -70,8 +62,11 @@ export async function nativeRunnerFixture(
       },
     },
   });
-  const provider: any = new n.RunnerProviderImpl();
-  provider.runnerFactory = runnerFactory;
+  const n = assembled.native,
+    runnerFactory = assembled.factory,
+    provider = assembled.provider,
+    loop = assembled.loop;
+  f.di.set(n.getModule(67330).ContextCompactSummarizer, compactor);
   f.models.maxInputTokens = 1000;
   f.s.history.push(
     { id: "owned-question", type: "message", role: "user", content: "owned" },
