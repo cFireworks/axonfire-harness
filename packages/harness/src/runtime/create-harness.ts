@@ -40,7 +40,6 @@ import { createNativeMcpProjectionHost, type NativeMcpProjectionOptions } from "
 import { createNativeProductHost, type NativeProductHostOptions } from "../config/native-product-host.js";
 import { ProductPromptRenderer } from "../prompts/prompt-renderer.js";
 import { RunnerFactory } from "../runner/runner-factory.js";
-import { ToolCallLoopDetectorImpl } from "../runner/tool-call-loop-detector.js";
 import { SessionManager } from "../sessions/session-manager.js";
 import { SessionRunStateMachine } from "../sessions/run-state-machine.js";
 import { SessionStore } from "../sessions/session-store.js";
@@ -670,14 +669,14 @@ export async function createHarness(options: HarnessOptions) {
   const originalProvider = options.modelProvider ?? new WorkBuddyModelProvider(product, authentication, settings, sessions, fetch, {}, imageBlobService);
   const recordingStore = new RecordingStoreImpl(recordReplayEnv);
   const provider = new RecordReplayModelProvider(originalProvider, recordingStore, { info: (message) => options.logger?.info?.(message) }, recordReplayEnv);
-  const runnerFactory = new RunnerFactory(provider, sessions, stateMachine, agents, product, new ToolCallLoopDetectorImpl(), {
+  const runnerFactory = new RunnerFactory(provider, sessions, stateMachine, agents, product, undefined, {
     compactAndSummarize: (session, compactOptions) => {
       const pending = compactor.compactAndSummarize(session, compactOptions);
       compactions.set(session.id, pending);
       void pending.finally(() => { if (compactions.get(session.id) === pending) compactions.delete(session.id); }).catch(() => undefined);
       return pending;
     },
-  }, undefined, { tracingDisabled: true });
+  }, undefined, { tracingDisabled: true, logger: options.logger });
   service = new AgentService(authentication, settings, runnerFactory, sessions, stateMachine, agents,
     [new CommandAgentRunInterceptor(agents, getSkillConfiguration, commandRenderer, { render: (content, variables) => prompts.renderAsync(content, variables) }, options.mcpPromptRenderer ?? { async render(...args:any[]) { if(!productRuntime)throw new Error("Product runtime is not initialized");return (productRuntime.mcpPromptRenderer.render as any)(...args); } }, { error: (message) => options.logger?.warn(message) }), new EnvAgentRunInterceptor(settings), new ConditionalRulesAgentRunInterceptor(memoryRules.conditionalRules), autoMemory.context, new MessageQueueAgentRunInterceptor(messageQueue, stateMachine, deferredQueueDispatch), new SkipRunAgentRunInterceptor(stateMachine), new SystemReminderAgentRunInterceptor(prompts, plans, { getAlwaysMemory:scope=>memoryRules.manager.get({scope:scope==='project_local'?MemoryScope.PROJECT_LOCAL:scope,type:MemoryType.ALWAYS}), channelServers: () => channelManager.channelServers.values(), ...options.reminderSources }),
       new WorktreeContextInterceptor(worktreeSessions), new TeamContextInterceptor(teamManager, prompts), new TeammateFailureInterceptor(teamManager, teamMembers), new UserQueryWrapperAgentRunInterceptor(), new ModelConfigAgentRunInterceptor(agents, sessions, settings), new ImageFilterAgentRunInterceptor({ productManager: processorProductManager, logger: { info: (message: string) => options.logger?.info?.(message) } }),
@@ -1034,6 +1033,7 @@ export async function createHarness(options: HarnessOptions) {
     for (const task of taskManager.getTasks()) if (task.status === "running" || task.status === "pending") await task.kill();
     await Promise.allSettled([...detachedExecutions]);
     await waitForMemory();
+    await runnerFactory.close();
     // Product handleExit returns a UI decision for dirty/hook worktrees. This
     // host defaults that unresolved choice to keep; clean worktrees are removed.
     if (worktreeSessions.isInWorktreeSession()) { if (await worktreeSessions.handleExit() === "keep") await worktreeSessions.keepWorktree(); }

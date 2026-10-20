@@ -47,6 +47,7 @@ export const AGENT_RUN_SDK_MODES = [
 export function agentRunSdk(
   factories = agentRunFactories,
   mode: (typeof AGENT_RUN_SDK_MODES)[number] = "cold",
+  options: { runnerProvider?: (context: any) => any } = {},
 ) {
   return withTrace(new LocalNoopTrace(), async () => {
     const f = await agentRunFixture(factories, { emptyMeta: true }),
@@ -188,7 +189,13 @@ export function agentRunSdk(
         Object.assign(service, {
           logger: f.logger,
           authenticationManager: { initialized: Promise.resolve() },
-          runnerProvider: { get: async () => runner },
+          runnerProvider: options.runnerProvider?.({
+            fixture: f,
+            manager,
+            agents,
+            model,
+            product,
+          }) ?? { get: async () => runner },
           sessionManager: manager,
           stateMachine: manager.stateMachine,
           agentManager: agents,

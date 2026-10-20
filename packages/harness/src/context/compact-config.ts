@@ -30,8 +30,8 @@ export function getEngineeringCompactSufficiencyRatio(): number {
   return percentage(process.env.CODEBUDDY_ENGINEERING_COMPACT_SUFFICIENCY_PCT) ?? 0.15;
 }
 export function getAutoCompactWindow(): number {
-  const parsed = Number.parseInt(process.env.CODEBUDDY_AUTO_COMPACT_WINDOW ?? "", 10);
-  return Math.min(1_000_000, Math.max(100_000, Number.isFinite(parsed) && parsed > 0 ? parsed : 200_000));
+  const parsed = Number(process.env.CODEBUDDY_AUTO_COMPACT_WINDOW);
+  return Math.min(1_000_000, Math.max(100_000, Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 200_000));
 }
 export function resolveCompactTriggerAt(maxInputTokens: number | undefined, threshold: number): number {
   return maxInputTokens ? maxInputTokens * threshold : getAutoCompactWindow();

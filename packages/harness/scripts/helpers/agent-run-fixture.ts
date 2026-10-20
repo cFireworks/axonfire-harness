@@ -121,6 +121,7 @@ export async function agentRunFixture(
       getMaxOutputTokens: (_name: string, maximum: number) => maximum,
     },
     TelemetryUtils: primitives.TelemetryUtils,
+    UsageUtils: services.UsageUtils,
     TokenUtils,
     GitUtils: { getGitUserName: () => undefined },
   });

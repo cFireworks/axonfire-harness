@@ -48,4 +48,4 @@ npm run verify:agent-run -w @axonfire/harness -- /absolute/path/codebuddy.js
 
 真实 SDK 组合完整原 AgentService、15 个原 interceptor、原 Manager/Store/Factory、已还原 AgentManager/Factory/Read/ProductPromptRenderer：执行 Read 并写 JSONL、新建原 Manager 从空 meta 磁盘会话冷恢复、同 RunState 续轮、取消草稿及一次性 usage。原 `system-reminder-md` 提示词经真实模板渲染，显式 owned 规则文件确实进入模型输入。模型、文件、身份 fallback、telemetry、权限初始化和 memory 服务外缘都是明确的 owned test adapters；不伪造已登录产品账户，不访问生产服务。
 
-这里直接使用真实 SDK Runner，**尚非完整原 RunnerFactory/Provider 的启动接线**。CLI/Web 默认仍为已验证的独立宿主。下一步须恢复原 Runner 构造与父 HTTP Context → middleware → Agent.setSession/View rendezvous、资源所有权和真实认证入口，才能切换默认原生父 runtime。有限行为测试与完整 AST 保真不能证明整个产品 100% 等价。
+本批历史专项直接使用真实 SDK Runner；后续[完整原 Runner 创建链](native-runner.md)已恢复原 Factory/Provider/loop，并与本执行链完成四组成对 SDK 验证，CLI/Web 默认 Runner 也已委托原 Factory。其它父运行时仍是独立宿主；父 HTTP Context → middleware → Agent.setSession/View rendezvous、资源所有权和真实认证入口仍待恢复，才能切换完整原生父 runtime。有限行为测试与完整 AST 保真不能证明整个产品 100% 等价。

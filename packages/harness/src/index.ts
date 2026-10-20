@@ -133,6 +133,7 @@ export * from "./replay/record-replay-config.js";
 export * from "./replay/recording-store.js";
 export * from "./runner/history-repair.js";
 export * from "./runner/runner-factory.js";
+export * from "./runner/native-runner-host.js";
 export * from "./runner/tool-call-loop-detector.js";
 export * from "./runtime/create-harness.js";
 export * from "./agents/model-config-agent-run-interceptor.js";

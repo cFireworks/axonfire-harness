@@ -10,7 +10,9 @@
 
 完整原 CLI SessionManagerImpl/SessionStoreImpl/AbortedStreamDraftStore 现由 `sessions/native-session-stack` 提供，含完整反向 reader/sanitizer/持久化开关依赖；同 ID 保留对象、异 ID 完成十个旧 subjects、原 result gate、append/metadata/blob 等由完整类实现。原写锁保留、SessionStart settled 缓存、空 meta 冷加载及重复 saveHistory 追加等行为未修正。见[原生会话栈](native-session-stack.md)。
 
-完整原 AgentServiceImpl、31 个本地前置 interceptor 和 History/Input/Message/Purpose 工具 factory 现由 `agents/native-agent-run` 及 `native-agent-run-utilities` 显式提供。真实 SDK 集成直接连接完整原 Manager，不用旧 ensureRunResultHandler facade；原 History optional-meta 与 Telemetry 建立 meta 的阶段顺序支持空 meta 冷加载，并覆盖 Read、RunState 续轮、取消及 one-time。产品 SDK wrapper 只重导出 npm 依赖；外部服务仍须真实注入，不能把测试 adapters 当成恢复。仍需完整原 Runner 构造、父 context/资源所有权、认证与 View rendezvous，默认独立后端未切换。见[原生执行链](native-agent-run.md)。
+完整原 AgentServiceImpl、31 个本地前置 interceptor 和 History/Input/Message/Purpose 工具 factory 现由 `agents/native-agent-run` 及 `native-agent-run-utilities` 显式提供。真实 SDK 集成直接连接完整原 Manager，不用旧 ensureRunResultHandler facade；原 History optional-meta 与 Telemetry 建立 meta 的阶段顺序支持空 meta 冷加载，并覆盖 Read、RunState 续轮、取消及 one-time。产品 SDK wrapper 只重导出 npm 依赖；外部服务仍须真实注入，不能把测试 adapters 当成恢复。见[原生执行链](native-agent-run.md)。
+
+完整原 RunnerFactoryImpl/RunnerProviderImpl/ToolCallLoopDetectorImpl 及 compact/NumberUtils factory 现由 `runner/native-runner` 提供，并与完整 AgentService/Manager 组成真实 SDK 运行链。原 input-filter 内容清理、历史 usage、物理 subagent、状态事件、延迟压缩与 Provider 并发创建语义都保留。默认 RunnerFactory 公开构造器只是 `native-runner-host` 的兼容 DI；CLI/Web 的 Runner 决策和 loop detector 已走完整原类。追踪禁用策略在借用 SDK constructor 外缘，自有 deferred 任务在 close 释放会话前等待。仍需父 context/资源所有权、认证与 View rendezvous，完整原生父后端尚未切换。见[Runner 创建链](native-runner.md)。
 
 Web 使用单运行槽以避免用户在同一进程对多个会话并发修改共享运行状态；不是多用户服务。固定 IPv4 loopback 地址，拒绝其它 Host / Origin，写接口需要随机 CSRF token，不返回 API key、不序列化上游异常。默认工具审批只能保护当前宿主边界，不等同于原产品完整 ToolPermissionService 或 OS 隔离。
 

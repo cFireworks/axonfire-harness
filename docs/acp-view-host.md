@@ -64,4 +64,4 @@ npm run verify:acp-lifecycle -w @axonfire/harness -- /absolute/path/codebuddy.js
 
 集成发现：原 View 后台 drain 发出的产品 `session_end` 扩展，会被样本 SDK 的 ClientSideConnection schema 以 -32602 拒收。测试分别核对发包与丢弃，**未改宽 schema**，并新增原 SDK/Zod 差分。产品前端可能采用不同通知消费者，此证据不证明原 UI 收不到消息。
 
-内部新会话路由的控制器、工厂、中间件及完整原 CLI Manager/Store 已单独恢复，见[会话入口](session-ingress.md)与[原生会话栈](native-session-stack.md)；完整原 AgentService/前置链也已恢复并直接连接原 Manager 验证，见[原生执行链](native-agent-run.md)。尚未把原 Runner 构造、HTTP Context、认证和 View rendezvous 接成默认父 runtime。其余仍待：启动入口、真实 AuthenticationManager/网关、Ask/Plan/回放端到端、Desktop SessionManager/HistoryStore、daemon 模式重启回收、request-send telemetry/标题 Hook、原生/外部 Docs 服务。现有会话的完整协议循环不等于整个产品 100% 还原。
+内部新会话路由的控制器、工厂、中间件及完整原 CLI Manager/Store 已单独恢复，见[会话入口](session-ingress.md)与[原生会话栈](native-session-stack.md)；完整原 AgentService/前置链和 RunnerFactory/Provider 已连接原 Manager 验证，见[原生执行链](native-agent-run.md)与[Runner 创建链](native-runner.md)。尚未把 HTTP Context、认证和 View rendezvous 接成完整默认父 runtime。其余仍待：启动入口、真实 AuthenticationManager/网关、Ask/Plan/回放端到端、Desktop SessionManager/HistoryStore、daemon 模式重启回收、request-send telemetry/标题 Hook、原生/外部 Docs 服务。现有会话的完整协议循环不等于整个产品 100% 还原。

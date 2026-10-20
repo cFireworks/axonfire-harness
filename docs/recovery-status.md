@@ -1041,3 +1041,21 @@ REA 6.7.0对两个惰性源码文件的静态证据为`ev_267c38332ef956e2cfa2d7
 保持apps/cli、apps/web、packages/harness、docs、scripts分层，根smoke与CI加入smoke:agent-run。接口与边界见[原生执行链](native-agent-run.md)。完整原RunnerFactory/Provider尚未接入：上述集成直接用固定SDK Runner。默认CLI/Web仍使用已验证的独立宿主，不能将完整类恢复等同于完整原生启动。下一步为原Runner构造、父HTTP Context→middleware→Agent.setSession/View rendezvous及资源所有权；真实认证/网关、Desktop HistoryStore、daemon重启、Ask/Plan回放、request-send服务和Docs仍未完成，整体目标保持进行中。
 
 最终门槛：check/build、1411核心+11Web、1332项编译JS smoke、61组源码/行为校验、原配置字节与真实CLI/Web seed/reload启动均通过。暂存快照不带原应用/bundle/旧node_modules，重新npm ci/check/build后，在harness workspace执行全部1411项编译核心测试、11项Web、配置和CLI/Web实际启动均通过。115 product prompts、6 JSON、22 Desktop资源（304358字节）与SDK固定版本未改。发布审计710文件，在已检查的凭据/运行文件规则内无发现，不是安全证明；既有17项依赖告警（10中危/7高危）保留。
+
+## 2026-10-21：完整原 RunnerFactory / Provider / loop 与默认 Runner 切换
+
+固定 CLI SHA 不变。恢复完整 RunnerFactoryImpl（43843，5方法）、RunnerProviderImpl（66545，1方法）和ToolCallLoopDetectorImpl（66545，9方法），共3主要类15成员/5完整声明/4原export getter。原retry helper、工具专用/通用prompt、retry/exhausted marker、loop阈值与blacklist均保留；40038 loop tokens、67330 compact配置/环境/枚举与3927 NumberUtils为完整原factory。没有执行decorators/聚合模块bootstrap，不复制SDK实现。
+
+原create参数未使用，配置只有modelProvider/inputFilter。保留loop退款短路→checkAutoCompact→完整HistoryUtils内容过滤/截断处理→await空的injectSendNowItems→非辅助purpose状态事件的顺序。check/deferred compaction和退款/状态失败由原分支捕获/记录；空send-now方法不脑补逻辑。shouldCompact使用历史UsageUtils而非session聚合usage/rawResponses、trailing tool tokens、storeId物理subagent、阈值/环境/未知窗口fallback、meaningful post-compact与默认Agent检查，失败返回false。Provider先await创建再缓存，首次并发可重复创建/后完成者覆盖，失败后重试，未改Promise缓存。
+
+保留先读取length再cleanup删除meta的时机、完成结果对应空arguments改{}特例、真实jsonrepair及greater-than二次修复、精确retry/exhausted prompt与callId真值分支。原invalid-call过滤不删除function_call_output的差异也保留。原NumberUtils使用Number→floor→clamp，5e5有效而500000junk无效；独立compact-config窗口helper同步纠正，百分比仍按原parseInt，不统一改写。
+
+第62组verify:native-runner对完整声明/类体/成员/模块绑定/getter/factory做AST核对，并执行41组成对有限组件场景、4组成对完整原Runner/Provider/loop+完整原AgentService/前置链/Manager/Store的真实SDK验证。四模式为Read/空meta冷恢复、同RunState续轮、真实stream取消草稿、one-time usage。比较原样本片段与还原片段；模型/文件/存储和权限、Hook、memory/telemetry等外围均为明确owned边界，不冒充真实认证。修正旧fixture缺失AgentNames的UsageUtils依赖，注入完整原常量/历史工具；没有改原shouldCompact或伪造usage以通过正向分支。
+
+新增native-runner-host仅负责显式DI/借用固定SDK/资源所有权，完整原History/Input/Purpose/SessionUtils/UsageUtils及既有原TokenUtils均在该链中。现有RunnerFactory兼容构造器已委托完整原Factory，默认CLI/Web的Runner决策和loop detector不再走旧近似实现。SDK tracingDisabled属于宿主隐私策略，只在借用SDK构造器外缘提供；原create方法及node_modules不变。宿主跟踪已安排immediate/Promise，close在释放会话前等待；4项host测试覆盖真正SDK、委托、关闭barrier和Number窗口兼容，加45原链专项共49项。
+
+REA 6.7.0对native-runner/host两文件的静态证据为`ev_d74ffcc1a6cc4fa99e8ee205bdc30662b3e6d2013afb31a72d23e4537f7db81f`，4375 AST nodes、2 parsed files、0 parse failures。750节点/每文件750、150unknown、45秒限制下semantic graph仍partial/truncated，未执行bootstrap，不把静态图作为整个运行时等价证明。
+
+仓库分层与开箱即用CLI/Web命令保持，smoke:native-runner纳入根smoke与CI，公开嵌入接口见[Runner创建链](native-runner.md)。这次切换仅限Runner，不等于完整原生父runtime完成。下一步是父HTTP Context→SessionMiddleWare→controller→Agent.setSession/View rendezvous、父资源所有权与真实认证/网关入口；Desktop HistoryStore、daemon自动重启、Ask/Plan回放、request-send服务与Docs仍未完成，整体目标继续进行。
+
+最终门槛：check/build、1460核心+11Web、1381项编译JS smoke、62组源码/行为校验、原配置字节与真实CLI/Web seed/reload启动均通过。修正fixture依赖后61/62组重新成对校验通过；宿主immediate直接执行原async同步前段的受控测试也通过，不额外加微任务。无原应用/bundle/旧node_modules的暂存快照重新npm ci/check/build，并在最终源码版本的build成功后顺序执行全部1460项编译核心测试、11项Web、配置和CLI/Web实际启动，均通过。115 product prompts、6 JSON、22 Desktop资源（304358字节）及SDK固定版本未改。发布审计720文件，在所检查的凭据/运行文件规则内无发现，不是安全证明；既有17项依赖告警（10中危/7高危）保留。
