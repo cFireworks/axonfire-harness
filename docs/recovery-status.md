@@ -951,3 +951,19 @@ CLI/Web、Addon.prompt与promptAcp默认入口未切换。后续仍需完整RPC/
 REA对本批两份源服务/所有权宿主的静态证据为 `ev_f0869863d3a63ce4b2b839a0f8477b290519e9867fb087e94e010638f435d02a`，16007 AST nodes、2文件、0 parse failures。semantic graph 上限750节点/150 unknown、45秒，仍partial/truncated；不执行应用bootstrap，不把静态图或有限差分当整个harness运行时等价。SDK依赖、115 product prompts、6原JSON与22份Desktop模板字节保持不变。
 
 最终门槛：check/build、1188核心+11Web、1109项编译JS smoke、56组源码/行为验证、原字节配置与CLI/Web实际启动全部通过。新的全暂存快照不带原应用/bundle/旧node_modules，重新npm ci/check/build，通过236项编译后ACP服务/协议/输入/用户Prompt/资源/环境/设置消费者/Addon/Cloud测试、11项Web和实际CLI/Web seed/reload启动及配置检查。发布审计664文件，在所检查的凭据/运行文件规则内无发现，不是安全证明；既有17项依赖告警（10中危/7高危）不强制升级。后续继续完整RPC/连接manager/guard、入口与审批owner切换、原request-send telemetry/标题Hook以及daemon会话控制；整个目标仍未完成。
+
+## 2026-10-20：ACP 连接/Stream/Guard 与完整修改版 SDK
+
+固定 CLI SHA 不变。恢复完整 AcpAgentManagerImpl、AcpServerImpl、AcpContextImpl、AcpController、AcpTransportManagerImpl、AcpTransportImpl、AcpTransportFactoryImpl、AcpStreamManagerImpl、AcpConnectionGuardImpl、AcpSecurityMiddleware，10类84成员；另16完整函数、4初始化、6个类外静态配置赋值和原var eG自引用。类体之外的静态赋值也逐项AST核对，防止漏掉30分钟/0/5000/30000毫秒与sweep kind。原HTTP decorators不执行，但4条完整路由的verb/path/action和post的Body参数零与样本核对；POST /connect没有误作GET。
+
+完整factory38113恢复样本修改版ACP SDK：5类88成员、6完整顶层函数及全部内联schema，8个原导出接口。manifest版本0.25.0不能证明stock npm SDK等价；保留样本NES/provider/CodeBuddy扩展，不替换OpenAI SDK。原Zod factory25223独立执行确认core是4.0.0；使用既有锁定zod3@3.25.67的v4模块，由有界局部CJS loader隔离内部裸zod自引用，避免误用根zod4.3.5。参考差分侧运行完整原Zod factory，不与移植侧共用同一npm Zod。未复制整个Zod或改动依赖版本。
+
+保留原guard TTL非滑动/严格大于过期、容量检查先于同ID替换、5000毫秒idle grace与dead连接优先；HTTP双Accept门槛、初始化校验前置标志、id0与batch回复；write/flush异常和drain背压；server request暂停idle、任意client POST恢复、POST heartbeat续idle deadline；cancel grace正常cancelled result与idle -32800回收。原首个orphan sweep清其他in-flight标记却留下对应POST stream，不在source类里修正。server.stop不释放订阅/transport，原transport.close为空，stream.close不结束incoming controller；测试宿主拥有并显式关闭这些资源。
+
+第57组verify:acp-connections完整AST核对，再做29组连接和9组SDK/Zod有限行为差分。41项专项含三项真实owned PassThrough/Node HTTP loopback测试，以原Server/Controller/Stream和完整修改版SDK完成UTF-8 NDJSON、POST双向permission/通知、独立GET SSE和DELETE。业务Agent、认证、文件/终端为明确doubles，不算完整业务Agent/View.render已接进RPC。原middleware缺少依赖会next、loopback绕过认证/token；不提供默认公网listener或声称完整认证。旧primitive无参默认值仍仅RequestError，可显式注入完整模块38113。
+
+REA对三份惰性组件/SDK/Zod桥静态分析证据`ev_08971e22aaf8eb0c81242c356eca7d8772e286fff0d2e4e88359c89509e66cb7`，25158 AST nodes、3文件、0 parse失败；semantic上限750节点/150 unknown、45秒，仍partial/truncated，不执行应用bootstrap，不作为运行时整体等价证明。OpenAI Docs仅核对[SDK运行/流式边界](https://developers.openai.com/api/docs/guides/agents/running-agents)，还原依据仍是锁定SDK和原样本，不用当前文档改写历史逻辑。
+
+完整业务RPC入口、View.render迭代/关闭与单一审批owner、真实网关认证、request-send telemetry/标题Hook、Desktop SessionManager/HistoryStore/Plan回放、daemon模式自动重启回收仍待继续。CLI/Web、Addon.prompt和promptAcp默认路径保持不变，整个harness没有宣称100%完成；[连接说明](acp-connections.md)记录API与所有权边界。
+
+最终门槛：check/build、1229核心+11Web、1150项编译JS smoke、57组源码/行为验证、原字节配置与CLI/Web实际启动全部通过。新的暂存快照不含原应用/bundle/旧node_modules，重新npm ci/check/build，通过277项编译后连接/服务/协议/输入/用户Prompt/资源/环境/设置消费者/Addon/Cloud相关测试、11项Web、实际CLI/Web seed/reload启动与配置检查。SDK依赖、115 product prompts、6 JSON与22 Desktop资源（304358字节）保持不变。发布审计675文件，在所检查的凭据/运行文件规则内无发现，不是安全证明；既有17项依赖告警（10中危/7高危）保留。

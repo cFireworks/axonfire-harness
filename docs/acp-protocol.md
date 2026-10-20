@@ -10,7 +10,7 @@
 
 完整协议类通过 `createNativeAcpAgent(runtime)`、`createNativeAcpView(runtime)`、`createNativeAcpPrimitives(runtime)` 导出。它们是供下一阶段接线的原始完整组件，不是“调用无参构造即可登录连接”的应用服务。`runtime.modules` / `runtime.getModule` 对应 catalog 中的源模块 ID；依赖缺失会明确报错，不以空服务或伪造通知补全。原实例的 DI、连接、广播、命令、会话、任务、审批、标题与遥测服务必须由宿主明确提供；这些 factory 不查找安装账户、不扫描真实用户目录、不启动后台传输。
 
-`createNativeAcpPrimitives` 默认只提供从样本抽取的 RequestError，**不包含完整 ACP transport SDK**。读取 `AgentSideConnection`、`ndJsonStream` 等 transport 导出会报错；如有真实依赖，须显式注入 `runtime.modules[38113]`，返回的 RequestError 与协议使用的构造器保持同一引用。此 primitive loader 优先使用 modules 覆盖，其次自身已恢复 factory，getModule 只为未恢复依赖提供回落。OpenAI SDK 仍直接使用仓库锁定的 npm 依赖，没有复制或重写其 agent loop。
+`createNativeAcpPrimitives` 的无参默认值仍仅提供从样本抽取的 RequestError，读取其他 transport 导出会报错。后续阶段已恢复完整样本 ACP transport SDK：可用 `createCapturedAcpSdk()` 显式注入 `runtime.modules[38113]`，返回的 RequestError 与协议使用的构造器保持同一引用。此 primitive loader 优先使用 modules 覆盖，其次自身已恢复 factory，getModule 只为未恢复依赖提供回落。连接、Zod 隔离、测试与未接通边界见 [ACP 连接说明](acp-connections.md)。OpenAI SDK 仍直接使用仓库锁定的 npm 依赖，没有复制或重写其 agent loop。
 
 ## 本阶段验证
 

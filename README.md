@@ -8,6 +8,8 @@
 
 标题、friction/召回、广播与 usage 源服务也已恢复；完整 AcpView 执行链通过真实 SDK 集成，附有独立的订阅/定时器/异步任务宿主。其默认入口和外部服务边界见 [ACP 服务说明](docs/acp-services.md)。
 
+ACP 连接/Stream/guard 的 10 个完整类及样本修改版 ACP SDK 已恢复，通过完整 AST、原样本行为差分和真实本地 stdio/HTTP 双向传输测试；尚未接管默认业务/审批入口，见 [ACP 连接说明](docs/acp-connections.md)。OpenAI SDK 仍保留原依赖，不重新实现。
+
 ## 快速开始
 
 需要 Node.js **22.19+** 和 npm。无需安装原版应用。

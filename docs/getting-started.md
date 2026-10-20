@@ -437,3 +437,5 @@ const answer = await backend.promptAcp({
 完整原 ACP Agent/View 与团队转发桥现已作为独立组件恢复，验证入口为 `npm run smoke:acp-protocol`。这没有把上述 `promptAcp` 自动改成 RPC/NDJSON 服务，也没有改变普通 CLI/Web 审批策略；接线状态及源行为见 [ACP 协议核心](acp-protocol.md)。
 
 标题/friction/广播/usage 已有完整源服务和 `createAcpServicesHost` 资源宿主，专项验证命令是 `npm run smoke:acp-services -w @axonfire/harness`。它需要父 ACP runtime 的显式依赖，并不自动把 Web/CLI 或 Addon.promptAcp 改为完整 RPC 服务。接口、关闭与借用边界见 [ACP 服务说明](acp-services.md)。
+
+连接/Stream/guard 和样本修改版 ACP SDK 的专项可运行 `npm run smoke:acp-connections`。这些是已恢复的显式嵌入组件，不新增默认 ACP 服务器命令；真实业务 Agent/审批 owner 接线仍待继续，CLI/Web 快速启动方式不变。接口与安全/所有权限制见 [ACP 连接说明](acp-connections.md)。

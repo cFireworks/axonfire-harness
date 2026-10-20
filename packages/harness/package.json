@@ -88,7 +88,9 @@
     "verify:acp-protocol": "node --import tsx scripts/verify-acp-protocol-recovery.ts",
     "smoke:acp-protocol": "node --test dist/test/acp-protocol-runtime.test.js",
     "verify:acp-services": "node --import tsx scripts/verify-acp-services-recovery.ts",
-    "smoke:acp-services": "node --test dist/test/acp-services-runtime.test.js"
+    "smoke:acp-services": "node --test dist/test/acp-services-runtime.test.js",
+    "verify:acp-connections": "node --import tsx scripts/verify-acp-connections-recovery.ts",
+    "smoke:acp-connections": "node --test dist/test/acp-connections-runtime.test.js"
   },
   "dependencies": {
     "@openai/agents": "0.5.2",
