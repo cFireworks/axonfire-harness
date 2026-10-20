@@ -17,3 +17,4 @@ jobs:
       - run: npm run verify:config
       - run: npm test
       - run: npm run smoke:runtime
+      - run: npm run smoke:launchers

@@ -66,6 +66,7 @@ scripts/                 仓库级验证入口
 npm run check
 npm test
 npm run smoke:runtime
+npm run smoke:launchers
 npm run verify:config
 # 可选：需要自行提供固定 SHA 的合法本地样本，不随仓库分发
 npm run verify:recovery -- /absolute/path/to/codebuddy.js

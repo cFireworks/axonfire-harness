@@ -13,3 +13,9 @@ Web 的 `--cwd` 指定工具工作目录：`npm start -- --cwd /absolute/path/to
 核心测试与 Web 宿主测试不使用本机真实模型账户，差分验证则需要固定样本 SHA-256 `4120898f1ded86ac545316721d216c827a325c2513a8fae4bcd8c8bbbf211afd`。不包含样本的普通 checkout 仍可安装、编译、离线演示和运行回归测试。
 
 历史报告中的根级 `src/`、`config/`、`test/`、`scripts/verify-*.ts` 现位于 `packages/harness/`。原逐项 `verify:*` 命令加 `-w @axonfire/harness`；推荐直接使用根级 `npm run verify:recovery -- /absolute/path/to/codebuddy.js` 执行全套差分。
+
+## 本批验收（2026-10-20）
+
+仅克隆本项目到干净目录，不复制安装包、原 bundle 或现有 node_modules：`npm ci`、`npm run build`、`npm test`（619 核心 + 10 宿主）、`npm run verify:config` 全部通过。独立 `npm run smoke:launchers` 启动 CLI help，再启动临时端口 Web demo，通过真实 SDK / harness 获取流式完成事件并正常退出。编译后 smoke 541 项与显式样本输入的 34 组差分通过。依赖锁中的既有包版本无变化。
+
+浏览器手动验收实际发送了一轮离线演示消息，确认增量文本、会话列表更新和完成后按钮状态恢复；截图位于 `docs/images/web-demo.png`。没有使用真实供应商密钥验证远端模型；没有据此声明所有供应商兼容或产品全部能力已恢复。CI 只是已加入仓库的定义，远端执行结果需以 GitHub Actions 实际记录为准。
