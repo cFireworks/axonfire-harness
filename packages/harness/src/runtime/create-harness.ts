@@ -61,6 +61,7 @@ import {createResponseInterceptorUtilities} from '../responses/response-intercep
 import {createNativeResponseInterceptors} from '../responses/native-response-interceptors.js';
 import type {AgentManagerHostOptions} from '../agents/standalone-agent-manager-host.js';
 import {createHookLifecycleHost,type HookLifecycleHostOptions} from '../hooks/hook-lifecycle-runtime.js';
+import { createToolPermissionHost, type ToolPermissionHostOptions } from '../permissions/tool-permission-host.js';
 import type { HarnessSession } from "../sessions/session.js";
 import { registerCoreFileTools } from "../tools/core-file-tools.js";
 import { registerCoreSearchTools } from "../tools/core-search-tools.js";
@@ -168,6 +169,9 @@ class LocalNoopTrace extends NoopTrace {
 }
 
 export type HarnessOptions = {
+  /** Complete native classifier/SDK callback path; explicit until the full native approval controller replaces the compatibility UI. */
+  nativePermissions?: boolean;
+  permissionHost?: Partial<ToolPermissionHostOptions>;
   workDir: string;
   stateDir?: string;
   apiKey?: string;
@@ -408,6 +412,18 @@ export async function createHarness(options: HarnessOptions) {
     hookInputProcessorProvider:{sortSync:()=>[imageToolHookInputProcessor,...options.hooks?.hookInputProcessorProvider?.sortSync()??[]].sort((a,b)=>(a.priority??500)-(b.priority??500))},
   });
   tools.attachHookLifecycle(nativeHooks.pipeline);
+  const permissionSettings = new Map<string, any>();
+  const permissions = createToolPermissionHost({
+    getWorkDir, getHomeDir: () => stateDir, sessionStore: store, planStorageService: plans,
+    sessionHookManager: nativeHooks.sessionManager, toolHookManager: nativeHooks.toolManager,
+    settingsManager: {
+      async get(key: string, scope?: string) { const id = `${scope ?? ''}\0${key}`; return permissionSettings.has(id) ? permissionSettings.get(id) : settings.get(key); },
+      async set(key: string, value: any, scope?: string) { permissionSettings.set(`${scope ?? ''}\0${key}`, value); },
+    },
+    logger: { warn: (...args: any[]) => options.logger?.warn(args.map(String).join(' ')) },
+    ...options.permissionHost,
+  });
+  if (options.nativePermissions) { tools.attachPermissionService(permissions); deferredRuntime.deferExecute.attachPermissionAdapter(permissions); }
   const skillPaths = options.skillPaths ?? { get project() { return resolve(getWorkDir(), ".codebuddy/skills"); }, user: resolve(stateDir, "skills"), connector: resolve(stateDir, "connector-skills") };
   const skillProvider = new SkillProductProvider(skillPaths);
   const configuredCommands = [...(Array.isArray(product.raw.commands) ? product.raw.commands as ProductCommand[] : []), ...options.commands ?? []].map((command) => ({ ...command }));
@@ -837,7 +853,7 @@ export async function createHarness(options: HarnessOptions) {
   try{await agents.start();await agents.getDefault();}catch(error){await close();throw error;}
   channelClients?.initializeConfigured();
   channelHost.start();
-  return { product, agents, agentFactory, tools, mcp, sessions, store, service, stateMachine, interruptions, compactor, memory, memoryRules, autoMemory, hooks:nativeHooks, shell, taskManager, taskStorage, taskTools, agentTool, taskOutputTools, plans, planTools, asks, askTool, promptContext, createWorkflowSubagentSpawner, createWorkflowRuntime, workflowTool, backgroundTaskNotifier, recordingStore, recordReplayProvider: provider, webFetchTool, webSearchTool, webRuntime,
+  return { product, agents, agentFactory, tools, mcp, sessions, store, service, stateMachine, interruptions, compactor, memory, memoryRules, autoMemory, hooks:nativeHooks, permissions, shell, taskManager, taskStorage, taskTools, agentTool, taskOutputTools, plans, planTools, asks, askTool, promptContext, createWorkflowSubagentSpawner, createWorkflowRuntime, workflowTool, backgroundTaskNotifier, recordingStore, recordReplayProvider: provider, webFetchTool, webSearchTool, webRuntime,
     channelHost, channelClients, channelManager, channelPermissionAdapter, wechatReplyTool, wecomReplyTool,
     delegateToolManager, delegateToolsChangedHandler, delegateTool,
     lspManager, lspTool,

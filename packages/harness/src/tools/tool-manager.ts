@@ -18,6 +18,7 @@ import { createConditionalRulesToolInjector } from "../memory/conditional-rules-
 import type { NativeToolExecutionPipeline } from "../hooks/native-tool-execution-pipeline.js";
 import type { ToolSearchService } from "./tool-search.js";
 import { BackgroundTaskRegistry, type ProductBackgroundTask } from "./background-task-registry.js";
+import { nativeToolPermissionMetadata } from "../permissions/native-tool-permission-metadata.js";
 import { delegateDescriptionVariables, type DelegateToolManagerImpl, type DelegateLogger } from "../delegate/delegate-tool-manager.js";
 
 export type HarnessToolContext = HarnessSession;
@@ -65,6 +66,17 @@ const ALWAYS_ALLOWED_IN_DELEGATE = new Set([
 ]);
 
 export class ToolManager {
+  private permissionService?: { needsApproval(...args: any[]): Promise<boolean> };
+  attachPermissionService(service: { needsApproval(...args: any[]): Promise<boolean> }): void { this.permissionService = service; }
+  private sdkApproval(name: string, handler: RegisteredToolHandler): NonNullable<RegisteredToolHandler["needsApproval"]> {
+    if (handler.needsApproval !== undefined) return handler.needsApproval;
+    if (!this.permissionService) return false;
+    return async (context, input, callId) => {
+      const metadata = nativeToolPermissionMetadata(name);
+      const descriptor = { name, aliases: handler.aliases ?? metadata.aliases, resolveToolType: metadata.resolveToolType.bind(metadata) };
+      return this.permissionService!.needsApproval(descriptor, context, input, callId, handler.resolveNeedPermissionArgs ?? metadata.resolveNeedPermissionArgs.bind(metadata));
+    };
+  }
   // The product initializes renderer objects per tool instance. Do not share
   // mutable presentation arrays between independent embedding runtimes.
   private readonly argumentRenderers = new Map(Object.entries(nativeToolArgumentRenderers).map(([name, renderer]) => [name, {
@@ -149,6 +161,8 @@ export class ToolManager {
     const parameters = await this.resolveParameters(handler.parameters);
     const executable:DeferredBuiltinTool = {
       name: registered,
+      aliases: handler.aliases ?? nativeToolPermissionMetadata(registered).aliases,
+      resolveToolType: nativeToolPermissionMetadata(registered).resolveToolType.bind(nativeToolPermissionMetadata(registered)),
       ...((handler.argumentRenderer ?? this.argumentRenderers.get(registered)) ? { argumentRenderer: handler.argumentRenderer ?? this.argumentRenderers.get(registered)! } : {}),
       execute: async (params, context, details) => {
         return this.executeRegistered(registered,handler,parameters,params,context as RunContext<HarnessToolContext>,details as ToolCallDetails|undefined);
@@ -156,7 +170,7 @@ export class ToolManager {
       ...(handler.needsApproval === undefined
         ? {}
         : { needsApproval: handler.needsApproval }),
-      ...(handler.resolveNeedPermissionArgs ? { resolveNeedPermissionArgs: handler.resolveNeedPermissionArgs as NonNullable<DeferredBuiltinTool["resolveNeedPermissionArgs"]> } : {}),
+      resolveNeedPermissionArgs: (handler.resolveNeedPermissionArgs ?? nativeToolPermissionMetadata(registered).resolveNeedPermissionArgs.bind(nativeToolPermissionMetadata(registered))) as NonNullable<DeferredBuiltinTool["resolveNeedPermissionArgs"]>,
       ...(handler.resolveRejectedResult
         ? {
             resolveRejectedResult: (rawItem: Record<string, unknown>) =>
@@ -173,7 +187,7 @@ export class ToolManager {
     const registered=executable.name!,definition=(configuration?.tools??this.product.raw.tools).find(tool=>tool.name===registered),handler=this.handlers.get(registered);if(!definition||!handler)return;
     const parameters=this.resolvedParameters.get(executable)!;
     const schema=isZodParameters(parameters)?z.toJSONSchema(parameters,{target:"draft-7",unrepresentable:"any"}):parameters;
-    return{...executable,name:registered,description:await this.getToolDescriptionFromProduct(registered,agent,configuration)??"",parameters:schema,strict:false,aliases:handler.aliases??[],defer_loading:definition.deferLoading===true,needsApproval:handler.needsApproval??false,
+    return{...executable,name:registered,description:await this.getToolDescriptionFromProduct(registered,agent,configuration)??"",parameters:schema,strict:false,aliases:handler.aliases??nativeToolPermissionMetadata(registered).aliases,defer_loading:definition.deferLoading===true,needsApproval:this.sdkApproval(registered,handler),
       errorFunction:(_context:any,error:any)=>{const message=error instanceof Error?error.message:String(error);return JSON.stringify({content:`Error: ${message}`,error:message});},
       isEnabled:async({runContext}:any)=>(await handler.isEnabled?.(runContext.context))??true};
   }
@@ -210,7 +224,7 @@ export class ToolManager {
         description: await this.getToolDescriptionFromProduct(definition.name, agent) ?? "",
         parameters: jsonSchema,
         strict: false,
-        needsApproval: handler.needsApproval ?? false,
+        needsApproval: this.sdkApproval(definition.name,handler),
         execute: async (input, context, details) => {
           if (!context)
             throw new Error(`Missing run context for tool ${definition.name}`);

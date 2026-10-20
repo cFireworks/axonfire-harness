@@ -19,3 +19,5 @@ Web 的 `--cwd` 指定工具工作目录：`npm start -- --cwd /absolute/path/to
 仅克隆本项目到干净目录，不复制安装包、原 bundle 或现有 node_modules：`npm ci`、`npm run build`、`npm test`（619 核心 + 10 宿主）、`npm run verify:config` 全部通过。独立 `npm run smoke:launchers` 启动 CLI help，再启动临时端口 Web demo，通过真实 SDK / harness 获取流式完成事件并正常退出。编译后 smoke 541 项与显式样本输入的 34 组差分通过。依赖锁中的既有包版本无变化。
 
 浏览器手动验收实际发送了一轮离线演示消息，确认增量文本、会话列表更新和完成后按钮状态恢复；截图位于 `docs/images/web-demo.png`。没有使用真实供应商密钥验证远端模型；没有据此声明所有供应商兼容或产品全部能力已恢复。CI 只是已加入仓库的定义，远端执行结果需以 GitHub Actions 实际记录为准。
+
+权限服务后续批次已将门槛提升为652核心 + 10宿主、574编译smoke、36组差分。嵌入API的 `createHarness({ nativePermissions: true, ... })` 可启用已恢复的完整权限分类与SDK回调；它目前仍使用兼容审批控制器和独立宿主guard，不是原产品的全套审批/SettingsManager/Auto classifier。默认CLI/Web行为保持可用，不需要启用该开发者选项。

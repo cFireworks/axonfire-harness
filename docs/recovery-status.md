@@ -456,3 +456,21 @@ REA 对本次选定单 bundle 的受限重分析在 45 秒预算内超时；不�
 本批门槛：631项核心测试、10项Web宿主测试、553项编译JS smoke、35组样本差分、check/build/config和CLI/Web实际启动全部通过。六份配置JSON、115个prompt、memory policy及SDK依赖锁定版本保持不变，发布前基本凭据/运行记录扫描未发现命中。目标仍在进行，不宣称整个harness已100%恢复。
 
 下一批已定位的原类：ToolPermissionService `11948949..11968077`，包含 checkPermission/doCheckPermission/needsApproval、PermissionRequest/Denied、executeAndCachePreToolUseHooks/cachePreToolUseResult、策略/规则/危险命令与更新持久化等27个方法（含constructor）；另一个 preToolUseHookResults.set 位于 DeferExecute 包装 `12008364..12018235`，不可仅恢复前者便认为缓存链路完整。随后对接完整 handleInterruptions / requestSdkPermission，再继续 MCP Hook proxy 与 ProductManager/插件热刷新。这些定位本身不计为已恢复代码。
+
+## 完整 ToolPermissionService / 规则 / 风险与审批缓存批次
+
+完整 ToolPermissionService `11948949..11968077`（27方法含constructor）、完整 PermissionUtils `13340331..13350579`（31方法）、完整 CommandUtils 与模块级辅助函数/正则表 `13050284..13060942`，以及 Default/AcceptEdits/Plan/Bypass/Work/Delegate/DontAsk/Auto 八个原策略均已直接移植。另恢复 BaseTool 与13种具体工具的权限参数/类型/别名元数据、完整危险allow规则过滤器、模块75753的host识别缓存。方法体只加TS类型，实例字段/容器/时钟/进程和宿主服务在外层工厂注入；没有按测试结果重写权限优先级。
+
+保留原先后顺序：deny → 可信allow → 非print命令安全检查 → ask规则 → bypass可用性与危险命令判断 → 非可信allow → 非MCP策略 → 不可提示时deny → 默认ask。可信allow本身可越过命令安全检查，未信任目录的project/local allow不能；Auto过滤危险allow。规则deny只需匹配一个子命令，命令allow必须所有子命令都匹配；重定向不按普通前缀allow。MCP权限按精确名/server/server wildcard处理，不借用builtin aliases。完整doCheckPermission和mode finalization的DontAsk、Auto降级/熔断/超长/denialLimit/headless abort分支均在本批范围。
+
+needsApproval完整恢复PreToolUse、PermissionRequest/Denied分派、deny不要求SDK审批但缓存拒绝的协议、回调updatedInput、无callId时抛原PermissionDeniedError，以及异常回退ask。原DeferExecute构造器的整个审批arrow和defaultNeedsApproval单独移植为native-defer-approval：包装器deny写缓存、mandatory判断、intrinsic true、MCP/bare名和target参数解析顺序均保留；其余Defer执行/MCP转换仍沿既有实现，不能据此认为整个原类都已替换。
+
+真实SDK0.5.2验证发现needsApproval在首次暂停和state恢复时均会重新运行，因此PreToolUse可执行两次并覆盖同一个callId缓存，执行包装只消费最后一次缓存。本批保留该行为，不增加源码不存在的“已有缓存则跳过”。测试分别证明直接Write、cached deny不触达文件系统、PermissionRequest改写、Defer外层deny不执行target Pre以及已索引Defer builtin审批后的实际写入。所有写入都在自有临时目录，危险命令只作为分类器字符串输入，从未执行。
+
+宿主入口：createHarness返回permissions（service/permissionUtils/strategies/commands/pathUtils与initializeContext），`nativePermissions: true`显式连接BaseTool默认needsApproval和Defer SDK callback；permissionHost可注入scoped settings、auto classifier、sandbox配置/信任/Hook adapter。为避免把未恢复的审批控制器伪装成原实现，该SDK路径暂不默认启用。现有默认CLI/Web审批仍可用；独立执行guard继续保留，所以原PermissionRequest allow不自动撤销宿主额外审批。默认scoped settings更新保存在宿主内存中，不声称已恢复原SettingsManager的磁盘持久化；Auto backend未配置时明确不可用，不调用真实模型或伪造分类结果。命令策略是否为WorkBuddy Desktop按原CODEBUDDY_HOST/argv缓存检测，不能因分析对象是桌面应用便对独立CLI硬编码true。
+
+验证：118个完整方法/函数AST、18张原正则/常量表AST、1,920组原样本行为比较；新增21项专项包含5项实际SDK直接/Defer运行验证与权限别名的跨宿主隔离。配置中的115个prompt、原JSON和SDK/OpenAI锁定版本不变。OpenAI Docs仅用于核对审批从RunState恢复的边界，SDK重复回调事实以锁定版本源码与实际测试为准。
+
+下一批优先完整InterruptionService审批控制器（approve/reject/queue/handleInterruptions/requestSdkPermission/SDK hooks与denials），对齐默认SDK接线与兼容审批宿主，再补MCP Hook proxy、AutoMode classifier backend、SettingsManager持久化、ProductManager/插件刷新；本批未把这些依赖标成完成。
+
+最新门槛：652项核心测试、10项Web宿主测试、574项编译JS smoke、36组样本差分、check/build/config和CLI/Web实际启动全部通过。发布前基本凭据/运行记录扫描未发现命中，未升级任何SDK或模型依赖。整体目标继续进行。

@@ -10,4 +10,6 @@ Web 使用单运行槽以避免用户在同一进程对多个会话并发修改�
 
 结果分派默认使用完整原 `InterruptionService.waitFor`，与 SessionManager 的 stream/history/gate 消费者分开。默认/非默认 Agent、headless、错误收尾和 Stop 续跑由原方法驱动；主 prompt 不再补发 Stop。独立宿主仅增加历史刷盘与异步续跑发布 barrier。较早报告中将该剩余分派归为 SessionManager 的表述已在还原状态中纠正。
 
-下一批还原重点是完整 handleInterruptions / SDK 权限请求拒绝分支、SDK approval cache、ToolPermissionService 与 MCP hook proxy。新增 Web UI 不计为这些原逻辑已经还原。之后继续 ProductManager / plugin refresh。
+下一批还原重点是完整 handleInterruptions / SDK 权限请求拒绝分支及 MCP hook proxy。新增 Web UI 不计为这些原逻辑已经还原。之后继续 AutoMode backend、SettingsManager 持久化与 ProductManager / plugin refresh。
+
+完整 ToolPermissionService、PermissionUtils、CommandUtils、八个策略和两个审批缓存入口现已恢复，通过 `createHarness({ nativePermissions: true, ... })` 显式连接真实 SDK；`harness.permissions` 提供完整核心对象。默认 UI 仍使用既有审批宿主，待原 InterruptionService 控制器整体替换后再统一默认路径。独立执行 guard 与原分类器有明确边界，Hook allow不会自动撤销该guard。宿主内存 settings adapter 和未配置的 Auto classifier 也不等于原产品持久化/模型服务。审批暂停应从相同RunState恢复，参考 [OpenAI Docs](https://developers.openai.com/api/docs/guides/agents/guardrails-approvals)；SDK0.5.2的实际回调次数以本地测试为准。

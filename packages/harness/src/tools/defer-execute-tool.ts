@@ -1,4 +1,6 @@
 import { Ajv, type ValidateFunction } from "ajv";
+import { createNativeDeferApproval } from "./native-defer-approval.js";
+import { nativeToolPermissionMetadata } from "../permissions/native-tool-permission-metadata.js";
 import { z } from "zod";
 import type { McpConnection, McpRegistry } from "../mcp/mcp-registry.js";
 import type { HarnessSession } from "../sessions/session.js";
@@ -45,6 +47,8 @@ export type DeferredToolResult = {
 };
 
 export type DeferredBuiltinTool = {
+  aliases?: string[];
+  resolveToolType?: (names: string[]) => string;
   argumentRenderer?: { displayProperties?: Array<{ name: string; type?: string }>; formatText?: (input: any) => unknown };
   name?: string;
   execute: (
@@ -116,16 +120,27 @@ export class DeferExecuteTool {
 
   private readonly ajv = new Ajv({ allErrors: true, coerceTypes: true });
   private readonly validateCache = new Map<string, ValidateFunction>();
+  private nativeApproval?: ReturnType<typeof createNativeDeferApproval>;
 
   constructor(
     private readonly search: ToolSearchService,
     private readonly tools: DeferredBuiltinToolManager,
     private readonly mcp: McpRegistry,
     private readonly proxyResolver: TransparentProxyResolver = {},
-    private readonly permission?: DeferredPermissionAdapter,
+    private permission?: DeferredPermissionAdapter,
   ) {}
+  attachPermissionAdapter(permission: DeferredPermissionAdapter): void {
+    this.permission = permission;
+    this.nativeApproval = createNativeDeferApproval({ permission, toolManager: this.tools, toolSearchService: this.search,
+      isMandatoryApprovalEnabled: () => this.isMandatoryApprovalEnabled(),
+      isMandatoryApprovalTarget: (session: HarnessSession, name: string) => permission.isMandatoryApprovalTarget?.(session, name) ?? false,
+      getMcpPermissionToolName: (name: string, definition: any) => this.getMcpPermissionToolName(name, definition),
+      resolveNeedPermissionArgs: nativeToolPermissionMetadata(this.name).resolveNeedPermissionArgs,
+    });
+  }
 
   async needsApproval(context: any, rawInput: any, callId?: string): Promise<boolean> {
+    if (this.nativeApproval) return this.nativeApproval.needsApproval(context, rawInput, callId);
     const input = rawInput && typeof rawInput === "object" && "value" in rawInput ? rawInput.value : rawInput;
     const name = input?.toolName;
     if (!name || typeof name !== "string") return this.defaultNeedsApproval(context, rawInput, callId);
