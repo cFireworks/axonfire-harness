@@ -42,11 +42,11 @@ Web 的 `--cwd` 指定工具工作目录：`npm start -- --cwd /absolute/path/to
 
 `hook_`、`mcp_`、`elic_`响应也按原前缀分发；MCP成功payload为 `response.mcp_response`，Hook成功payload为原hook输出对象。权限请求默认无超时，Hook默认60秒；关闭可取消全部pending。`initialize`、`get_available_modes`、`get_available_models`、`set_permission_mode`、`set_model`已注册。独立宿主默认initialize返回account:null，不映射模型API key为产品账号。
 
-`sdkControl.initializeDependencies` 可提供原ProductManager/env/账号等依赖。未提供ProductManager时systemPrompt/appendSystemPrompt/agents动态覆盖明确返回错误；环境切换仍需真实adapter，不返回假成功。后续MCP批次已接入原SdkMcpServer/transport与Hook proxy，见下节；SDK stdin/headless启动程序、鉴权命令和ProductManager刷新仍未完成。显式SDK客户端allowed可授权独立guard；Hook allow与完整native政策到guard的统一仍是后续默认路径对齐边界。
+`sdkControl.initializeDependencies` 可覆盖原ProductManager/env/账号等依赖。ProductManager现已默认接入：systemPrompt/appendSystemPrompt/agents经原provider合并后重建Agent，不再返回“缺少adapter”或只回复成功而不生效。环境切换仍需真实adapter，不返回假成功。后续MCP批次已接入原SdkMcpServer/transport与Hook proxy，见下节；SDK stdin/headless启动程序、鉴权命令及其余产品provider仍未完成。显式SDK客户端allowed可授权独立guard；Hook allow与完整native政策到guard的统一仍是后续默认路径对齐边界。
 
 ## 原生 MCP（嵌入 API）
 
-最新门槛为748核心 + 10宿主、670编译smoke、40组样本差分。stdio / HTTP / SSE override、SdkMcpTransport / SdkMcpServer、底层manager和结果处理之后，现已接入完整顶层McpManager、ConfigManager/Store、连接/模型/权限/toggle、Ready/CLI配置初始化、环境展开/diagnostics与plugin registry类。产品插件加载器与ProductManager的自动刷新编排仍是后续边界。
+最新门槛为775核心 + 10宿主、697编译smoke、41组样本差分。stdio / HTTP / SSE override、SdkMcpTransport / SdkMcpServer、底层manager和结果处理之后，现已接入完整顶层McpManager、ConfigManager/Store、连接/模型/权限/toggle、Ready/CLI配置初始化、环境展开/diagnostics与plugin registry类。ProductManager、MCP状态watcher和prompt命令已接入；产品插件加载器的完整刷新事务仍是后续边界。
 
 普通嵌入调用可在已有模型配置上添加：
 
@@ -95,3 +95,22 @@ await projection.drain(); // 独立宿主提供的异步/索引/关闭工作屏�
 `config.invalidateFilesystemScopeCaches({ includeUser: true })` 后调用 `manager.list()` 重新投影文件配置；`manager.reloadPluginServers()` 失效并重投影插件配置。插件来源默认沿用显式 `agentManager.plugins`，也可用 `projection.plugins` 覆盖；不自动发现或安装真实插件。原ConfigManager对文件删除的缓存语义和strictDynamic的特殊scope读取顺序保持不变，详见测试。原生projection拥有连接时，不再接受 `harness.mcp.register` / `nativeMcp.registerExternal` 塞入绕过配置的实例，改用上述配置接口。
 
 旧代连接、listTools或索引结果晚到时按原generation/fingerprint拒绝提交；配置撤销、删除与工具列表变化清理/重建索引。`close()`取消本宿主调度、订阅并等待当前/旧连接的关闭，不停止调用方外部服务。完整产品命令/UI、OAuth服务、插件自动事件编排与原SDK stdin程序仍未恢复。
+
+## ProductManager 与配置刷新
+
+`createHarness` 现在默认创建原ProductManager与五种原合并策略；`harness.product` 仍是供已有模块读取的live配置视图，`harness.productManager` 是拥有关闭检查与发布屏障的API，`harness.productRuntime.manager` 是完整原类。默认以固定原JSON为base，不请求原产品配置服务器、不读取安装应用账户或缓存。
+
+```js
+await harness.productManager.sync(true); // 全provider，包含force标记
+await harness.agents.waitForRebuildSettled(0);
+await harness.productManager.syncVolatileProviders(true); // 从稳定快照重放volatile provider
+await harness.agents.waitForRebuildSettled(0);
+```
+
+同步后的prompt/Agent/tool描述索引与命令表会刷新。SDK控制通道的initialize现可应用systemPrompt、appendSystemPrompt和自定义agents（每项须有description/prompt），仍按原字段，不把自定义Agents SDK接口冒充原JSONL协议。MCP prompt在连接后通过原provider转成命令，原renderer负责引号参数、角色/资源文本和剩余参数；必要时调用全量sync等待发现，不把volatile sync误当成刷新全部MCP prompt。
+
+`productRuntime.providers` 可附加显式provider（priority > 0，provide({force,current})；按需声明volatile）。默认接入原Client/Env/CLI options/SDK initialize/Plugins/MCP prompt/default provider，以及已有Skill provider和明确标记的宿主命令/skill选项适配器。完整Cloud/Models/Agent model与CustomAgents/CustomCommands文件发现provider尚未全部接入；文件watch到commands/agents变化不代表缺失的发现器已经实现。插件组件来源默认沿用显式agentManager.plugins，移除插件后重放volatile快照不会残留其Agent instructions或命令。
+
+缓存默认用本宿主独立的原MemoryLocalStorage；可用`productRuntime.storage`注入自己拥有的get/set及可选getSync。缓存保留原gzip/base64、稳定快照与版本key，不自动读取原应用的本地存储。`productRuntime.env`是显式拥有的配置环境对象，默认空；原Env provider可处理其中的ACC_PRODUCT_CONFIG等字段，不会自动扫描进程中可能包含账号的产品配置环境。模型API key仍使用原CLI/Web自己的配置，不映射为产品账号。
+
+原ConfigWatch/McpWatch服务默认接线：文件watch setup延迟2秒、change debounce 3秒、rename即时刷新；MCP connected/disconnected合并后触发全量sync。用户/项目路径沿宿主state/工作目录，不监听安装应用目录；`productRuntime.watch:false`可禁用。原watcher unref，不靠它保持进程存活，关闭会取消订阅、watcher及pending任务，防止关闭中的初始化重新挂载。缺少完整SettingsManager的clearCache与插件加载器服务时，不会用空实现假称已完成那些服务。

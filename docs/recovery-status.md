@@ -17,6 +17,7 @@
 | ---: | ----------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |    1 | OpenAI Agents SDK | 完成                         | 精确锁定 `@openai/agents* 0.5.2`、`openai 6.25.0`；SDK 不重写                                                                                                                                                                                                                         |
 |    2 | Product config    | 100% 字节保留                | default/cloudhosted/internal/ioa/selfhosted/sandbox 六份原始 JSON；SHA 验证                                                                                                                                                                                                           |
+|    2 | ProductManager / providers | 原manager、merger与首批provider完整类默认接入 | 19个完整原类、112处成员/函数AST、743次比较；stable/volatile、优先级、缓存/proxy throttle、SDK覆盖、插件组件/MCP prompt命令、文件与MCP状态watcher已接真实SDK。Cloud/Models/Agent-model及文件发现provider、插件完整刷新事务/环境服务和磁盘Settings仍待补，不等于完整产品bootstrap |
 |    2 | Prompt registry   | 100% 内容保留                | 115 模板、284,899 Unicode code point；Nunjucks `autoescape:false`、编译缓存、失败回退                                                                                                                                                                                                 |
 |    2 | Tool registry | 47个不同名称均有handler | 原48条声明含一条重复Agent。新增WeChatReply/WeComReply与bridge，默认CLI声明不变；WeCom连接沿原逻辑补入已构造Agent内存tools。47/47只是名称覆盖，已有工具的客户端/宿主分支、动态缓存/插件等仍待补；不是整体100% |
 |    2 | AgentManager | 完整原类移植，68个非constructor方法结构对照 | eager构建/ready与models屏障、pending/force重建/指纹、CLI/handoff/asTool、模型继承/related/env、插件replace/volatile expert/settings优先级、MCP首轮等待/原生defer/权限门槛已恢复；74个原YAML模块factory逐字保留。独立host明确适配DI/Deferred/Emitter，不等于完整ProductManager/插件loader/工具索引热刷新服务 |
@@ -564,3 +565,27 @@ ConnectionManager保留同model的inflight join、不同model supersede、Unauth
 新增25项专项覆盖上述主链、同scope缓存失效/队列竞态、晚到索引/create清理、orphan状态、settle abort/timeout、JSONC真实临时文件与嵌套、env/diagnostics、toggle、CLI strict初始化、prompt title alias、OAuth接口边界和plugin registry。真实SDK两例均先验证project批准前无HTTP握手，再批准配置、索引后ToolSearch→DeferExecute→自有loopback HTTP；允许时只执行一次，拒绝时无tools/call，之后撤销配置清空连接和索引。没有真实账号、外网模型、联系人或桌面操作。
 
 本批门槛：748核心、10Web宿主、670最新编译JS smoke、40组样本差分、check/build/config及CLI/Web实际启动通过。依赖锁、SDK/OpenAI版本、六份JSON/115 Prompt和memory policy哈希均未修改；当前旧依赖audit 16项风险未强制升级。下一批优先完整ProductManager初始化覆盖、配置/插件跨服务刷新、命令物化，再补SDK输入/鉴权/Hook服务端、Auto classifier backend与SettingsManager持久化；整体目标继续进行，不能以当前完整MCP类群或可编译启动代替整个harness最终完成。
+
+## ProductManager、原合并策略与动态配置发布批次
+
+保持固定5.3.14样本/SHA与REA证据。完整ProductManagerImpl `15588491..15597577`（constructor及17个成员）已移植；缓存key/endpoint/env/version key、MAX_CACHE_TTL=480000、PROXY_SYNC_THROTTLE_MS=2000及PRODUCT_CONFIGURATION_CACHE_TIMEOUT=480000均按原值。以下位移仍为UTF-16索引，方法仅加TS注解与外层DI。
+
+完整五策略：Override `15599132..15599242`、Merge `15599371..15599892`、SmartMerge `15600057..15601365`、DeepSmartMerge `15601498..15602636`、CommandsSmartMerge `15602777..15603887`；DefaultProductMerger `15604751..15605166`。保留undefined/null/数组/primitive语义、按id/name合并、Symbol.for('@genie/product:overrideMode')的replace锁、builtInMarketPluginsMerge原路径例外、deep primitive去重/循环WeakSet、commands路径和Galileo四字段不完整时禁用/清字段。优先级provider排序按原Prioritizeable规则：正值、降序稳定sort，ProductManager再reverse，因此同优先级应用顺序也反转，不能用随手的升序sort替换。
+
+原provider与renderer首批完整类：CliOptionsProductProvider `9877981..9880084`、SdkInitializeProductProvider `9881205..9881847`、PluginsProductProvider `9912987..9913726`、McpPromptProductProvider `9915058..9916130`、DefaultProductProvider `15261645..15261742`、ClientProductProvider `15628995..15629918`、EnvProductProvider `15639250..15640120`；McpPromptRendererImpl `7652318..7654310`。原Agent-definition转换/system-prompt override两函数 `9876813..9877412` 一并恢复。补完整GzipUtils `15627963..15628249`、MemoryLocalStorage `15669496..15669815`，默认分别使用Node zlib与自有内存实例，不扫描安装应用缓存。
+
+ProductManager保留sync/finally队列、stable与volatile快照、强制标记、条件独立/endpoint-dependent prefetch、发布Proxy、data level防止晚到cache覆盖新server结果、gzip/base64缓存及endpoint/environment恢复、过期读取节流、网络环境解析和完整feature过滤。源finally链若先前拒绝，后续doSync可运行但返回的Promise仍保留旧拒绝，这个怪异语义也有回归，不改成“成功恢复”。DisableMultimodalGeneration追加的中英capability_constraints整段文字通过完整AST保留，重复过滤不追加；terminal变量和bundled skill basename过滤亦保留。原六份JSON/115个registry prompt未修改，新增内嵌文案不伪算为新增registry prompt。
+
+constructor.name是本批独立核查点。原manager用可读provider名称字符串判断prefetch，而压缩包相关类是tB/tI/tz/tV/eE或eS=eu等匿名赋值名；Component decorator仅登记元数据，不重命名。移植后通过显式name descriptor保留样本名称（公开类接口仍用原导出名，例如CliOptionsProductProvider），不因可读TS类名意外激活原包未命中的分支。差分另用真实命中名单的named fake provider覆盖条件并行分支，不将该分支测试当作所有默认provider在样本中都并行。
+
+完整ConfigWatchServiceImpl `9893732..9902774`、McpWatchServiceImpl `9904348..9905553`恢复，合计19个完整原类。保留2秒watch setup、3秒change debounce、rename即时刷新、文件类型过滤、CWD失效/重绑、memory/settings/skill/plugin/MCP缓存调用、Windows目录512阈值与递归失败降级、EMFILE停用、MCP connected/disconnected合并sync。新增owned host跟踪setup/Promise/subscription/FS watcher、关闭中的初始化与发布，避免晚到任务在close后重挂载；不改原watcher决策。依赖中缺少完整SettingsManager.clearCache/插件服务时，仍按原能力检查处理，不以空方法计为已恢复。
+
+默认createHarness现使用原ProductManager，固定JSON作为base客户端快照；现有Skill provider与显式commands/skills参数通过标记清楚的宿主provider接线，额外provider可显式注入。每次发布更新同一个ProductConfiguration视图及其索引，清ToolManager描述cache、刷新CommandManager，并经原onDidChange重建eager AgentManager。SDK initialize真实应用systemPrompt/appendSystemPrompt/custom agents，等待原重建屏障，不再是假成功或默认“依赖缺失”。插件组件provider忽略settings字段，volatile重放从稳定快照开始，移除插件不残留其instructions/命令。MCP prompt provider、原renderer与Command interceptor已打通，引号参数/剩余参数、角色和资源文本按源码转换。
+
+独立Product host默认环境对象为空、缓存为自有MemoryLocalStorage，home/watch路径为当前state/工作目录；不读取原账号/安装缓存，不请求原配置服务。显式productRuntime.env/storage/providers可注入自有来源，模型API key仍不映射为产品账号。当前接入的是完整manager与首批provider，不是整个provider注册表：Cloud/Models/Agent-model/CustomAgents与CustomCommands文件发现、完整ProductEnvService、API-key-helper及插件原子跨服务刷新事务仍待补。ConfigWatch看见commands/agents文件变化只会调用sync，不能据此声称尚缺的文件发现provider已工作。完整stdin/CLI鉴权/Hook服务端与SettingsManager磁盘也仍未恢复。
+
+`verify:product-manager`核对112处完整成员/函数AST，包括19类与两helper，另验证原module常量和manager静态字段；743次有限比较：五策略11×11输入共605组，24组stable/volatile/错误/名称分支同步流程，6组sync/async缓存，108组platform/512阈值/changeType/rename-change watcher矩阵。原factory/类在独立VM执行，FS/clock/provider为fake；合并顺序按最终值验证，独立日志交错按值/数量比较。有限矩阵不是所有provider、平台或并发状态空间100%。
+
+新增27项专项覆盖策略/循环/replace、gzip/cache晚到和finally失败、命名分支、proxy节流、feature prompt、原SDK/CLI/Env/Client provider、优先级、watch路由/EMFILE/Windows、取消与发布错误恢复。三条真实SDK链路验证initialize prompt/custom-agent确实进入模型请求、插件移除后的Agent/命令刷新、原MCP prompt经自有loopback HTTP回注；另用真正的owned fs.watch rename验证skill配置刷新，测试等待期间仅ref自有watcher，结束关闭。均不使用真实账号、外网模型、联系人或桌面。
+
+本批775核心、10Web宿主、697编译JS smoke、41组样本差分、check/build/config与CLI/Web实际启动通过；固定SDK/OpenAI、依赖锁、六份JSON/115 Prompt与memory policy保持不变。OpenAI Docs仅核对Agent instructions/运行时上下文边界，实际行为仍以锁定SDK与原样本为准。整体目标继续进行；下一批优先原CustomAgents/CustomCommands发现器、Models/Agent-model provider及插件刷新事务，再推进环境/SDK启动与剩余宿主服务，不以本批完整类群宣称整个harness已100%完成。

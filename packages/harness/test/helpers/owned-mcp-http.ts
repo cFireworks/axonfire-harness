@@ -5,6 +5,8 @@ import { StreamableHTTPServerTransport } from "mcp-sdk-native/server/streamableH
 import {
   ListToolsRequestSchema,
   CallToolRequestSchema,
+  ListPromptsRequestSchema,
+  GetPromptRequestSchema,
 } from "mcp-sdk-native/types.js";
 /** Loopback-only test peer. No credentials, remote addresses or installed application state. */
 export async function ownedMcpHttp() {
@@ -16,7 +18,7 @@ export async function ownedMcpHttp() {
   const peer = () => {
     const server = new Server(
       { name: "owned-http", version: "1.0.0" },
-      { capabilities: { tools: {} } },
+      { capabilities: { tools: {}, prompts: {} } },
     );
     server.setRequestHandler(ListToolsRequestSchema, async () => ({
       tools: [
@@ -38,6 +40,27 @@ export async function ownedMcpHttp() {
       };
     });
     peers.add(server);
+    server.setRequestHandler(ListPromptsRequestSchema, async () => ({
+      prompts: [
+        {
+          name: "greet",
+          title: "Greet",
+          description: "owned greeting",
+          arguments: [{ name: "name", required: true }],
+        },
+      ],
+    }));
+    server.setRequestHandler(GetPromptRequestSchema, async (r) => ({
+      messages: [
+        {
+          role: "user",
+          content: {
+            type: "text",
+            text: "owned prompt " + r.params.arguments?.name,
+          },
+        },
+      ],
+    }));
     return server;
   };
   const server = createServer(async (req, res) => {

@@ -448,12 +448,20 @@ test(
     await f.h.sdkControl.receive({
       type: "control_request",
       request_id: "override",
-      request: { subtype: "initialize", systemPrompt: "not silently accepted" },
+      request: {
+        subtype: "initialize",
+        systemPrompt: "owned initialized prompt",
+      },
     });
     assert.equal(
       f.messages.find((m) => m.response?.request_id === "override").response
         .subtype,
-      "error",
+      "success",
+    );
+    assert.equal(
+      (await f.h.agents.getAgentConfig(f.h.agents.getDefaultAgentName()))
+        ?.instructions,
+      "owned initialized prompt",
     );
   },
 );

@@ -18,7 +18,7 @@ import { AgentTask } from "../agents/agent-task.js";
 import { AgentTaskManager } from "../agents/agent-task-manager.js";
 import { AgentTaskOutputFileManager } from "../agents/agent-task-output-file-manager.js";
 import { ModelConfigAgentRunInterceptor } from "../agents/model-config-agent-run-interceptor.js";
-import { loadProductConfiguration } from "../config/product-config.js";
+import { loadProductConfiguration, ProductConfiguration } from "../config/product-config.js";
 import { ContextCompactSummarizerImpl } from "../context/context-compact-summarizer.js";
 import type { CompactOptions } from "../context/context-compact-summarizer.js";
 import { McpRegistry } from "../mcp/mcp-registry.js";
@@ -34,6 +34,7 @@ import { createSdkControlHost, type SdkControlHostOptions } from "../sdk/sdk-con
 import { attachHarnessSdkControl } from "../sdk/harness-sdk-control.js";
 import { createNativeMcpHost, type NativeMcpHostOptions } from "../mcp/native-mcp-host.js";
 import { createNativeMcpProjectionHost, type NativeMcpProjectionOptions } from "../mcp/native-mcp-projection-host.js";
+import { createNativeProductHost, type NativeProductHostOptions } from "../config/native-product-host.js";
 import { ProductPromptRenderer } from "../prompts/prompt-renderer.js";
 import { RunnerFactory } from "../runner/runner-factory.js";
 import { ToolCallLoopDetectorImpl } from "../runner/tool-call-loop-detector.js";
@@ -173,6 +174,7 @@ class LocalNoopTrace extends NoopTrace {
 }
 
 export type HarnessOptions = {
+  productRuntime?: Partial<Omit<NativeProductHostOptions, "initialConfiguration" | "getWorkDir" | "getHomeDir">>;
   /** Complete native classifier/SDK callback path; independent of the approval UI host. */
   nativePermissions?: boolean;
   /** Complete captured approval controller, with legacy UI retained as the default during migration. */
@@ -269,6 +271,7 @@ export async function createHarness(options: HarnessOptions) {
   const sdkPermissionClient = options.approvalController?.sdkPermissionClient ?? sdkControl?.permission;
   const sdkSettings = new Map<string, any>();
   const product = await loadProductConfiguration();
+  let productRuntime: ReturnType<typeof createNativeProductHost> | undefined;
   const prompts = new ProductPromptRenderer(product);
   const mcp = new McpRegistry();
   const settings: SettingsManager = {
@@ -301,7 +304,7 @@ export async function createHarness(options: HarnessOptions) {
   const store = new SessionStore({ storageDir: resolve(stateDir, "sessions"), workDir: getWorkDir, imageBlobService, toolResultBlobService, ...(options.logger ? {logger: options.logger} : {}) });
   const functionCallResultProcessor = new FunctionCallResultAgentInputItemProcessor();
   const processorUtilities = createInputProcessorUtilities(getWorkDir, () => stateDir);
-  const processorProductManager = { waitConfiguration: async () => product.raw };
+  const processorProductManager = { waitConfiguration: async () => productRuntime?.started ? productRuntime.facade.waitConfiguration() : product.raw };
   const responseUtilities=createResponseInterceptorUtilities({getCurrentConfiguration:()=>product.raw});
   const responseInterceptors:ModelResponseInterceptor[]=[...(options.sessionLifecycle?.interceptors??[])];
   const inputItemPipeline = new AgentInputItemPipeline([
@@ -407,7 +410,7 @@ export async function createHarness(options: HarnessOptions) {
   const deferredRuntime = registerDeferredRuntimeTools(tools, mcp, { cwd: getWorkDir, resolveAllowedTools: (name) =>
     product.agentsByName.get(name ?? product.defaultAgent.name)?.tools ?? product.defaultAgent.tools });
   const agentFactory = new AgentFactory(stateMachine);
-  const agents:AgentManager = new AgentManager(product, prompts, tools, mcp, agentFactory,{settings,getConfiguration:async()=>({...product.raw,...await getSkillConfiguration()}),logger:{debug(){},info:(...args)=>options.logger?.info?.(args.map(String).join(' ')),warn:(...args)=>options.logger?.warn(args.map(String).join(' ')),error:(...args)=>options.logger?.warn(args.map(String).join(' '))},...options.agentManager});
+  const agents:AgentManager = new AgentManager(product, prompts, tools, mcp, agentFactory,{settings,getConfiguration:async(force)=>productRuntime?.started ? productRuntime.facade.waitConfiguration(force) : ({...product.raw,...await getSkillConfiguration()}),onConfigurationChange:listener=>productRuntime?.facade.onDidChange(listener),logger:{debug(){},info:(...args)=>options.logger?.info?.(args.map(String).join(' ')),warn:(...args)=>options.logger?.warn(args.map(String).join(' ')),error:(...args)=>options.logger?.warn(args.map(String).join(' '))},...options.agentManager});
   const delegateLogger: DelegateLogger = { warn: (...args) => options.logger?.warn(args.map(String).join(" ")), error: (...args) => options.logger?.warn(args.map(String).join(" ")), info: (...args) => options.logger?.info?.(args.map(String).join(" ")) };
   const delegateToolManager = new DelegateToolManagerImpl(delegateLogger), delegateToolsChangedHandler = new DelegateToolsChangedHandler(() => delegateToolManager, delegateLogger), delegateTool = new DelegateToolImpl(() => delegateToolManager);
   delegateTool.register(tools); tools.attachDelegateToolManager(delegateToolManager, agents, delegateLogger);
@@ -443,6 +446,7 @@ export async function createHarness(options: HarnessOptions) {
   const skillProvider = new SkillProductProvider(skillPaths);
   const configuredCommands = [...(Array.isArray(product.raw.commands) ? product.raw.commands as ProductCommand[] : []), ...options.commands ?? []].map((command) => ({ ...command }));
   const getSkillConfiguration = async () => {
+    if (productRuntime?.started) return productRuntime.facade.waitConfiguration();
     const skills = new Map((await skillProvider.loadSkillsCached()).map((skill) => [skill.name, skill]));
     for (const skill of options.skills ?? []) skills.set(skill.name, skill);
     return { skills: [...skills.values()], commands: configuredCommands };
@@ -621,7 +625,7 @@ export async function createHarness(options: HarnessOptions) {
     },
   }, undefined, { tracingDisabled: true });
   service = new AgentService(authentication, settings, runnerFactory, sessions, stateMachine, agents,
-    [new CommandAgentRunInterceptor(agents, getSkillConfiguration, commandRenderer, { render: (content, variables) => prompts.renderAsync(content, variables) }, options.mcpPromptRenderer ?? { async render() { throw new Error("MCP prompt renderer requires an explicit standalone host adapter"); } }, { error: (message) => options.logger?.warn(message) }), new EnvAgentRunInterceptor(settings), new ConditionalRulesAgentRunInterceptor(memoryRules.conditionalRules), autoMemory.context, new MessageQueueAgentRunInterceptor(messageQueue, stateMachine, deferredQueueDispatch), new SkipRunAgentRunInterceptor(stateMachine), new SystemReminderAgentRunInterceptor(prompts, plans, { getAlwaysMemory:scope=>memoryRules.manager.get({scope:scope==='project_local'?MemoryScope.PROJECT_LOCAL:scope,type:MemoryType.ALWAYS}), channelServers: () => channelManager.channelServers.values(), ...options.reminderSources }),
+    [new CommandAgentRunInterceptor(agents, getSkillConfiguration, commandRenderer, { render: (content, variables) => prompts.renderAsync(content, variables) }, options.mcpPromptRenderer ?? { async render(...args:any[]) { if(!productRuntime)throw new Error("Product runtime is not initialized");return (productRuntime.mcpPromptRenderer.render as any)(...args); } }, { error: (message) => options.logger?.warn(message) }), new EnvAgentRunInterceptor(settings), new ConditionalRulesAgentRunInterceptor(memoryRules.conditionalRules), autoMemory.context, new MessageQueueAgentRunInterceptor(messageQueue, stateMachine, deferredQueueDispatch), new SkipRunAgentRunInterceptor(stateMachine), new SystemReminderAgentRunInterceptor(prompts, plans, { getAlwaysMemory:scope=>memoryRules.manager.get({scope:scope==='project_local'?MemoryScope.PROJECT_LOCAL:scope,type:MemoryType.ALWAYS}), channelServers: () => channelManager.channelServers.values(), ...options.reminderSources }),
       new WorktreeContextInterceptor(worktreeSessions), new TeamContextInterceptor(teamManager, prompts), new TeammateFailureInterceptor(teamManager, teamMembers), new UserQueryWrapperAgentRunInterceptor(), new ModelConfigAgentRunInterceptor(agents, sessions, settings), new ImageFilterAgentRunInterceptor({ productManager: processorProductManager, logger: { info: (message: string) => options.logger?.info?.(message) } }),
       new ImageRehydrationAgentRunInterceptor({ imageBlobService, settingsManager: settings, logger: { debug() {}, warn: (...args: unknown[]) => options.logger?.warn(args.map(String).join(" ")) } }),
       new ImageCompressionAgentRunInterceptor({ imageUtils: options.imageHistory?.imageUtils??nativeImageUtils, logger: { info: (message: string) => options.logger?.info?.(message), warn: (message: string) => options.logger?.warn(message) } })], undefined, interruptions);
@@ -768,12 +772,35 @@ export async function createHarness(options: HarnessOptions) {
     });
   }
 
+  const explicitProductProvider = { priority: 21001, volatile: true, async provide() { return { mergeStrategy: "smartMerge", ...(options.skills ? { skills: options.skills } : {}), ...(options.commands ? { commands: options.commands } : {}) }; } };
+  productRuntime = createNativeProductHost({
+    initialConfiguration: product.raw, getWorkDir, getHomeDir: () => stateDir,
+    ...(sdkControl ? { sdkInitializeState: sdkControl.initializeState } : {}),
+    ...(options.agentManager?.plugins ? { plugins: options.agentManager.plugins } : {}),
+    ...(options.agentManager?.getCliOptions ? { cliOptions: options.agentManager.getCliOptions } : {}),
+    mcpManager: nativeMcpProjection?.manager ?? { getConnectedServers: (opts:any) => mcp.getConnectedServers(opts), async getPrompt() { throw Error("MCP prompts require native MCP projection"); } },
+    skillProvider, logger: { warn: (...args:any[]) => options.logger?.warn(args.map(String).join(' ')) },
+    cwdService,
+    ...(nativeMcpProjection ? { serverModelManager:nativeMcpProjection.models } : {}),
+    watchDependencies: { memoryCache:memoryRules.cache,subdirectoryMemory:memoryRules.subdirLoader,settings,
+      mcpConfig:nativeMcpProjection?.config,
+      ...options.productRuntime?.watchDependencies,
+    },
+    ...options.productRuntime,
+    providers: [explicitProductProvider, ...options.productRuntime?.providers ?? []],
+    onConfiguration(configuration) {
+      Object.assign(product, new ProductConfiguration(configuration));
+      tools.invalidatePluginDependentToolCaches();
+      return Promise.all([commandManager.refresh(), options.productRuntime?.onConfiguration?.(configuration)]).then(() => undefined);
+    },
+  });
   const sdkHandlers = sdkControl ? attachHarnessSdkControl(sdkControl, {
     sessions, agents, commands: commandManager, product, plans,
     settings: { get: (key: string) => settings.get(key), async set(key: string, value: any) { sdkSettings.set(key, value); } },
     cliSettings: { async set(key: string, value: any) { sdkSettings.set(key, value); } },
     logger: { warn: (...args: any[]) => options.logger?.warn(args.map(String).join(' ')) },
     initializeDependencies: {
+      productManager: productRuntime.facade,
       ...(nativeMcp ? { mcpReadyService: { waitForServersReady: () => mcp.waitForServersReady() }, mcpManager: { add: connectNativeMcp } } : {}),
       ...options.sdkControl?.initializeDependencies,
     },
@@ -878,6 +905,7 @@ export async function createHarness(options: HarnessOptions) {
     closed = true;
     for (const session of active.keys()) session.abortController.abort();
     sdkControl?.close();
+    await productRuntime?.close();
     await nativeMcp?.close();
     channelHost.close(); channelClients?.close(); channelApprovalTargets.clear();
     sessionQueueSubscription.unsubscribe(); teamLeadPoller.stopTeamLeadPoller(); teamMailbox.stopAll(); shutdownCoordinator.cancelAll("harness closed");
@@ -946,6 +974,7 @@ export async function createHarness(options: HarnessOptions) {
     logger:options.sessionLifecycle?.logger??{info:(...args)=>options.logger?.info?.(args.map(String).join(' ')),debug(){},warn:(...args)=>options.logger?.warn(args.map(String).join(' ')),error:(...args)=>options.logger?.warn(args.map(String).join(' '))},
   }));
   try{
+    await productRuntime.start();
     await agents.start(); await agents.getDefault();
     for (const [name, config] of Object.entries(options.nativeMcp?.servers ?? {})) {
       if ((config as any).type === "sdk") throw Error("Register SDK MCP servers through initialize after the control receiver is ready");
@@ -955,7 +984,7 @@ export async function createHarness(options: HarnessOptions) {
   channelClients?.initializeConfigured();
   channelHost.start();
   return { product, agents, agentFactory, tools, mcp, sessions, store, service, stateMachine, interruptions, compactor, memory, memoryRules, autoMemory, hooks:nativeHooks, permissions, shell, taskManager, taskStorage, taskTools, agentTool, taskOutputTools, plans, planTools, asks, askTool, promptContext, createWorkflowSubagentSpawner, createWorkflowRuntime, workflowTool, backgroundTaskNotifier, recordingStore, recordReplayProvider: provider, webFetchTool, webSearchTool, webRuntime,
-    sdkControl, sdkHandlers, nativeMcp, connectNativeMcp, channelHost, channelClients, channelManager, channelPermissionAdapter, wechatReplyTool, wecomReplyTool,
+    sdkControl, sdkHandlers, nativeMcp, connectNativeMcp, productRuntime, productManager: productRuntime.facade, channelHost, channelClients, channelManager, channelPermissionAdapter, wechatReplyTool, wecomReplyTool,
     delegateToolManager, delegateToolsChangedHandler, delegateTool,
     lspManager, lspTool,
     mediaRuntime, imageService, videoService, imageGenTool, imageEditTool, videoGenTool, imageToolHookInputProcessor,

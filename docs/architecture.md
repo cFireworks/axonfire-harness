@@ -16,7 +16,7 @@ Web 使用单运行槽以避免用户在同一进程对多个会话并发修改�
 
 SDK控制协议现由原StdoutWriter、Permission/Hooks/McpMessage/Elicitation客户端、ControlSignalHandler和初始化/模式/模型handler组成，所有I/O在工厂闭包显式注入。提供 `sdkControl` 时自动连接原Hook调用与权限控制器，默认启用两条native权限路径；`receive/receiveLine`消费控制响应，输出按JSONL保留原前缀分发和stdout背压行为。独立宿主拥有定时器/drain监听/拒绝Promise的清理，不添加原请求中不存在的默认permission timeout，不关闭外部stream。
 
-初始化handler的完整原方法已移植；SDK MCP server现接入原生宿主，其ProductManager刷新、环境切换依赖仍不能由空adapter伪装完成。默认宿主对未接入的动态覆盖返回明确错误，模型API key也不映射成原账号token。完整stdin/headless parser、SDK鉴权命令及产品启动与该可用控制组件仍有区别。
+初始化handler的完整原方法已移植；SDK MCP server和ProductManager现接入原生宿主，prompt/Agent初始化覆盖由原provider→merger→发布→AgentManager重建实现。环境切换仍需真实adapter，模型API key也不映射成原账号token。完整stdin/headless parser、SDK鉴权命令及产品启动与这些可用控制组件仍有区别。
 
 原生MCP模块将server/tool/Hook proxy、六个remote override、SDK server/JSON-RPC transport、transport registry、subagent白名单、JSONC配置工具与结果截断/落盘按完整原类/函数移植。外层 `native-mcp-host` 只负责显式配置、DI与资源所有权，不扫描安装账户或配置。已有Agent持有同一个live connectedServersCache，增删连接通过splice更新；工具元数据收集仍调用原proxy.listTools。
 
@@ -30,4 +30,8 @@ SDK控制协议现由原StdoutWriter、Permission/Hooks/McpMessage/Elicitation�
 
 显式nativeMcp现在与sdkControl一样默认启用nativePermissions/nativeApprovals，保证DeferExecuteTool→MCP也经过原分类/暂停/恢复。真实SDK测试覆盖项目批准前无握手、批准后索引→ToolSearch→DeferExecute→HTTP调用，以及工具拒绝时无底层调用；普通CLI/Web默认仍未切换原生入口。
 
-下一批优先ProductManager初始化覆盖、配置/插件跨服务刷新与命令物化，随后SDK输入/启动/鉴权、Hook服务端、AutoMode backend和SettingsManager持久化。统一默认审批时还须验证原policy allow与独立guard的边界，不能只因为可选路径测试通过就声明默认已等价。新增Web UI不计为这些原产品服务已恢复。
+原ProductManager、五种merge strategy及DefaultProductMerger、Client/Env/CLI options/SDK initialize/Plugins/MCP prompt/default providers、GzipUtils/MemoryLocalStorage和MCP prompt renderer已逐类移植。稳定与volatile配置分离，原provider优先级、同优先级反序、原finally同步队列/失败语义和480秒proxy过期/2秒节流不重写。压缩包的匿名provider constructor.name仍保持缩写，不能因可读类名命中原字符串prefetch名单而改变样本调度。
+
+ConfigWatch/McpWatch原类驱动缓存失效、CWD重绑与状态变化后的sync，独立host只负责自有FS/环境/缓存/定时器和发布关闭屏障。默认不加载原账户、远端产品配置或安装缓存。新快照同步更新同一个ProductConfiguration视图，ToolManager清描述缓存，CommandManager刷新，AgentManager监听原onDidChange重建；SDK初始化等待该重建。原插件完整刷新事务、其余Model/文件发现provider和SettingsManager磁盘服务不因该链路可运行就算完成。SDK instructions的职责参考[OpenAI Docs](https://developers.openai.com/api/docs/guides/agents/define-agents)，实际调用与生命周期仍按锁定0.5.2及真实SDK回归。
+
+下一批优先CustomAgents/CustomCommands原文件发现provider、Models/Agent-model providers和插件跨服务刷新事务，随后SDK输入/启动/鉴权、Hook服务端、AutoMode backend和SettingsManager持久化。统一默认审批时还须验证原policy allow与独立guard的边界，不能只因为可选路径测试通过就声明默认已等价。新增Web UI不计为这些原产品服务已恢复。
