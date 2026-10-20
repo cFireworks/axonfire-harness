@@ -24,4 +24,22 @@ Web 的 `--cwd` 指定工具工作目录：`npm start -- --cwd /absolute/path/to
 
 `approvalController` 可注入 `sdkPermissionClient.requestPermission(toolName, input, callId)`、`sdkHooksManager`、workflow resolver、mandatory target判断、trace和广播诊断依赖。会话 `options.inputFormat = "stream-json"` 且非ACP时走SDK客户端，不再同时询问本地UI；显式客户端返回allowed后会登记独立宿主guard授权，updatedInput按源码浅合并。未配置SDK客户端会进入源码的错误拒绝路径，不伪造同意。普通text路径仍通过 `approveTool` / `askUserQuestion` 交互，默认不自动允许。
 
-以上不等于原产品的完整SDK callback transport、ACP服务、SettingsManager磁盘持久化或Auto classifier backend已恢复。特别是原控制器CLI拒绝会abort并记录skipRun结果，而非调用RunState.reject后继续执行；宿主等待该结果落盘后结束。模型和所有依赖版本未升级。
+以上不等于原产品的完整SDK启动程序、ACP服务、SettingsManager磁盘持久化或Auto classifier backend已恢复。特别是原控制器CLI拒绝会abort并记录skipRun结果，而非调用RunState.reject后继续执行；宿主等待该结果落盘后结束。模型和所有依赖版本未升级。
+
+## SDK 控制协议（嵌入 API）
+
+最新SDK协议批次门槛为693核心 + 10宿主、615编译smoke、38组差分。核心SDK控制与初始化的12个原类、四个SessionManager override方法、75处完整方法/函数AST与794组协议比较通过。
+
+提供 `createHarness({ ...modelOptions, sdkControl: { stdout: controlOutput } })`，其中 `controlOutput` 是调用方拥有的Node Writable式对象（write/once/removeListener）。不会自动绑定process.stdin、读取安装应用的账户，或把新协议误当成现有CLI flags。建议使用独立控制通道，不与普通文本/日志混流；控制输出按源码为JSONL。`sdkControl` 默认启用 `nativePermissions` / `nativeApprovals`，新打开的会话走 `inputFormat: stream-json`。
+
+将收到的控制对象传入 `harness.sdkControl.receive(message)`，或将已完成JSONL分帧的单行传入 `receiveLine(line)`。外层输入读取、普通user消息到prompt的投递、断线检测仍由嵌入方负责。断线时调用 `sdkControl.close()`，关闭整个harness时也会自动清理；不会关闭调用方拥有的输出stream。
+
+例如权限请求的回复结构（request_id原样对应收到的perm_请求）：
+
+```json
+{"type":"control_response","response":{"subtype":"success","request_id":"perm_...","response":{"allowed":true,"updatedInput":{"content":"由调用方确认的内容"}}}}
+```
+
+`hook_`、`mcp_`、`elic_`响应也按原前缀分发；MCP成功payload为 `response.mcp_response`，Hook成功payload为原hook输出对象。权限请求默认无超时，Hook默认60秒；关闭可取消全部pending。`initialize`、`get_available_modes`、`get_available_models`、`set_permission_mode`、`set_model`已注册。独立宿主默认initialize返回account:null，不映射模型API key为产品账号。
+
+`sdkControl.initializeDependencies` 可提供原ProductManager/env/MCP/账号等依赖。未提供ProductManager时systemPrompt/appendSystemPrompt/agents动态覆盖明确返回错误；环境切换和SDK MCP server注册同样需要真实adapter，不返回假成功。原类完整方法保留，但SDK stdin/headless启动程序、鉴权命令、ProductManager刷新、SDK MCP server及MCP Hook proxy还不能视为完成。显式SDK客户端allowed可授权独立guard；Hook allow与完整native政策到guard的统一仍是后续默认路径对齐边界。

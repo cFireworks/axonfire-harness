@@ -33,7 +33,7 @@
 |    5 | Core file tools   | 主路径高覆盖                 | 三个原始 Zod schema、1-based paging、2000 行/字符限制、256KB/100MB 限制、binary/Notebook/image、行号格式、读后写和外部修改保护、CRLF/BOM、唯一/全量替换已实现；原ImageUtils完整类/Jimp0.22.12与Read图片方法、模型/二进制门槛、blob去重已恢复；非UTF编码全集、其他文本Read原方法/错误码复核及遥测待补                                                                            |
 |    5 | Core search tools | 主路径高覆盖                 | 原始 Glob/Grep schema、60s Glob timeout、ripgrep、node_modules/.git 排除、mtime 排序、分页、三种 Grep 输出、上下文/类型/multiline 参数、50,000 字符截断已实现                                                                                                                         |
 |    5 | Core shell tools  | 核心控制流已实现             | 原始 Bash/PowerShell schema、120s/600s timeout、30k/150k 限制、上下文 env、前台 envelope、6 位 task ID、显式后台、timeout 转后台、后台输出/kill 已实现；sandbox orchestrator、ConPTY、safe-delete、安全分类和 UI streaming 待补                                                   |
-|    6 | Permission flow | 完整原控制器与权限服务，显式接入 | 完整InterruptionService构造器及32成员、always/background审批类；原queue/main/child/team/sandbox/orphan、channel race、CLI/ACP/SDK拒绝、SDK PermissionRequest callbacks与denials已移植；nativePermissions/nativeApprovals分别启用。真实SDK6项覆盖批准/拒绝/Defer/客户端改写/interrupt/cancel。SDK客户端和Hook transport、MCP proxy、Auto backend/SettingsManager仍待补；默认CLI/Web保留兼容宿主 |
+|    6 | Permission flow | 完整原控制器/权限服务及SDK控制客户端 | 原InterruptionService、always/background审批、权限/缓存/模式策略已移植；SDK JSONL权限/Hook/MCP消息/elicitation客户端与dispatcher已接真实SDK。显式sdkControl默认启用nativePermissions/nativeApprovals；SDK启动/鉴权/产品初始化依赖、MCP server/proxy、policy到独立guard统一、Auto backend/SettingsManager仍待补，普通CLI/Web默认不变 |
 |    6 | AgentTask         | 完成/失败仲裁与主生命周期差分通过 | setup/execute/cleanup、new/resume/fork、model/permission/hooks/skills/转发/usage 主路径保留；agent_end/idle、stream final-step guard、retryInProgress/compaction、200ms/120s 压缩轮询/重挂、精确取消、原错误 rethrow、Hook best-effort、RESULT delimiter、nullish resume meta 与 teammate failure 已恢复。executePhaseWithRetry 无内部重试循环；普通会话重试现由 InterruptionService 负责，45s throttle/watchdog 已确认属于 Workflow 并在对应链路恢复；独立 result reset/落盘 barrier 为 host adapter |
 |    6 | Agent tool | 同步/Worktree/进程内与显式进程外 Team 接入真实 SDK | 原 schema、env max turns、model variant、fork boilerplate/child 检测、disabled fork、父 toolCall id、同步/中断/错误码 19920..19923/subAgent meta 已恢复。真实 SDK 验证 Explore→Read→独立 transcript→resume、子审批、Worktree、Team，以及子任务网络重试不误判失败。spawn chain/重名/颜色/rollback/失败后 chain 拒绝保持原行为；默认保持原 in-process，显式 standalone override 接 detached-process；全部权限宿主分支仍待补 |
 |    6 | AgentTaskManager | 核心调度与 Team 策略接入 | register/get/alias/status/session/wait/cancel/events、5 分钟 TTL/60s cleanup、20 个已完成 Team session 上限、4s 通知延迟/30s dedup/末成员强制通知/10s auto-team cleanup 已恢复；现接 TeamManager/registry/mailbox/cleanup adapter，长时间调度/全部失败竞态未穷举 |
@@ -496,3 +496,25 @@ stream-json且非ACP时，不与本地approveTool同时竞争，沿原SDK客户�
 本批门槛：672项核心测试、10项Web宿主测试、594项最新编译JS smoke、37组源码差分、check/build/config和实际CLI/Web launcher验证通过。六份原JSON、115个prompt、memory policy与固定SDK依赖保持不变。OpenAI Docs只用于核对SDK审批状态边界，不按现行文档替换锁定版本。
 
 下一批优先SDK PermissionClient / SDKHooksManager transport与MCP Hook proxy，随后统一默认审批接线，再推进AutoMode classifier backend、SettingsManager磁盘持久化及ProductManager/插件刷新。完整控制器方法已恢复不等于其所有外部产品服务完成，整体目标继续进行。
+
+## SDK 控制客户端、JSONL 与初始化协议批次
+
+直接移植12个完整原类：StdoutWriter `7794169..7794674`、SdkPermissionClientImpl `7795251..7796834`、SdkHooksManagerImpl `7797641..7800832`、SdkMcpMessageClientImpl `7801845..7803380`、SdkElicitationClientImpl `7804207..7805343`、ControlSignalHandlerImpl `7806184..7808272`、SdkInitializeStateServiceImpl `7810342..7810807`、InitializeHandler `7811554..7814144`、SetPermissionMode/GetAvailableModes/GetAvailableModels/SetModel四个handler。补原control predicates、HOOK_EVENTS/60秒请求配置/产品环境值、Deferred与createAbortController无限监听helper，以及SessionManager `10977093..10977351` 的四个override map方法。class constructor和方法体仅加TS注解；stdout、clock、timers、Deferred所有权与容器服务在外层注入，不改原JSON协议字段。
+
+权限请求使用perm_、默认不创建timeout，仅显式正timeout生效；can_use_tool保留agent_id/permission_suggestions/blocked_path/decision_reason的truthy展开。成功返回allowed默认false及reason/interrupt/updatedInput；错误、单次取消/全取消按原错误文本清理Map和timer。Hook请求使用hook_、默认60秒，executeHooks按matcher构造所有callback并Promise.allSettled，聚合保留deny > ask > allow、system/additionalContext顺序和最后停止原因。即使已有deny，后续allow的updatedInput仍可复制进结果；未擅自删除该字段。clearHooks清请求但不清capabilities，setHooks不取消既有pending，invalid regex回退精确文本。
+
+MCP message客户端使用mcp_，携带server_name/message，成功必须有truthy mcp_response；abort/listener cleanup/cancel保留原路径。elicitation使用elic_，create可取消，complete发送control_notification(channel:elicitation)。这两个客户端是SDK控制通道的一端，不等于已恢复SdkMcpServer/transport或MCP Hook proxy。
+
+ControlSignalHandler按三种消息类型和四种response ID前缀路由，request按subtype provider查找；保留60秒超时、cancel abort、handler失败回复error、未知subtype错误和finally清理。StdoutWriter按原JSON.stringify+换行、write(false)后drain、批量flush及部分splice保留背压行为，没有重排或重复输出。InitializeState仅由markSynced推进fingerprint；clear本身不推进，因而可能连续返回true，这是原行为。
+
+Initialize完整保留环境/endpoint优先级、Hook与capabilities配置、elicitation form标记、MCP注册与SDK overrides并行、ProductManager.sync(true)/失败返回/重建屏障、命令/样式/模型/原账号字段映射。SetPermissionMode原支持六种，而availableModes仍只列四种，文案不替换；Plan初始化计划路径；当前session不匹配拒绝，尚无session但给ID时存override。SetModel同时更新requestOptions/options/CLI settings/override；GetAvailableModels按原排除url/apiKey后返回rawModels。未新增原类不存在的“全字段脱敏”行为，也未接触真实账号。
+
+新增createSdkControlHost，返回原clients/control/init state，receive/receiveLine处理调用方提供的控制对象/完整单行。所有输出只写显式提供的Writable式对象，不自动绑定stdin。外层所有权观察原unused Deferred拒绝、close清pending/timers/drain listeners、禁止关闭后再发新请求，不结束调用方stream。原类sendRequest抛错的清理行为没有修改；host shutdown另行清本次拥有的状态。既有class原方法与host adapter分开标注。
+
+createHarness的显式sdkControl默认启用nativePermissions/nativeApprovals，并连接同一原SDK hooks manager与权限客户端。新会话inputFormat:stream-json、不竞争本地UI；SDK允许后登记独立guard授权，真实input rewrite通过工具执行验证。断连取消请求后不再启动后续模型run，harness.close也会关闭其拥有的SDK控制组件。初始化基础metadata、available modes/models、模式/模型更新已注册；默认account:null，绝不把模型API key映射成产品账号。动态system/append/agents覆盖在ProductManager adapter缺失时明确错误，环境切换与SDK MCP创建依赖同样不可伪装成功，原完整handler仍可通过显式initializeDependencies组合验证。
+
+验证：75处完整方法/函数AST、3组常量表检查、794组固定SHA行为比较。覆盖四类客户端请求/错误/缺payload/取消/超时/abort与晚到响应、Hook顺序/匹配/聚合、控制超时/取消/provider失败、initialize环境/账号/同步失败/重建、六种模式/缺session/mismatch/model更新矩阵。新增21项专项，其中6项经真实SDK，验证JSONL人工批准与实际Write改写、interrupt拒绝无文件副作用、Pre两次/Post/Stop回调、initialize/modes/model状态、真正pending权限请求的断连清理与不续发模型。其余使用自有临时目录、假时钟/消息/账户/输出，不访问安装应用令牌、真实模型或联系人。
+
+本批门槛：693项核心测试、10项Web宿主测试、615项编译JS smoke、38组差分、check/build/config和实际CLI/Web启动均通过。固定SDK/OpenAI依赖、六份配置JSON、115个prompt与memory policy不变。OpenAI Docs仅核对SDK生命周期边界，不用当前文档改写锁定0.5.2的运行行为。
+
+剩余边界：普通CLI/Web默认仍为兼容审批宿主；SDK控制组件不等于原stdin/headless startup或鉴权命令全集。完整McpServerManager `9186841..9198615` 的server/tool/Hook proxy、SdkMcpServer与重写transport已定位但本批没有把定位计为实现；下一批优先恢复其完整依赖链。之后继续ProductManager动态初始化/插件刷新、Auto classifier backend、SettingsManager磁盘持久化，并统一原policy allow到执行guard的默认语义。整体目标保持进行中，不以当前门槛代替最终完成标准。

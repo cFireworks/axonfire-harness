@@ -30,6 +30,8 @@ import { MemoryPromptContextInitializer } from "../prompts/prompt-context.js";
 import { WorkBuddyModelProvider, type SettingsManager } from "../models/model-provider.js";
 import { InterruptionService, type InterruptionServiceOptions } from "../permissions/interruption-service.js";
 import { PermissionMode } from "../permissions/permission.js";
+import { createSdkControlHost, type SdkControlHostOptions } from "../sdk/sdk-control-host.js";
+import { attachHarnessSdkControl } from "../sdk/harness-sdk-control.js";
 import { ProductPromptRenderer } from "../prompts/prompt-renderer.js";
 import { RunnerFactory } from "../runner/runner-factory.js";
 import { ToolCallLoopDetectorImpl } from "../runner/tool-call-loop-detector.js";
@@ -174,6 +176,8 @@ export type HarnessOptions = {
   /** Complete captured approval controller, with legacy UI retained as the default during migration. */
   nativeApprovals?: boolean;
   approvalController?: Partial<NonNullable<InterruptionServiceOptions["controller"]>>;
+  /** Explicit owned JSONL control transport; enables both native permission paths by default. */
+  sdkControl?: SdkControlHostOptions;
   permissionHost?: Partial<ToolPermissionHostOptions>;
   workDir: string;
   stateDir?: string;
@@ -257,12 +261,17 @@ export async function createHarness(options: HarnessOptions) {
     throw new Error("Standalone runtime requires explicit apiKey and baseURL (or an injected ModelProvider).");
   }
   if (options.baseURL && !["http:", "https:"].includes(new URL(options.baseURL).protocol)) throw new Error("baseURL must use HTTP or HTTPS");
+  const sdkControl = options.sdkControl ? createSdkControlHost(options.sdkControl) : undefined;
+  const nativeApprovals = options.nativeApprovals ?? !!sdkControl, nativePermissions = options.nativePermissions ?? !!sdkControl;
+  const sdkPermissionClient = options.approvalController?.sdkPermissionClient ?? sdkControl?.permission;
+  const sdkSettings = new Map<string, any>();
   const product = await loadProductConfiguration();
   const prompts = new ProductPromptRenderer(product);
   const mcp = new McpRegistry();
   const settings: SettingsManager = {
     async list() { return await options.settings?.list?.() ?? {}; },
     async get<T>(key: string): Promise<T | undefined> {
+      if (sdkSettings.has(key)) return sdkSettings.get(key);
       if(key==='model'&&options.model!==undefined)return options.model as T;
       if (key === "env" && options.baseURL) return { ...await options.settings?.get<Record<string, string>>(key), CODEBUDDY_BASE_URL: options.baseURL } as T;
       if (key === "memory" && options.memoryExtraction !== undefined) return { ...await options.settings?.get<object>(key), memoryExtraction: options.memoryExtraction } as T;
@@ -407,7 +416,7 @@ export async function createHarness(options: HarnessOptions) {
   const structuredStartHook = new StructuredOutputSessionStartHook(structuredContexts, undefined, options.logger);
   const structuredStopHook = new StructuredOutputStopHook(structuredContexts, options.logger);
   nativeHooks=createHookLifecycleHost({
-    ...options.hooks,workDir:getWorkDir,sessionStore:store,settings:options.hooks?.settings??settings,
+    ...options.hooks,sdkHooksManager:options.hooks?.sdkHooksManager??sdkControl?.hooks,workDir:getWorkDir,sessionStore:store,settings:options.hooks?.settings??settings,
     logger:options.hooks?.logger??memoryRules.runtime.dependencies.logger,
     getAgentService:options.hooks?.getAgentService??(()=>service),agentManager:options.hooks?.agentManager??agents,
     runnerProvider:options.hooks?.runnerProvider??{async get(){const runner=await runnerFactory.create();return{run:(agent:any,state:any,opts:any)=>sessions.run(state._context.context,()=>runner.run(agent,state,opts))};}},
@@ -426,7 +435,7 @@ export async function createHarness(options: HarnessOptions) {
     logger: { warn: (...args: any[]) => options.logger?.warn(args.map(String).join(' ')) },
     ...options.permissionHost,
   });
-  if (options.nativePermissions) { tools.attachPermissionService(permissions); deferredRuntime.deferExecute.attachPermissionAdapter(permissions); }
+  if (nativePermissions) { tools.attachPermissionService(permissions); deferredRuntime.deferExecute.attachPermissionAdapter(permissions); }
   const skillPaths = options.skillPaths ?? { get project() { return resolve(getWorkDir(), ".codebuddy/skills"); }, user: resolve(stateDir, "skills"), connector: resolve(stateDir, "connector-skills") };
   const skillProvider = new SkillProductProvider(skillPaths);
   const configuredCommands = [...(Array.isArray(product.raw.commands) ? product.raw.commands as ProductCommand[] : []), ...options.commands ?? []].map((command) => ({ ...command }));
@@ -458,16 +467,16 @@ export async function createHarness(options: HarnessOptions) {
   prompts.attachContextProvider(promptContext);
   let service!: AgentService;
   const interruptions:InterruptionService = new InterruptionService(stateMachine, {
-    ...(options.nativeApprovals ? { controller: {
+    ...(nativeApprovals ? { controller: {
       permissions: { async applyUpdate(session: HarnessSession, update: any) { await permissions.initializeContext(session); return permissions.service.applyUpdate(session, update); } },
       toolManager: tools, commands: permissions.commands.CommandUtils, getWorkDir,
       sdkHooksManager: nativeHooks!.runtime.dependencies.sdkHooksManager,
       workflowSourceResolver: new WorkflowSourceResolver(workflowRegistry, getWorkDir),
       ...options.approvalController,
-      ...(options.approvalController?.sdkPermissionClient ? { sdkPermissionClient: {
+      ...(sdkPermissionClient ? { sdkPermissionClient: {
         async requestPermission(name: string, input: any, callId: string) {
           const session = currentSession();
-          const decision = await options.approvalController!.sdkPermissionClient.requestPermission(name, input, callId);
+          const decision = await sdkPermissionClient.requestPermission(name, input, callId);
           if (decision.allowed && session) {
             const effective = { ...input, ...decision.updatedInput }, effectiveName = name === "DeferExecuteTool" && typeof effective.toolName === "string" ? effective.toolName : name;
             let entries = approvedCalls.get(session); if (!entries) approvedCalls.set(session, entries = new Set()); entries.add(`${effectiveName}\0${callId}`);
@@ -489,14 +498,15 @@ export async function createHarness(options: HarnessOptions) {
     recovery: {
       service: {
         run: (...args) => withTrace(new LocalNoopTrace(), async () => {
+          if (sdkControl?.closed) return;
           const previous = args[2]?.context?.resultSubject.value;
           await service.run(...args);
-          if (options.nativeApprovals && Array.isArray(args[1]) && args[1].some((item: any) => item.providerData?.skipRun)) {
+          if (nativeApprovals && Array.isArray(args[1]) && args[1].some((item: any) => item.providerData?.skipRun)) {
             if (previous && typeof previous === "object") terminalRejectedResults.add(previous);
             if (args[2]?.context) stateMachine.forceIdle(args[2].context, "native-rejected-tool-skip-run");
           }
         }),
-        runDefault: (...args) => withTrace(new LocalNoopTrace(), () => service.runDefault(...args)),
+        runDefault: (...args) => withTrace(new LocalNoopTrace(), async () => { if (!sdkControl?.closed) await service.runDefault(...args); }),
       },
       beforeHandleError: (_session, result) => sessions.waitForResultHandled(result),
       describeDeferredTool: (name) => deferredRuntime.search.describe(name),
@@ -524,7 +534,7 @@ export async function createHarness(options: HarnessOptions) {
     const source = interruptions.findSessionByItem(pending.item);
     if (!source) return;
     // The captured stream-json path delegates to the SDK client, not the local UI.
-    if (options.nativeApprovals && source.options.inputFormat === "stream-json" && !source.options.acp) return;
+    if (nativeApprovals && source.options.inputFormat === "stream-json" && !source.options.acp) return;
     const raw = pending.item.rawItem as any;
     void (async () => {
       let approved = false;
@@ -720,6 +730,14 @@ export async function createHarness(options: HarnessOptions) {
     });
   }
 
+  const sdkHandlers = sdkControl ? attachHarnessSdkControl(sdkControl, {
+    sessions, agents, commands: commandManager, product, plans,
+    settings: { get: (key: string) => settings.get(key), async set(key: string, value: any) { sdkSettings.set(key, value); } },
+    cliSettings: { async set(key: string, value: any) { sdkSettings.set(key, value); } },
+    logger: { warn: (...args: any[]) => options.logger?.warn(args.map(String).join(' ')) },
+    ...(options.sdkControl?.initializeDependencies ? { initializeDependencies: options.sdkControl.initializeDependencies } : {}),
+  }) : undefined;
+
   async function openSession(id?: string, config: { print?: boolean; permissionMode?: PermissionMode; jsonSchema?: string | Record<string, unknown>; outputFormat?: "text" | "json" | "stream-json" } = {}): Promise<HarnessSession> {
     if (closed) throw new Error("Harness is closed");
     const session = id ? await sessions.get(id) : await sessions.create();
@@ -729,12 +747,15 @@ export async function createHarness(options: HarnessOptions) {
     session.options.workDir = getWorkDir();
     session.meta.cwd = getWorkDir();
     session.options.print = config.print === true;
+    if (sdkControl) session.options.inputFormat = "stream-json";
     if (options.model) session.options.model = options.model;
+    const overrideModel = sessions.getOverrideModel(session.id);
+    if (overrideModel !== undefined) session.requestOptions.model = overrideModel;
     if (options.fallbackModel !== undefined) session.options.fallbackModel=options.fallbackModel;
     if (config.jsonSchema ?? options.jsonSchema) session.options.jsonSchema = config.jsonSchema ?? options.jsonSchema;
     if (config.outputFormat ?? options.outputFormat) session.options.outputFormat = config.outputFormat ?? options.outputFormat;
     const restored = session.meta.standalonePermissionMode as PermissionMode | undefined;
-    session.permissionModeSubject.next(config.permissionMode ?? restored ?? PermissionMode.Default);
+    session.permissionModeSubject.next(config.permissionMode ?? sessions.getOverridePermissionMode(session.id) ?? restored ?? PermissionMode.Default);
     await sessions.emitSessionStart(session, id ? "resume" : "startup");
     watchQueue(session);
     cronScheduler.start(session);
@@ -814,6 +835,7 @@ export async function createHarness(options: HarnessOptions) {
   async function close(): Promise<void> {
     if (closed) return;
     closed = true;
+    sdkControl?.close();
     channelHost.close(); channelClients?.close(); channelApprovalTargets.clear();
     sessionQueueSubscription.unsubscribe(); teamLeadPoller.stopTeamLeadPoller(); teamMailbox.stopAll(); shutdownCoordinator.cancelAll("harness closed");
     for (const session of opened) session.teamCancelled = true;
@@ -884,7 +906,7 @@ export async function createHarness(options: HarnessOptions) {
   channelClients?.initializeConfigured();
   channelHost.start();
   return { product, agents, agentFactory, tools, mcp, sessions, store, service, stateMachine, interruptions, compactor, memory, memoryRules, autoMemory, hooks:nativeHooks, permissions, shell, taskManager, taskStorage, taskTools, agentTool, taskOutputTools, plans, planTools, asks, askTool, promptContext, createWorkflowSubagentSpawner, createWorkflowRuntime, workflowTool, backgroundTaskNotifier, recordingStore, recordReplayProvider: provider, webFetchTool, webSearchTool, webRuntime,
-    channelHost, channelClients, channelManager, channelPermissionAdapter, wechatReplyTool, wecomReplyTool,
+    sdkControl, sdkHandlers, channelHost, channelClients, channelManager, channelPermissionAdapter, wechatReplyTool, wecomReplyTool,
     delegateToolManager, delegateToolsChangedHandler, delegateTool,
     lspManager, lspTool,
     mediaRuntime, imageService, videoService, imageGenTool, imageEditTool, videoGenTool, imageToolHookInputProcessor,

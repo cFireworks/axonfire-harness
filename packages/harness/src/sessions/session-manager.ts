@@ -10,6 +10,7 @@ import type { AgentInputItemPipeline } from "./input-item-pipeline.js";
 import { NativeHistoryInputUtils } from "./input-processor-utils.js";
 import { SessionResultLifecycle } from "./session-result-lifecycle.js";
 import { createSessionResultRuntime, createSessionResultObservers, type SessionLifecycleOptions } from "./session-result-runtime.js";
+import type { PermissionMode } from "../permissions/permission.js";
 
 export type SessionThinkingOverride = {
   thinkingEnabled?: boolean;
@@ -30,6 +31,8 @@ export class SessionManager {
     string,
     SessionThinkingOverride
   >();
+  private readonly overridePermissionModes = new Map<string, PermissionMode>();
+  private readonly overrideModels = new Map<string, string>();
   readonly resultLifecycle?: SessionResultLifecycle;
   private readonly resultGates=new WeakMap<object,NonNullable<HarnessSession['interceptorGate']>>();
   private readonly activeResultConsumers=new WeakSet<object>();
@@ -175,6 +178,11 @@ export class SessionManager {
     const value = this.thinkingOverrides.get(sessionId);
     return value ? { ...value } : undefined;
   }
+  // Complete original methods, UTF-16 10977093..10977351.
+  setOverridePermissionMode(eA: string, el: PermissionMode): void { this.overridePermissionModes.set(eA, el); }
+  getOverridePermissionMode(eA: string): PermissionMode | undefined { return this.overridePermissionModes.get(eA); }
+  setOverrideModel(eA: string, el: string): void { this.overrideModels.set(eA, el); }
+  getOverrideModel(eA: string): string | undefined { return this.overrideModels.get(eA); }
 
   initRunResultHandler(session: HarnessSession): void {
     if(this.resultLifecycle){this.resultLifecycle.initRunResultHandler(session);return}
