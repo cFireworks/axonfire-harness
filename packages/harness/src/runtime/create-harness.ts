@@ -28,7 +28,7 @@ import { MemoryScope, MemoryType } from "../memory/memory-rule-constants.js";
 import { ConditionalRulesAgentRunInterceptor } from "../agents/conditional-rules-agent-run-interceptor.js";
 import { MemoryPromptContextInitializer } from "../prompts/prompt-context.js";
 import { WorkBuddyModelProvider, type SettingsManager } from "../models/model-provider.js";
-import { InterruptionService } from "../permissions/interruption-service.js";
+import { InterruptionService, type InterruptionServiceOptions } from "../permissions/interruption-service.js";
 import { PermissionMode } from "../permissions/permission.js";
 import { ProductPromptRenderer } from "../prompts/prompt-renderer.js";
 import { RunnerFactory } from "../runner/runner-factory.js";
@@ -169,8 +169,11 @@ class LocalNoopTrace extends NoopTrace {
 }
 
 export type HarnessOptions = {
-  /** Complete native classifier/SDK callback path; explicit until the full native approval controller replaces the compatibility UI. */
+  /** Complete native classifier/SDK callback path; independent of the approval UI host. */
   nativePermissions?: boolean;
+  /** Complete captured approval controller, with legacy UI retained as the default during migration. */
+  nativeApprovals?: boolean;
+  approvalController?: Partial<NonNullable<InterruptionServiceOptions["controller"]>>;
   permissionHost?: Partial<ToolPermissionHostOptions>;
   workDir: string;
   stateDir?: string;
@@ -455,6 +458,24 @@ export async function createHarness(options: HarnessOptions) {
   prompts.attachContextProvider(promptContext);
   let service!: AgentService;
   const interruptions:InterruptionService = new InterruptionService(stateMachine, {
+    ...(options.nativeApprovals ? { controller: {
+      permissions: { async applyUpdate(session: HarnessSession, update: any) { await permissions.initializeContext(session); return permissions.service.applyUpdate(session, update); } },
+      toolManager: tools, commands: permissions.commands.CommandUtils, getWorkDir,
+      sdkHooksManager: nativeHooks!.runtime.dependencies.sdkHooksManager,
+      workflowSourceResolver: new WorkflowSourceResolver(workflowRegistry, getWorkDir),
+      ...options.approvalController,
+      ...(options.approvalController?.sdkPermissionClient ? { sdkPermissionClient: {
+        async requestPermission(name: string, input: any, callId: string) {
+          const session = currentSession();
+          const decision = await options.approvalController!.sdkPermissionClient.requestPermission(name, input, callId);
+          if (decision.allowed && session) {
+            const effective = { ...input, ...decision.updatedInput }, effectiveName = name === "DeferExecuteTool" && typeof effective.toolName === "string" ? effective.toolName : name;
+            let entries = approvedCalls.get(session); if (!entries) approvedCalls.set(session, entries = new Set()); entries.add(`${effectiveName}\0${callId}`);
+          }
+          return decision;
+        },
+      }} : {}),
+    }} : {}),
     resultDispatch: {
       getDefaultAgent: () => agents.getDefault(),
       beforeResult: (_session, result) => sessions.waitForResultHandled(result),
@@ -467,7 +488,14 @@ export async function createHarness(options: HarnessOptions) {
     }} : {}),
     recovery: {
       service: {
-        run: (...args) => withTrace(new LocalNoopTrace(), () => service.run(...args)),
+        run: (...args) => withTrace(new LocalNoopTrace(), async () => {
+          const previous = args[2]?.context?.resultSubject.value;
+          await service.run(...args);
+          if (options.nativeApprovals && Array.isArray(args[1]) && args[1].some((item: any) => item.providerData?.skipRun)) {
+            if (previous && typeof previous === "object") terminalRejectedResults.add(previous);
+            if (args[2]?.context) stateMachine.forceIdle(args[2].context, "native-rejected-tool-skip-run");
+          }
+        }),
         runDefault: (...args) => withTrace(new LocalNoopTrace(), () => service.runDefault(...args)),
       },
       beforeHandleError: (_session, result) => sessions.waitForResultHandled(result),
@@ -495,6 +523,8 @@ export async function createHarness(options: HarnessOptions) {
     if (!pending) return;
     const source = interruptions.findSessionByItem(pending.item);
     if (!source) return;
+    // The captured stream-json path delegates to the SDK client, not the local UI.
+    if (options.nativeApprovals && source.options.inputFormat === "stream-json" && !source.options.acp) return;
     const raw = pending.item.rawItem as any;
     void (async () => {
       let approved = false;

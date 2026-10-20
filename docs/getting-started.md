@@ -20,4 +20,8 @@ Web 的 `--cwd` 指定工具工作目录：`npm start -- --cwd /absolute/path/to
 
 浏览器手动验收实际发送了一轮离线演示消息，确认增量文本、会话列表更新和完成后按钮状态恢复；截图位于 `docs/images/web-demo.png`。没有使用真实供应商密钥验证远端模型；没有据此声明所有供应商兼容或产品全部能力已恢复。CI 只是已加入仓库的定义，远端执行结果需以 GitHub Actions 实际记录为准。
 
-权限服务后续批次已将门槛提升为652核心 + 10宿主、574编译smoke、36组差分。嵌入API的 `createHarness({ nativePermissions: true, ... })` 可启用已恢复的完整权限分类与SDK回调；它目前仍使用兼容审批控制器和独立宿主guard，不是原产品的全套审批/SettingsManager/Auto classifier。默认CLI/Web行为保持可用，不需要启用该开发者选项。
+审批控制器后续批次已将门槛提升为672核心 + 10宿主、594编译smoke、37组差分。嵌入API的 `createHarness({ nativePermissions: true, nativeApprovals: true, ... })` 可同时启用完整原权限分类/SDK缓存与完整原InterruptionService控制器。两项独立开关默认关闭，CLI/Web仍使用可用的兼容审批宿主；不需要为了启动启用开发者选项。
+
+`approvalController` 可注入 `sdkPermissionClient.requestPermission(toolName, input, callId)`、`sdkHooksManager`、workflow resolver、mandatory target判断、trace和广播诊断依赖。会话 `options.inputFormat = "stream-json"` 且非ACP时走SDK客户端，不再同时询问本地UI；显式客户端返回allowed后会登记独立宿主guard授权，updatedInput按源码浅合并。未配置SDK客户端会进入源码的错误拒绝路径，不伪造同意。普通text路径仍通过 `approveTool` / `askUserQuestion` 交互，默认不自动允许。
+
+以上不等于原产品的完整SDK callback transport、ACP服务、SettingsManager磁盘持久化或Auto classifier backend已恢复。特别是原控制器CLI拒绝会abort并记录skipRun结果，而非调用RunState.reject后继续执行；宿主等待该结果落盘后结束。模型和所有依赖版本未升级。

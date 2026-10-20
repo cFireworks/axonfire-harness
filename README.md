@@ -72,7 +72,7 @@ npm run verify:config
 npm run verify:recovery -- /absolute/path/to/codebuddy.js
 ```
 
-最新验证：652 项核心测试、10 项 Web 宿主测试、574 项编译后 smoke、36 组原样本差分通过。完整结果分派已默认接入；完整权限服务与 SDK 缓存链路可通过 `nativePermissions: true` 显式使用，默认审批控制器仍待整体替换。配置中的 115 个原始 prompt 和固定哈希保持不变。详细边界见 [还原状态](docs/recovery-status.md)，安装与启动验证见 [使用说明](docs/getting-started.md)。
+最新验证：672 项核心测试、10 项 Web 宿主测试、594 项编译后 smoke、37 组原样本差分通过。完整结果分派已默认接入；完整权限服务和完整原审批控制器分别通过 `nativePermissions: true`、`nativeApprovals: true` 显式使用，CLI/Web 默认保留兼容审批宿主。配置中的 115 个原始 prompt 和固定哈希保持不变。详细边界见 [还原状态](docs/recovery-status.md)，安装与启动验证见 [使用说明](docs/getting-started.md)。
 
 本地工作台演示：
 

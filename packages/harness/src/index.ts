@@ -112,6 +112,7 @@ export * from "./permissions/managed-security-policy.js";
 export * from "./permissions/tool-permission-plan-strategy.js";
 export * from "./permissions/permission-manager.js";
 export * from "./permissions/interruption-service.js";
+export {createNativeInterruptionService,createNativeToolApprovalServices,type NativeInterruptionControllerRuntime,SessionCompactionAbortError,SdkPermissionDeniedError} from "./permissions/native-interruption-service.js";
 export * from "./permissions/interruption-stream-recovery.js";
 export * from "./prompts/prompt-renderer.js";
 export * from "./replay/record-replay-model.js";

@@ -33,7 +33,7 @@
 |    5 | Core file tools   | 主路径高覆盖                 | 三个原始 Zod schema、1-based paging、2000 行/字符限制、256KB/100MB 限制、binary/Notebook/image、行号格式、读后写和外部修改保护、CRLF/BOM、唯一/全量替换已实现；原ImageUtils完整类/Jimp0.22.12与Read图片方法、模型/二进制门槛、blob去重已恢复；非UTF编码全集、其他文本Read原方法/错误码复核及遥测待补                                                                            |
 |    5 | Core search tools | 主路径高覆盖                 | 原始 Glob/Grep schema、60s Glob timeout、ripgrep、node_modules/.git 排除、mtime 排序、分页、三种 Grep 输出、上下文/类型/multiline 参数、50,000 字符截断已实现                                                                                                                         |
 |    5 | Core shell tools  | 核心控制流已实现             | 原始 Bash/PowerShell schema、120s/600s timeout、30k/150k 限制、上下文 env、前台 envelope、6 位 task ID、显式后台、timeout 转后台、后台输出/kill 已实现；sandbox orchestrator、ConPTY、safe-delete、安全分类和 UI streaming 待补                                                   |
-|    6 | Permission flow   | 主控制流高覆盖               | 10 个真实 mode、`auto/dontAsk` ceiling、`delegate→default` 继承、ACP `PermissionManager`（300s timeout）、SDK interruption 队列、main/child/team 路由、同工具合并、always/sandbox/cancel、channel/local race、notification hook、permission resolved/interruption broadcast、pre-tool decision reason、SDK state approve/reject 与拒绝结果回注已实现；SDK callback 权限客户端和错误恢复全集待补 |
+|    6 | Permission flow | 完整原控制器与权限服务，显式接入 | 完整InterruptionService构造器及32成员、always/background审批类；原queue/main/child/team/sandbox/orphan、channel race、CLI/ACP/SDK拒绝、SDK PermissionRequest callbacks与denials已移植；nativePermissions/nativeApprovals分别启用。真实SDK6项覆盖批准/拒绝/Defer/客户端改写/interrupt/cancel。SDK客户端和Hook transport、MCP proxy、Auto backend/SettingsManager仍待补；默认CLI/Web保留兼容宿主 |
 |    6 | AgentTask         | 完成/失败仲裁与主生命周期差分通过 | setup/execute/cleanup、new/resume/fork、model/permission/hooks/skills/转发/usage 主路径保留；agent_end/idle、stream final-step guard、retryInProgress/compaction、200ms/120s 压缩轮询/重挂、精确取消、原错误 rethrow、Hook best-effort、RESULT delimiter、nullish resume meta 与 teammate failure 已恢复。executePhaseWithRetry 无内部重试循环；普通会话重试现由 InterruptionService 负责，45s throttle/watchdog 已确认属于 Workflow 并在对应链路恢复；独立 result reset/落盘 barrier 为 host adapter |
 |    6 | Agent tool | 同步/Worktree/进程内与显式进程外 Team 接入真实 SDK | 原 schema、env max turns、model variant、fork boilerplate/child 检测、disabled fork、父 toolCall id、同步/中断/错误码 19920..19923/subAgent meta 已恢复。真实 SDK 验证 Explore→Read→独立 transcript→resume、子审批、Worktree、Team，以及子任务网络重试不误判失败。spawn chain/重名/颜色/rollback/失败后 chain 拒绝保持原行为；默认保持原 in-process，显式 standalone override 接 detached-process；全部权限宿主分支仍待补 |
 |    6 | AgentTaskManager | 核心调度与 Team 策略接入 | register/get/alias/status/session/wait/cancel/events、5 分钟 TTL/60s cleanup、20 个已完成 Team session 上限、4s 通知延迟/30s dedup/末成员强制通知/10s auto-team cleanup 已恢复；现接 TeamManager/registry/mailbox/cleanup adapter，长时间调度/全部失败竞态未穷举 |
@@ -474,3 +474,25 @@ needsApproval完整恢复PreToolUse、PermissionRequest/Denied分派、deny不�
 下一批优先完整InterruptionService审批控制器（approve/reject/queue/handleInterruptions/requestSdkPermission/SDK hooks与denials），对齐默认SDK接线与兼容审批宿主，再补MCP Hook proxy、AutoMode classifier backend、SettingsManager持久化、ProductManager/插件刷新；本批未把这些依赖标成完成。
 
 最新门槛：652项核心测试、10项Web宿主测试、574项编译JS smoke、36组样本差分、check/build/config和CLI/Web实际启动全部通过。发布前基本凭据/运行记录扫描未发现命中，未升级任何SDK或模型依赖。整体目标继续进行。
+
+## 完整 InterruptionService 审批控制器批次
+
+`native-interruption-service.ts`直接移植原类 `11047102..11089570` 的完整constructor及其余32个成员，复用此前完整结果分派的外部依赖绑定，不再用手写兼容handleInterruptions代表原实现。另直接移植ToolAlwaysApprovalService `11939394..11942161`（11成员）、BackgroundTaskToolApprovalService `6987547..6988678`（4成员）、原Deferred/CustomError/ErrorUtil、四个审批异常类和两个trace取消helper。完整class/member AST去除TS注解后与固定SHA样本比较；仅waitFor的结果订阅改为显式所有权桥接，原容器、时钟、诊断和客户端依赖在工厂闭包注入。
+
+原approve的always分支委派helper，由helper检查风险、记录签名、applyUpdate后批准state，控制器不额外强造state.approve。Session缓存跨工具共享同一session Set的原结构保留；child审批可同步main。危险Bash和ExitPlanMode不加入always缓存，但本次人工同意仍批准。后台任务原approve helper与handle各调用一次state.approve，保留重复调用，不按“理想实现”去重。
+
+队列保留对象身份键、main/child/team缓存、sourceSession fallback、sandbox全局pending占用与orphan迁移、head元数据、广播参数和清理顺序。只有sandbox出队/取消触发原跨队列提升，普通队列不补造相同行为。原sandbox批准不额外发permissionResolved；拒绝与cancel的广播仍按原分支。控制器原方法返回undefined，兼容facade在外层转换为已有boolean/count接口。
+
+完整handle保留后台/direct-approve mode ceiling、FullAccess/子AcceptEdits/Bypass的优先级、危险命令与mandatory Defer例外、always缓存和同工具pending检查、workflow源码预载、200ms UI延迟、pre-hook reason回填、Notification best-effort、local/channel race、deny_and_exit_plan模式恢复、abort与compaction区别。CLI普通拒绝silentAbort+abort+agent_end并异步发送工具特有skipRun结果；ACP或SDK interrupt拒绝中止且root发interrupted Stop，不进行拒绝续跑。compaction catch只break，不设置普通拒绝标志，所以末尾仍调用state continuation，这是固定样本行为，未擅自“修正”。
+
+SDK请求保留缺失callId直接approve、参数JSON解析失败转reject、PermissionRequest回调顺序、空transcript_path/cwd/callId和timeout秒转毫秒（默认60s）、单callback异常仅warn并继续、result-owned abort signal、updatedInput浅合并、精确permissionDenials字段以及SdkPermissionDeniedError.interrupt。缺失callId自动approve属于原行为，不代表宿主会绕过独立执行guard。外部SDK客户端/Hook callback transport没有伪造实现；默认不可用依赖明确拒绝/为空回调集合。mandatory target判断仍为显式adapter，未冒充完整ModelUtils支付/高额度服务。
+
+嵌入API新增`nativeApprovals: true`与`approvalController`，可和`nativePermissions: true`组合。原类通过InterruptionService facade接入；独立宿主在class外等待自己的历史消费者，并跟踪原fire-and-forget service.run和setImmediate续跑，使prompt不会提前返回旧结果。Deferred原constructor不改；外部所有权子类只观察200ms UI窗口内可能发生的早期拒绝，避免Node未处理拒绝。skipRun结果落盘后关闭宿主gate，不强迫再生成一次模型结果。宿主close清理本次拥有的订阅和计时器。
+
+stream-json且非ACP时，不与本地approveTool同时竞争，沿原SDK客户端路径；显式人工SDK客户端allowed后登记宿主guard授权，拒绝不登记，输入改写真正传到工具。Hook PermissionRequest allow与SDK人工客户端同意仍是不同来源，前者不会隐式撤销独立guard。CLI/Web默认保留兼容控制器，两项native选项均未默认启用；不能据此宣称所有入口已经统一为原产品协议。
+
+验证：58处完整成员/helper AST、1,100组固定SHA行为比较，包含完整控制器waitFor桥接、模式/child/后台/六种决策、危险/mandatory工具、SDK/ACP/缺ID/回调故障/interrupt矩阵、channel/ceiling/workflow、跨会话sandbox与普通队列。新增20项专项，其中6项使用实际SDK和自有临时目录，覆盖批准暂停恢复/实际Write、拒绝skipRun历史、Defer路由、SDK客户端真实输入改写、interrupt拒绝和取消前无文件副作用。危险命令仅为分类器字符串，不执行；没有访问真实产品账户、联系人、远端模型或桌面。
+
+本批门槛：672项核心测试、10项Web宿主测试、594项最新编译JS smoke、37组源码差分、check/build/config和实际CLI/Web launcher验证通过。六份原JSON、115个prompt、memory policy与固定SDK依赖保持不变。OpenAI Docs只用于核对SDK审批状态边界，不按现行文档替换锁定版本。
+
+下一批优先SDK PermissionClient / SDKHooksManager transport与MCP Hook proxy，随后统一默认审批接线，再推进AutoMode classifier backend、SettingsManager磁盘持久化及ProductManager/插件刷新。完整控制器方法已恢复不等于其所有外部产品服务完成，整体目标继续进行。
