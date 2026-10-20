@@ -1,3 +1,4 @@
+import { getCapturedBundlePath } from "./helpers/captured-bundle-path.js";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
@@ -14,11 +15,7 @@ import {
 } from "../src/images/read-image-runtime.js";
 import { getCurrentImageModel } from "../src/images/current-image-model.js";
 const source = await readFile(
-    process.argv[2] ??
-      new URL(
-        "../../../work/workbuddy-app/cli/dist/codebuddy.js",
-        import.meta.url,
-      ),
+    getCapturedBundlePath(),
     "utf8",
   ),
   env: NodeJS.ProcessEnv = {},

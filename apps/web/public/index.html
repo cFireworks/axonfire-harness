@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Axonfire · Harness</title>
+    <link rel="stylesheet" href="/style.css" />
+    <script type="module" src="/app.js"></script>
+  </head>
+  <body>
+    <aside>
+      <a class="brand" href="/" aria-label="Axonfire 首页"
+        ><span class="mark">a<span>↗</span></span> axonfire<span class="tag"
+          >HARNESS</span
+        ></a
+      >
+      <button id="new-session" class="new">＋ 新建会话 <kbd>N</kbd></button>
+      <div class="section-label">
+        工作记录 <span id="session-count">0</span>
+      </div>
+      <nav id="sessions" aria-label="历史会话"></nav>
+      <div class="aside-foot">
+        <span class="status-dot"></span> LOCAL WORKSPACE
+        <p>代码还原核心 · 独立使用界面</p>
+        <a
+          href="https://github.com/cFireworks/axonfire-harness"
+          target="_blank"
+          rel="noreferrer"
+          >GitHub ↗</a
+        >
+      </div>
+    </aside>
+    <main>
+      <header>
+        <div>
+          <span class="status-dot"></span><span id="mode">正在连接</span
+          ><span class="divider">/</span><span id="model">—</span>
+        </div>
+        <button id="compact" title="压缩当前会话上下文">压缩上下文 ↗</button>
+      </header>
+      <div id="notice" role="status" hidden></div>
+      <section id="welcome">
+        <span class="eyebrow">YOUR LOCAL AGENT WORKBENCH</span>
+        <h1>从一个问题，<br />到一次<span>真正的执行。</span></h1>
+        <p>
+          连接你自己的模型，使用还原的 Agent Harness。<br />会话留在本地，每一次工具操作由你决定。
+        </p>
+        <div class="suggestions">
+          <button data-prompt="帮我了解当前项目的目录结构与启动方式。">
+            <span>01 / EXPLORE</span>了解这个项目 ↗</button
+          ><button
+            data-prompt="阅读项目并提出一份分步实现计划，暂时不要修改文件。"
+          >
+            <span>02 / PLAN</span>制定实现计划 ↗
+          </button>
+        </div>
+      </section>
+      <section id="messages" aria-label="会话消息" aria-live="polite"></section>
+      <section id="decisions" aria-label="待处理审批"></section>
+      <footer>
+        <form id="composer">
+          <label class="sr-only" for="prompt">发送消息</label
+          ><textarea
+            id="prompt"
+            placeholder="描述你的任务…"
+            rows="2"
+            maxlength="32000"
+            required
+          ></textarea>
+          <div class="composer-bottom">
+            <span>本地会话 <span id="session-id">/ 新会话</span></span
+            ><button type="button" id="cancel" hidden>停止 ■</button
+            ><button id="send" type="submit">发送 ↑</button>
+          </div>
+        </form>
+        <p class="footnote">
+          密钥仅保留在服务端 · 默认逐次审批工具 ·
+          <span id="connection">127.0.0.1</span>
+        </p>
+      </footer>
+    </main>
+  </body>
+</html>

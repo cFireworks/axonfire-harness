@@ -1,3 +1,4 @@
+import { getCapturedBundlePath } from "./helpers/captured-bundle-path.js";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { loadCapturedSessionResult } from "./helpers/captured-session-result.js";
@@ -20,11 +21,7 @@ import { createContentFilterInputUtils } from "../src/sessions/content-filter-in
 import { SessionResultLifecycle } from "../src/sessions/session-result-lifecycle.js";
 import { ModelBehaviorError } from "@openai/agents-core";
 const source = await readFile(
-    process.argv[2] ??
-      new URL(
-        "../../../work/workbuddy-app/cli/dist/codebuddy.js",
-        import.meta.url,
-      ),
+    getCapturedBundlePath(),
     "utf8",
   ),
   native = loadCapturedSessionResult(source);

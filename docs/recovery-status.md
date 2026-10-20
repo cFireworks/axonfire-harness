@@ -424,3 +424,15 @@ Stop只在completed且未abort时接续；preventContinuation、显式continueRe
 验证：70个完整方法/函数AST、884次固定SHA比较，覆盖两个完整类、三个工具wrapper、输入/XML边界、权限/平台helper、错误码和15个factory原文。新增28项专项：默认真实SDK Hook上下文/阻断/Stop续跑/工具改写/失败回注、Task/compact/子Agent事件、真实自有node命令和once跨session、Prompt evaluator历史隔离、真实自有fs.watch与结束清理。Windows/故障/计时分支使用fake I/O；无真实产品账号/模型服务、联系人或桌面操作。
 
 最新门槛：619项全量测试、541项最新编译JS smoke、34个源码差分、check/build/config及编译CLI help全部通过；六份原JSON、115 Prompt、memory policy和SDK/OpenAI固定版本不变。OpenAI Docs只核对审批/状态边界，不按现行文档升级SDK。整体目标继续进行，下一批优先原onResult/审批与Hook服务代理，再继续ProductManager/插件热刷新。
+
+## Axonfire 仓库分层与本地 Web 宿主批次
+
+按用户要求建立 axonfire-harness 仓库；还原基线保留为本地/远端历史提交。参照 deepseek-harness 的 apps/packages/docs 分层，但未导入其 Cordis/插件架构。原 src/config/test/scripts/tsconfig 整体移至 packages/harness，SDK 与模型依赖版本、原配置和 prompt 不变。原报告移至 docs/reconstruction.md 与本文件；历史根级路径按 packages/harness 映射。
+
+新增 apps/cli 统一启动器、apps/web 本地工作台、npm workspaces、.env.example、根级全量差分入口和 CI 定义。新 Web 宿主明确不属于原版 UI 或原产品 Gateway：使用同一 createHarness 与真实 Agents SDK，支持流式文本、会话列表/恢复、上下文压缩、逐次工具审批、AskUserQuestion 和取消。离线 demo 注入固定模型，不调用远端服务或工具；不把它记作真实供应商验证。
+
+Web 固定监听 127.0.0.1，校验 Host/Origin/CSRF，限制请求体，审批超时/取消/断连不会自动允许，单回合运行槽避免共享状态并发冲突；模型密钥不发送给浏览器，不序列化可能包含认证头的上游异常。不是 OS 沙箱、多用户服务或公网部署方案。
+
+迁移后619项核心回归、541项编译 smoke、34组样本差分以及原配置哈希门槛通过。新增10项宿主测试，包括真实SDK通过Web调用Write的允许与拒绝、恢复与压缩、取消/断连、问答、输入和跨源校验。浏览器离线演示已实际运行并保存截图。样本差分的默认输入不再绑定本机目录，须显式提供原bundle路径或 WORKBUDDY_BUNDLE；原安装包/完整bundle不随仓库发布。
+
+下一批核心还原顺序保持不变：原 SessionManager onResult/onResultError/SDK interruption、审批缓存与 ToolPermissionService / Hook proxy，然后 ProductManager/插件刷新。新的使用界面不代表这些原产品边界已完成。

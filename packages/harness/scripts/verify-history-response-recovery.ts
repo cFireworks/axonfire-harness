@@ -1,3 +1,4 @@
+import { getCapturedBundlePath } from "./helpers/captured-bundle-path.js";
 import assert from "node:assert/strict";
 import { parse } from "acorn";
 import { readFile } from "node:fs/promises";
@@ -35,11 +36,7 @@ import { ModelPermissionErrorInterceptor } from "../src/responses/model-permissi
 import { TRUNCATION_RETRY_MARKER } from "../src/runner/history-repair.js";
 import { estimateTrailingToolResultTokens } from "../src/sessions/history-utils.js";
 const source = await readFile(
-    process.argv[2] ??
-      new URL(
-        "../../../work/workbuddy-app/cli/dist/codebuddy.js",
-        import.meta.url,
-      ),
+    getCapturedBundlePath(),
     "utf8",
   ),
   native = loadCapturedHistoryResponse(source);

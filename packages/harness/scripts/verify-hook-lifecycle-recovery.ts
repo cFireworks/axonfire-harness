@@ -1,3 +1,4 @@
+import { getCapturedBundlePath } from "./helpers/captured-bundle-path.js";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { runInNewContext } from "node:vm";
@@ -18,11 +19,7 @@ import {
 } from "../src/vendor/captured-hook-dependencies.js";
 import * as toolErrors from "../src/tools/native-tool-errors.js";
 const source = await readFile(
-    process.argv[2] ??
-      new URL(
-        "../../../work/workbuddy-app/cli/dist/codebuddy.js",
-        import.meta.url,
-      ),
+    getCapturedBundlePath(),
     "utf8",
   ),
   native = loadCapturedHookLifecycle(source);

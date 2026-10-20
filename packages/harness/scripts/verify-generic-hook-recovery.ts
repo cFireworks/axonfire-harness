@@ -1,3 +1,4 @@
+import { getCapturedBundlePath } from "./helpers/captured-bundle-path.js";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { parse } from "acorn";
@@ -17,11 +18,7 @@ import {
 import { createHookEventMetadata } from "../src/hooks/hook-event-metadata.js";
 import { runInNewContext } from "node:vm";
 const source = await readFile(
-  process.argv[2] ??
-    new URL(
-      "../../../work/workbuddy-app/cli/dist/codebuddy.js",
-      import.meta.url,
-    ),
+  getCapturedBundlePath(),
   "utf8",
 );
 const native = loadCapturedGenericHooks(source);
