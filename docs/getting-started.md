@@ -194,6 +194,41 @@ npm必须使用可信包和registry：原安装参数没有ignore-scripts，启�
 
 原ConfigWatch/McpWatch服务默认接线：文件watch setup延迟2秒、change debounce 3秒、rename即时刷新；MCP connected/disconnected合并后触发全量sync。用户/项目路径沿宿主state/工作目录，不监听安装应用目录；`productRuntime.watch:false`可禁用。原watcher unref，不靠它保持进程存活，关闭会取消订阅、watcher及pending任务，防止关闭中的初始化重新挂载。默认已连接原SettingsManager.clearCache；全局CWD变化也清理设置缓存。
 
+### Desktop 风格的会话 Addon（独立后端接口）
+
+`createAddonSession`把原模式解析、Addon manifest/指纹和CLI参数交接接到一个独立harness后端。每次调用独占`<stateRoot>/<sessionId>`，不把会话模式写到用户全局settings。普通CLI/Web路径保持原有standalone行为，不会被悄悄切成Desktop。嵌入示例（模型地址/密钥需显式配置）：
+
+```js
+import { createAddonSession } from '@axonfire/harness/runtime/create-addon-session.js';
+const backend = await createAddonSession({
+  stateRoot: '/absolute/path/to/owned-state',
+  desiredConfig: {
+    mode: 'ask',
+    permissionMode: 'default',
+    systemPrompt: '你是一个只在获得授权后执行操作的助手。',
+    tools: 'Read',
+  },
+  harness: {
+    workDir: '/absolute/path/to/project',
+    apiKey: process.env.OPENAI_API_KEY,
+    baseURL: process.env.OPENAI_BASE_URL,
+    model: process.env.CODEBUDDY_MODEL,
+  },
+});
+try { console.log(await backend.prompt('概述当前项目')); }
+finally { await backend.close(); }
+```
+
+这是显式用户prompt，不需要原应用资源。若要原mode/template插件合成，移除显式systemPrompt/tools，在desiredConfig设置`welcomeMode:'code'`和`mode:'ask'`等；同时经`harness.nativePlugins.builtinSeed.assetsRoot`提供你有权使用的可信资源根（含plugins/workbuddy-builtin）。原registry选择welcomemode/interactionmode/prompt-common，原settings.agent与fragment composer负责实际Agent prompt。仓库不分发整套第三方资源，未配置的模式插件不会凭空生成。`addons.systemPromptService`可接自己的renderSystemPrompt/collectSystemPromptVariables；未提供时沿原fallback配置，不冒充已恢复全部Desktop模板服务。
+
+重要：沿原模式默认值，craft/expert的permissionMode是`bypassPermissions`，会绕过standalone工具审批guard；若要审批，请像示例一样显式指定`permissionMode:'default'`。ask默认default，plan默认plan；plan之前的权限也须关注permissionModeBeforePlan。可信插件/设置的Hook可以自动执行，任何模式均不是OS沙箱。
+
+返回`harness/session/runtimeConfig/manifest/cliArgs/owner/tempDir/prompt/close`。`manifest`只存prompt长度/hash而非正文，但settings和工具参数仍可能敏感，不要把完整cliArgs/config写到公共日志。sessionId默认UUID，可显式指定安全标识符；`resume:true`要求之前已有持久化会话。模式变化目前应close旧后端，再用同一sessionId/resume重建；这条显式路径经真实SDK验证，但不冒充原daemon的pending配置排队/自动重启/消息队列迁移。
+
+原CLI参数生成会抑制由work-mode插件承担的旧system-prompt/tools，显式用户覆盖仍透传。会话设置请放在desiredConfig.sessionSettings；生成的CLI settings会覆盖harness.nativeSettings.cliOptions.settings。CLI scope启用选中插件、禁用旧模式，不持久化到USER；显式自定义plugin settings/manager来源需自行完成等价接线。netdrive依赖、micro-scene和项目资源在manifest中是声明/来源记录，不据此自动建立MCP连接；未解析micro-scene会记录warning。
+
+原prompt-vars临时文件写入、健康检查与11109错误协议已恢复，wrapper每次prompt前检查/修复；关闭仅删除本次随机owned临时目录，保留会话/插件state。外部systemPromptService/resolver是借用adapter，不由该host擅自cleanup；忽略取消的外部Promise需自行settle，close会等待它。公开的底层harness仅供嵌入调试，直接调用其prompt会绕过wrapper的文件健康检查；不要在同一后端创建额外公共会话来模拟模式隔离。
+
 ### Cloud 产品配置（嵌入接口）
 
 原CloudPre/CloudProvider默认位于同一ProductManager的9999/10000优先级。无账户或精确`ApiKey`类型不会请求云配置；模型API key不作为产品账户。不会读取已安装应用令牌，也不自动请求生产Cloud endpoint。现阶段CLI/Web不提供登录UI；如需云配置，嵌入时显式提供自己拥有的账户和transport：

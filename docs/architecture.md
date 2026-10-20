@@ -66,4 +66,8 @@ CLI/Web共享本地命令分派，原reload executor负责caveat/input/output历
 
 Cloud四个完整原类的22个成员保留用户投影、精确ApiKey门槛、缓存/重试/合并决策；只在外层提供账户Subject、存储、日志、时钟、HTTP和Promise生命周期。类constructor.name也保留样本e0/tG/e_/eE，避免误触发ProductManager按名称选择的预取/缓存分支。owned单origin HTTP不是原CellJS REST或登录实现，默认匿名无外部请求。关闭不会改写原reset语义；正常运行的reset仍不取消旧重试，只有宿主close终止资源。成功重试不自动sync，force sync也不跳过用户8分钟缓存。
 
-后续继续资源prompt/session-addon、环境及完整SDK输入/启动/鉴权、Hook服务端和AutoMode backend。统一默认审批时还须验证原policy allow与独立guard的边界，不能只因为可选路径测试通过就声明默认已等价。新增Web UI不计为这些原产品服务已恢复。
+Desktop侧会话Addon链现有完整纯函数与ModeService三类、CWD错误类、原SessionManager.resolveRuntimeConfig成员。`createAddonSession`是明确新增的进程内宿主：每会话独立state/Settings/Product/Plugin/Agent实例，沿原manifest和buildAgentCliRuntimeArgs下发CLI scope，复用真实SDK。它不把多个会话的模式覆盖到一个全局ProductManager。显式close/resume重建可切模式，但没有替代原daemon SessionManager全类、ACP进程池、pending drain/自动restart及消息迁移；普通CLI/Web不默认走此factory。
+
+源craft/expert默认bypassPermissions，这会绕过现有standalone mutation guard；该默认被保留而非改成兼容策略，嵌入者如需审批应显式default。原prompt-vars写入/健康检查/11109修复方法在owned随机temp根运行，关闭保留state，只移除本次temp；工作目录预检不会自动创建丢失的项目。借用的resolver/prompt renderer生命周期由调用方管理，不读取原账户或自动初始化模板服务。
+
+后续继续完整资源prompt服务、daemon会话动态配置/自动重启、环境及完整SDK输入/启动/鉴权、Hook服务端和AutoMode backend。统一默认审批时还须验证原policy allow与独立guard的边界，不能只因为可选路径测试通过就声明默认已等价。新增Web UI不计为这些原产品服务已恢复。

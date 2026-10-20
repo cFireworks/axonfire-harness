@@ -776,6 +776,7 @@ export async function createHarness(options: HarnessOptions) {
   async function waitForMemory(): Promise<void> { await memoryPending; await memory.waitForExtraction(); }
   const active = new Map<HarnessSession, Promise<string>>();
   const opened = new Set<HarnessSession>();
+  const openingSessionIds = new Set<string>();
   const queueSubscriptions = new Map<HarnessSession, Array<{ unsubscribe(): void }>>();
   const dispatchingQueue = new Set<HarnessSession>();
   const dispatchScheduled = new Set<HarnessSession>();
@@ -850,28 +851,36 @@ export async function createHarness(options: HarnessOptions) {
     },
   }) : undefined;
 
-  async function openSession(id?: string, config: { print?: boolean; permissionMode?: PermissionMode; jsonSchema?: string | Record<string, unknown>; outputFormat?: "text" | "json" | "stream-json" } = {}): Promise<HarnessSession> {
+  async function openSession(id?: string, config: { sessionId?: string; print?: boolean; permissionMode?: PermissionMode; jsonSchema?: string | Record<string, unknown>; outputFormat?: "text" | "json" | "stream-json" } = {}): Promise<HarnessSession> {
     if (closed) throw new Error("Harness is closed");
-    const session = id ? await sessions.get(id) : await sessions.create();
-    if (!session) throw new Error(`Session not found: ${id}`);
-    opened.add(session);
-    taskManager.setMainSession(session);
-    session.options.workDir = getWorkDir();
-    session.meta.cwd = getWorkDir();
-    session.options.print = config.print === true;
-    if (sdkControl) session.options.inputFormat = "stream-json";
-    if (options.model) session.options.model = options.model;
-    const overrideModel = sessions.getOverrideModel(session.id);
-    if (overrideModel !== undefined) session.requestOptions.model = overrideModel;
-    if (options.fallbackModel !== undefined) session.options.fallbackModel=options.fallbackModel;
-    if (config.jsonSchema ?? options.jsonSchema) session.options.jsonSchema = config.jsonSchema ?? options.jsonSchema;
-    if (config.outputFormat ?? options.outputFormat) session.options.outputFormat = config.outputFormat ?? options.outputFormat;
-    const restored = session.meta.standalonePermissionMode as PermissionMode | undefined;
-    session.permissionModeSubject.next(config.permissionMode ?? sessions.getOverridePermissionMode(session.id) ?? restored ?? PermissionMode.Default);
-    await sessions.emitSessionStart(session, id ? "resume" : "startup");
-    watchQueue(session);
-    cronScheduler.start(session);
-    return session;
+    if (config.sessionId !== undefined && (id !== undefined || !/^[a-zA-Z0-9_-]+$/.test(config.sessionId))) throw Error("Explicit new sessionId must be a safe identifier and cannot accompany resume");
+    if (config.sessionId !== undefined && openingSessionIds.has(config.sessionId)) throw Error("Session is already opening: " + config.sessionId);
+    if (config.sessionId !== undefined) openingSessionIds.add(config.sessionId);
+    try {
+      if (config.sessionId !== undefined && await sessions.get(config.sessionId)) throw Error("Session already exists: " + config.sessionId);
+      const session = id ? await sessions.get(id) : await sessions.create(config.sessionId ? {id:config.sessionId} : {});
+      if (!session) throw new Error(`Session not found: ${id}`);
+      opened.add(session);
+      taskManager.setMainSession(session);
+      session.options.workDir = getWorkDir();
+      session.meta.cwd = getWorkDir();
+      session.options.print = config.print === true;
+      if (sdkControl) session.options.inputFormat = "stream-json";
+      if (options.model) session.options.model = options.model;
+      const overrideModel = sessions.getOverrideModel(session.id);
+      if (overrideModel !== undefined) session.requestOptions.model = overrideModel;
+      if (options.fallbackModel !== undefined) session.options.fallbackModel=options.fallbackModel;
+      if (config.jsonSchema ?? options.jsonSchema) session.options.jsonSchema = config.jsonSchema ?? options.jsonSchema;
+      if (config.outputFormat ?? options.outputFormat) session.options.outputFormat = config.outputFormat ?? options.outputFormat;
+      const restored = session.meta.standalonePermissionMode as PermissionMode | undefined;
+      session.permissionModeSubject.next(config.permissionMode ?? sessions.getOverridePermissionMode(session.id) ?? restored ?? PermissionMode.Default);
+      await sessions.emitSessionStart(session, id ? "resume" : "startup");
+      watchQueue(session);
+      cronScheduler.start(session);
+      return session;
+    } finally {
+      if (config.sessionId !== undefined) openingSessionIds.delete(config.sessionId);
+    }
   }
 
   async function execute(session: HarnessSession, input: string | AgentInputItem[], promptOptions: PromptOptions): Promise<string> {

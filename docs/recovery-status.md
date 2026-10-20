@@ -17,7 +17,7 @@
 | ---: | ----------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |    1 | OpenAI Agents SDK | 完成                         | 精确锁定 `@openai/agents* 0.5.2`、`openai 6.25.0`；SDK 不重写                                                                                                                                                                                                                         |
 |    2 | Product config    | 100% 字节保留                | default/cloudhosted/internal/ioa/selfhosted/sandbox 六份原始 JSON；SHA 验证                                                                                                                                                                                                           |
-|    2 | ProductManager / providers | 原manager、merger及文件/模型provider默认接入 | 首批19类/112处AST/743次比较；文件/模型15类及helper为118处AST/263次比较。插件刷新队列与原SettingsManager/PluginPolicy现默认接入，seed物化/交接已接显式资源根；Cloud四类22成员/8常量/38次比较现已默认接入，认证/REST为显式边界；资源打包/会话addon和环境服务仍待补，不等于完整产品bootstrap |
+|    2 | ProductManager / providers | 原manager、merger及文件/模型provider默认接入 | 首批19类/112处AST/743次比较；文件/模型15类及helper为118处AST/263次比较。插件刷新队列与原SettingsManager/PluginPolicy现默认接入，seed物化/交接已接显式资源根；Cloud四类22成员/8常量/38次比较现已默认接入，认证/REST为显式边界；Addon核心与独立后端已恢复（见后文）；完整资源Prompt服务、daemon动态会话编排和环境服务仍待补，不等于完整产品bootstrap |
 |    2 | PluginManager / loaders / refresh | 完整核心类、市场、安装器和设置/策略主路径默认接入 | 首批14完整类含PluginManager194成员与七loader/事务/reload/style：294处AST/472次比较；市场/锁15类+19helper：129处AST/584次比较；Git/npm/subdir/Options/ErrorCollector5类：45处AST/120次比较。原PluginPolicy与Settings/CLI服务已默认连接，支持磁盘启停/卸载/重启及实时产品策略；资源seed/MCPB与完整产品控制器仍待补 |
 |    2 | Settings / PluginPolicy | 6完整类与原常量默认接入 | SettingsManager/Controller/ValidateMiddleWare、CliSettings/SettingSourcesProvider、PluginPolicy，另3个helper共66处完整AST、9个pure factory与94次有限行为比较；JSONC/作用域/缓存/损坏拒写/锁/Hook/CLI队列和策略事件保留。权限/MCP局部内存适配、完整路由bootstrap未据此宣称恢复 |
 |    2 | Builtin seed / plugin controller | 原物化与metadata交接链已接入 | 43个Desktop seed/复制函数、5个资源解析函数/7级候选、完整PluginController23方法及Validator/Error类：78处AST、12初始化表达式、113次有限比较。显式资源根启动接原manager事务/刷新；第三方二进制不分发，完整Electron/daemon/session-addon未据此标为恢复 |
@@ -767,3 +767,29 @@ CloudProvider原位删除远端endpoint/stagingEndpoint，再浅排除deployment
 REA对四类惰性片段再次分析，证据`ev_d040e81908e84846b52c594362210aa335501f03305da79a5b914e6f3c019f11`；750节点/每文件750节点、150unknown、45秒上限，semantic graph为partial/truncated。未执行原bootstrap。六份JSON、115原Prompt/memory policy摘要、SDK/OpenAI版本和依赖锁均未变。
 
 最新门槛：974核心、11Web、895编译JS smoke（821既有+23设置+29seed+22Cloud）、48组源码差分、check/build/config与实际CLI/Web启动全部通过。无原应用/bundle/旧node_modules的全新暂存快照重新npm ci/check/build，246项编译后Cloud/产品/插件/市场/设置/审批/seed测试及11项Web测试、CLI/Web实际seed/reload启动全部通过。发布审计585文件在所检查规则内无发现，不是安全证明；既有17项audit告警（10中危/7高危）不强制升级。后续继续资源prompt/会话Addon编排、权限/MCP专用settings消费者、环境服务与剩余产品启动/鉴权链；整体目标未完成。
+
+## Desktop 会话 Addon、模式配置与原 CLI 交接批次
+
+新增固定样本：`main/initialize.js` SHA-256 `528d3bffc67c5244d1a641e0cfc13c2be4ef7943c248b390125b76d70880ed19`，`main/workbuddy-auth-product-coordinator.js` SHA-256 `8624215504229c4b6190f5c2172da270e015cc96871e90b261786f047e4c6e78`。源码中的明确region证明Addon核心位于Desktop服务侧，不是CLI Agent loop。所有位置仍是对应文件UTF-16索引，由SESSION_MODE_FUNCTIONS/CLASSES/CONSTANTS及SESSION_ADDON_FUNCTIONS/CLASSES/CONSTANTS完整导出。verify额外样本可分别用WORKBUDDY_DESKTOP_INITIALIZE和WORKBUDDY_MODE_COORDINATOR指定；默认读取CLI旁main目录，不执行原bootstrap。
+
+完整移植DefaultModeHandler、ExpertModeHandler、ModeService三个类（coordinator变量声明`1070369..1071833`、`1072148..1073261`、`1073595..1074401`），CWD错误类及原预检；完整mode-tools-config/runtime-config、Storage plugin-context规范化、micro-scene/user-resource/work-mode packs、pack registry、session expander/composer/manifest、会话plugin-context投影、原runtime resolver/log-details、cli-runtime-args和prompt-vars文件/修复函数。另移植原Desktop SessionManager.resolveRuntimeConfig成员`4767659..4768528`连接resolver、manifest与expansion，不冒充已移植该大类全部方法。总计93完整函数、13类成员（含字段/constructor和该单独成员）、18初始化表达式，去除TS注解后独立AST一致；SDK依赖不改写。
+
+保留原决定：craft/ask/plan/expert工具名单完整（含Defer(...)、read_me/show_widget等），plan用craft prompt但plan权限，expert必须expertId；ModeService最后以非undefined显式输入覆盖handler返回，mcpConfig例外由handler优先。permissionMode只接受原五种，离开plan用permissionModeBeforePlan或bypass；welcome coding/working输入规范化为code/work，raw非空runtimeIdentity不trim返回。restartFingerprint只含结构字段，不含model/渲染日期/记忆。
+
+会话选型启用welcome/interaction/prompt-common，不把mode/template列入机器默认USER seed。原专家craft→expert选择、micro-scene未解析warning、project resource provenance、先到先得Addon ID去重、八种bucket、prompt仅摘要、sorted stable JSON/SHA且generatedAt不参与hash均保留。enabledPlugins摘要仅排除精确false（null也算启用）；合成时禁用未选中work-mode前缀插件，用户插件保留。持久化plugin context则仅保留boolean启停，trim/去重/排序并剔除派生模式；这两套语义不能合并成一套近似normalizer。
+
+原buildAgentCliRuntimeArgs只在work-mode承担prompt/tools时抑制旧参数；显式用户覆盖保留。allowedTools、permission/model、sessionSettings/trustedDirectories、language/envRouteMode、strict MCP与prompt-vars参数保留原顺序。根cwd的trustedDirectories原表达式会生成`//**`，没有擅自修正成`/**`。原session resolver还保留Claw路径比较失败不禁用支付插件、明确匹配时将weixinpay session-local置false；Claw目录查找由显式owned callback提供，不调用原会创建/修改系统默认workspace的全局服务。
+
+原prompt文件、prompt-vars写入/健康检查/修复与11109错误协议已接入：缺失/损坏JSON/shape/内容不匹配修复，目标必须canonical path，目录不可写、写失败和修复后仍不健康保留原reason。底层函数仅改fs/os/Date闭包DI；独立宿主将OS temp根重定向到本次state内随机目录。原异步cwd stat/access预检不替调用方创建丢失项目目录。
+
+新增明确标记的createSessionAddonHost与createAddonSession是独立宿主，不是原daemon进程池：每会话独占state/完整Settings/Product/Plugin/Agent实例，在原CLI scope应用合成设置，真实SDK消费原插件settings.agent和fragment composer。两个并行ask/craft实例经owned资源验证互不污染，不把mode写入USER。通过显式close/resume重建验证同ID模式变化后新prompt与既有历史；尚未恢复原pending配置排队、自动backend restart、ACP/pool或队列迁移。普通CLI/Web入口保持原standalone默认，新的Desktop风格入口目前是嵌入API。显式systemPrompt无需原资源；完整资源PromptService仍待恢复，可注入renderer，未提供时沿原fallback。
+
+权限边界必须明确：原craft/expert默认bypassPermissions会绕过standalone工具guard，这个默认被保留。真实SDK测试只对owned文件验证其写入行为，同时验证显式default拒绝同一写入；若需人工审批，应显式default。可信设置/插件Hook仍可自动执行，不是OS沙箱。后端state根canonical化，进程内同路径独占，拒绝session state symlink；不是跨进程daemon锁。borrowed resolver忽略取消时close等待settle，不擅自销毁外部PromptService。
+
+`verify:session-addons`为第49组源码差分，93函数/13类成员/18初始化项、204组有限原完整方法体/port比较；包含模式/权限/选型矩阵、manifest及CLI参数、存储context、resolver/Claw/变量、prompt-vars故障、cwd errno。18专项另验证真实SDK、并行mode插件、close/resume、明确bypass/default边界、原文件修复和显式新sessionId启动/并发防重。不是全daemon/生产账户/所有模式资源或全部并发状态空间100%。
+
+REA对93函数及相关类/初始化项的惰性派生片段分析，证据`ev_6c46f709037be3790dba543b7f4434d73cf2a3618aeb02a7e9b73cf88718f959`；750节点/每文件750节点、150unknown、45秒上限，semantic graph明确partial/truncated。六份JSON、115个原Prompt与memory policy摘要、SDK/OpenAI版本和依赖锁未变。
+
+本批编译后全量运行暴露旧fs.watch测试的不确定性：测试名为rename但用writeFile创建文件，change分支的3秒fake clock未推进。首次改真实rename及防抖驱动后，全量通过但干净快照仍超时，说明不能将其仅归因于防抖。现fixture在5秒内用真实rename探针等待实际OS投递进入原hotReload，再检查配置/关闭；记录投递event/filename以便无事件时诊断，不假设watch返回即完成OS就绪。防抖只推进测试自己的clock，不直接调用原performHotReload制造成功；原watcher与确定性时序测试均不改变。
+
+最新门槛：992核心、11Web、913编译JS smoke（821既有+23设置+29seed+22Cloud+18Addon）、49组样本源码差分、check/build/config及实际CLI/Web启动全部通过。最终不含原应用/bundle/旧node_modules的全新暂存快照重新npm ci/check/build，264项编译后Addon/Cloud/产品/插件/市场/设置/审批/seed及11项Web测试、CLI/Web实际seed/reload启动均通过；修正后的真实OS watcher测试另独立连续5次通过。早前失败快照和修复原因如上，不以某次重试绿灯掩盖旧fixture问题。发布审计592文件未发现所检查的凭据/运行文件，不是安全证明；既有17项audit告警保持不变。后续优先完整权限/MCP settings消费者、资源PromptService及daemon会话动态配置/自动重启、环境与鉴权链；整体目标仍未完成。

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { mkdtemp, writeFile, readFile, rm } from "node:fs/promises";
+import { mkdtemp, writeFile, readFile, rm, rename } from "node:fs/promises";
 import * as fs from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -753,6 +753,9 @@ test(
   async (t) => {
     const root = await owned(t),
       timers = new Map<any, { callback: () => void; ms: number }>();
+    const before = join(root, "owned-before.skill");
+    await writeFile(before, "owned");
+    const delivered: string[] = [];
     let revision = 0;
     const host = createNativeProductHost({
       initialConfiguration: { agents: [], models: [], tools: [], prompts: [] },
@@ -770,6 +773,22 @@ test(
         },
       },
       runtime: {
+        fs: {
+          ...fs,
+          watch(path: any, options: any, listener: any) {
+            return fs.watch(path, options, (event, filename) => {
+              delivered.push(event + ":" + String(filename));
+              listener(event, filename);
+              // Real OS delivery may coalesce as change. Drive the owned fake
+              // 3-second clock as well; leaving it frozen cannot test reload.
+              for (const [id, timer] of [...timers])
+                if (timer.ms === 3000) {
+                  timers.delete(id);
+                  timer.callback();
+                }
+            });
+          },
+        },
         setTimeout(callback: () => void, ms: number) {
           const id = {};
           timers.set(id, { callback, ms });
@@ -792,19 +811,42 @@ test(
       assert.equal(host.configWatch.isWatching(root), true);
       // Native watch intentionally unrefs; this test owns the ref while awaiting OS delivery.
       host.configWatch.watchers.get(root).ref();
+      let observed = false;
       const changed = new Promise<void>((resolve) => {
         const listener = host.configWatch.onDidHotReload(() => {
+          observed = true;
           listener.dispose();
           resolve();
         });
       });
-      await writeFile(join(root, "owned.skill"), "owned");
+      // fs.watch returning is not an OS delivery-ready handshake (notably on
+      // macOS). Use bounded real rename probes until a real event reaches the
+      // native watcher; never call performHotReload directly to manufacture it.
+      let from = before,
+        to = join(root, "owned.skill");
+      const deadline = Date.now() + 5000;
+      while (!observed && Date.now() < deadline) {
+        await rename(from, to);
+        [from, to] = [to, from];
+        await new Promise<void>((resolve) => setTimeout(resolve, 25));
+      }
+      assert.ok(
+        observed,
+        "No native OS reload: " +
+          JSON.stringify({
+            delivered,
+            timers: [...timers.values()].map((t) => t.ms),
+            watching: host.configWatch.isWatching(root),
+          }),
+      );
       await changed;
       await host.flush();
       assert.equal(
         host.manager._configuration.skills[0].description,
-        "revision:1",
+        "revision:" + revision,
       );
+      assert.ok(delivered.length > 0);
+      assert.ok(revision > 0);
     } finally {
       await host.close();
     }
