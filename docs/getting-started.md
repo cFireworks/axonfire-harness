@@ -46,7 +46,7 @@ Web 的 `--cwd` 指定工具工作目录：`npm start -- --cwd /absolute/path/to
 
 ## 原生 MCP（嵌入 API）
 
-最新门槛见[还原状态](recovery-status.md)末尾。完整原MCP类群、ProductManager、文件/模型providers及企业模型策略已接入。插件loader、active snapshot提交和完整刷新事务、本地/Git/HTTP/ZIP市场与市场存储/文件锁/更新检查现已接入。Git/npm/subdir安装器、原OptionsStorage/ErrorCollector、SettingsManager和PluginPolicy现默认接入；内置seed/controller/validator已接显式资源根。权限/MCP/SDK设置消费者和Cloud product核心现已接入；真实账户、资源PromptService与完整产品bootstrap仍待补；原环境核心及两个providers已接入，不能据此宣称所有产品链路完成。
+最新门槛见[还原状态](recovery-status.md)末尾。完整原MCP类群、ProductManager、文件/模型providers及企业模型策略已接入。插件loader、active snapshot提交和完整刷新事务、本地/Git/HTTP/ZIP市场与市场存储/文件锁/更新检查现已接入。Git/npm/subdir安装器、原OptionsStorage/ErrorCollector、SettingsManager和PluginPolicy现默认接入；内置seed/controller/validator已接显式资源根。权限/MCP/SDK设置消费者和Cloud product核心现已接入；真实账户、完整UserPromptService与产品bootstrap仍待补；原环境核心及两个providers、资源PromptService和九collector已接入，不能据此宣称所有产品链路完成。
 
 普通嵌入调用可在已有模型配置上添加：
 
@@ -245,15 +245,49 @@ try { console.log(await backend.prompt('概述当前项目')); }
 finally { await backend.close(); }
 ```
 
-这是显式用户prompt，不需要原应用资源。若要原mode/template插件合成，移除显式systemPrompt/tools，在desiredConfig设置`welcomeMode:'code'`和`mode:'ask'`等；同时经`harness.nativePlugins.builtinSeed.assetsRoot`提供你有权使用的可信资源根（含plugins/workbuddy-builtin）。原registry选择welcomemode/interactionmode/prompt-common，原settings.agent与fragment composer负责实际Agent prompt。仓库不分发整套第三方资源，未配置的模式插件不会凭空生成。`addons.systemPromptService`可接自己的renderSystemPrompt/collectSystemPromptVariables；未提供时沿原fallback配置，不冒充已恢复全部Desktop模板服务。
+这是显式用户prompt，不需要原应用资源。若要原mode/template插件合成，移除显式systemPrompt/tools，在desiredConfig设置`welcomeMode:'code'`和`mode:'ask'`等；同时经`harness.nativePlugins.builtinSeed.assetsRoot`提供你有权使用的可信资源根（含plugins/workbuddy-builtin）。原registry选择welcomemode/interactionmode/prompt-common，原settings.agent与fragment composer负责实际Agent prompt。仓库不分发整套第三方资源，未配置的模式插件不会凭空生成。`addons.systemPromptService`可接自己的renderSystemPrompt/collectSystemPromptVariables；未提供service/resolver时现默认创建原资源PromptService（见下节），`resourcePrompts:false`可显式保留旧fallback边界。
 
 重要：沿原模式默认值，craft/expert的permissionMode是`bypassPermissions`，会绕过standalone工具审批guard；若要审批，请像示例一样显式指定`permissionMode:'default'`。ask默认default，plan默认plan；plan之前的权限也须关注permissionModeBeforePlan。可信插件/设置的Hook可以自动执行，任何模式均不是OS沙箱。
 
-返回`harness/session/runtimeConfig/manifest/cliArgs/owner/tempDir/prompt/close`。`manifest`只存prompt长度/hash而非正文，但settings和工具参数仍可能敏感，不要把完整cliArgs/config写到公共日志。sessionId默认UUID，可显式指定安全标识符；`resume:true`要求之前已有持久化会话。模式变化目前应close旧后端，再用同一sessionId/resume重建；这条显式路径经真实SDK验证，但不冒充原daemon的pending配置排队/自动重启/消息队列迁移。
+返回`harness/session/runtimeConfig/manifest/cliArgs/owner/resourcePromptHost/tempDir/prompt/close`。`manifest`只存prompt长度/hash而非正文，但settings和工具参数仍可能敏感，不要把完整cliArgs/config写到公共日志。sessionId默认UUID，可显式指定安全标识符；`resume:true`要求之前已有持久化会话。模式变化目前应close旧后端，再用同一sessionId/resume重建；这条显式路径经真实SDK验证，但不冒充原daemon的pending配置排队/自动重启/消息队列迁移。
 
 原CLI参数生成会抑制由work-mode插件承担的旧system-prompt/tools，显式用户覆盖仍透传。会话设置请放在desiredConfig.sessionSettings；生成的CLI settings会覆盖harness.nativeSettings.cliOptions.settings。CLI scope启用选中插件、禁用旧模式，不持久化到USER；显式自定义plugin settings/manager来源需自行完成等价接线。netdrive依赖、micro-scene和项目资源在manifest中是声明/来源记录，不据此自动建立MCP连接；未解析micro-scene会记录warning。
 
 原prompt-vars临时文件写入、健康检查与11109错误协议已恢复，wrapper每次prompt前检查/修复；关闭仅删除本次随机owned临时目录，保留会话/插件state。外部systemPromptService/resolver是借用adapter，不由该host擅自cleanup；忽略取消的外部Promise需自行settle，close会等待它。公开的底层harness仅供嵌入调试，直接调用其prompt会绕过wrapper的文件健康检查；不要在同一后端创建额外公共会话来模拟模式隔离。
+
+### 原资源 PromptService（独立接口）
+
+`createAddonSession`在未给`addons.resolver/systemPromptService`时，默认拥有一个原资源PromptService，收集变量交给原resolver与prompt-vars文件，并按原resolveCliSettingsLanguage把语言交给CLI scope。状态位于`<stateRoot>/.resource-prompts/`；关闭保留身份/记忆，只释放本次服务、timer、请求/代理socket、Git探测和临时prompt文件。该内部目录拒绝symlink。`resourcePrompts:false`显式禁用；自定义service/resolver仍借用、不被自动cleanup。
+
+独立使用（不需要原应用）：
+
+```js
+import { createResourcePromptHost } from '@axonfire/harness/prompts/resource-prompt-host.js';
+const prompts = await createResourcePromptHost({
+  stateDir: '/absolute/path/to/owned-prompt-state',
+  getWorkDir: () => '/absolute/path/to/project',
+  locale: 'zh-CN',
+  // productManager: application.productManager, // 可显式借用live产品视图
+});
+try {
+  const request = { mode: 'ask', cwd: '/absolute/path/to/project', modelId: 'your-model' };
+  const systemPrompt = await prompts.service.renderSystemPrompt(request);
+  const variables = await prompts.service.collectSystemPromptVariables(request);
+  const userContext = await prompts.service.renderUserContext(request);
+} finally { await prompts.close(); }
+```
+
+默认产品来源是固定原product快照，不冒充完整Desktop应用的全局ProductManager；要消费动态产品/feature/model目录，请显式传入同一live productManager。默认无账户、无token、无BinaryManager，不扫描安装环境。可显式提供`auth`（getAccount/getToken）、`authentication.buildAuthHeaders`和`binaryManager.generatePromptContext`；它们仍是借用adapter，完整登录与二进制安装服务未完成。默认注册类型为样本python/node，扩展adapter可提供getRegisteredBinaryTypes。
+
+资源为`config/desktop-prompts/`的15份tpl+7份style，与115份product prompts分开逐字节校验。原kind/fallback、autoescape:false、scene优先于expertId、九collector顺序均保留。`templatesDir`只能指向可信模板。style/customPrompt/身份内容并非全部进入system prompt：原renderUserContext供首条用户上下文使用。完整WorkbuddyUserPromptService（first-turn/clear/meta、Teams、Connector、additional-data等）的实际SDK消息编排仍未接入；**不要把这三个独立渲染方法和变量文件可用当作首条隐藏上下文链已完整恢复**。work-mode插件抑制旧system-prompt的规则不改写，原插件合成仍需显式可信assetsRoot，不会因新增tpl就生成整套插件。
+
+平台home映射为`<prompt-state>/home`；默认身份/归档根为`home/.workbuddy`，app配置为`home/.workbuddy/app/app-config.json`，与CLI的四scope SettingsManager不是同一存储。WORKBUDDY_CONFIG_DIR等仅消费显式env；不读取真实home/安装账户。身份首次渲染会按原wx写默认SOUL/IDENTITY/USER/BOOTSTRAP及workspace-state；删除BOOTSTRAP会完成onboarding且不再自动补种。默认文件内容保持原文。项目MEMORY.md读取沿会话cwd，用户级读取沿owned home；桥拒绝越界symlink，但不是OS沙箱。
+
+原云记忆优先读本地memory归档、再legacy memery（原迁移写链含mutex/文件锁、版本守卫、backup/tmp/rename）。UID存在时本地档案可在无token下使用。远端fallback需要显式auth和allowedOrigins，同时目标/代理origin必须列出；默认即使传了token也不请求生产fallback。实际请求仍沿原/api/memory/profile、buildAuthHeaders/Bearer优先级、5秒timeout与JSON分支；响应流错误和关闭由独立资源桥转交原error分支收敛。不要把此桥称为原CellJS/PAC/企业HTTP实现。
+
+缓存原语义：同configDir+uid的pending Promise复用；本地/空结果1秒，非空远端30秒；远端空值/失败另设30秒cooldown，1秒后仍重读可能新增的本地归档。normal/expert身份差异、stale expertId对vars的影响、内存8k/4k和身份/云记忆/二进制10k的UTF-16截断及原提示文案均保留。`disableLocalSkillsMemory`不关闭云记忆；`generateMemoryEnabled:false`才关闭该collector。所有比例均不是整体功能覆盖率。
+
+默认每个独立Addon后端拥有自己的渲染器/cache，多个后端共享owned磁盘身份；原应用单例与跨会话缓存所有权尚未等价。需要应用级共享时，显式创建一个host并将其service借给各Addon，关闭在外层统一负责。此接口不提供全部app-config UI、身份变更自动重启或完整daemon生命周期。
 
 ### Cloud 产品配置（嵌入接口）
 

@@ -78,7 +78,9 @@
     "verify:settings-consumers": "node --import tsx scripts/verify-settings-consumers-recovery.ts",
     "smoke:settings-consumers": "node --test dist/test/settings-consumers-runtime.test.js",
     "verify:product-environment": "node --import tsx scripts/verify-product-environment-recovery.ts",
-    "smoke:product-environment": "node --test dist/test/product-environment-runtime.test.js"
+    "smoke:product-environment": "node --test dist/test/product-environment-runtime.test.js",
+    "verify:resource-prompts": "node --import tsx scripts/verify-resource-prompts-recovery.ts",
+    "smoke:resource-prompts": "node --test dist/test/resource-prompts-runtime.test.js"
   },
   "dependencies": {
     "@openai/agents": "0.5.2",

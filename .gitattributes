@@ -1,0 +1,3 @@
+# Captured assets are byte-verified; preserve original line endings and final blank lines.
+packages/harness/config/original/** -text
+packages/harness/config/desktop-prompts/** -text whitespace=-blank-at-eof

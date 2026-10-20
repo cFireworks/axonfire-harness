@@ -8,6 +8,10 @@ import {
 } from "../sessions/session-addon-host.js";
 import { PermissionMode } from "../permissions/permission.js";
 import { createNativeSessionAddons } from "../sessions/native-session-addons.js";
+import {
+  createResourcePromptHost,
+  type ResourcePromptHostOptions,
+} from "../prompts/resource-prompt-host.js";
 const activeStates = new Set<string>();
 /** One independently owned backend per Desktop-style session. Not a daemon replacement.
  * Trusted settings/plugins can execute Hooks. Native craft/expert default to
@@ -20,6 +24,9 @@ export async function createAddonSession(options: {
   resume?: boolean;
   desiredConfig: any;
   addons?: SessionAddonHostOptions;
+  resourcePrompts?:
+    | Omit<ResourcePromptHostOptions, "stateDir" | "getWorkDir">
+    | false;
   language?: string;
   envRouteMode?: string;
 }) {
@@ -47,7 +54,10 @@ export async function createAddonSession(options: {
     tempDir: string | undefined,
     closing: Promise<void> | undefined,
     closed = false;
-  const owner = createSessionAddonHost(options.addons);
+  let owner = createSessionAddonHost(options.addons);
+  let resourcePromptHost:
+    | Awaited<ReturnType<typeof createResourcePromptHost>>
+    | undefined;
   activeStates.add(stateDir);
   let native = owner.native,
     systemPromptFile: string | null = null,
@@ -55,11 +65,13 @@ export async function createAddonSession(options: {
   async function close() {
     return (closing ??= (async () => {
       closed = true;
+      const promptClosing = resourcePromptHost?.close();
       try {
         await harness?.close();
       } finally {
         try {
           await owner.close();
+          await promptClosing;
           native.cleanupAgentCliSystemPromptFile(systemPromptFile);
           native.cleanupAgentCliPromptVarsFile(promptVarsFile);
           if (tempDir) await rm(tempDir, { recursive: true, force: true });
@@ -70,6 +82,38 @@ export async function createAddonSession(options: {
     })());
   }
   try {
+    if (
+      options.resourcePrompts !== false &&
+      !options.addons?.resolver &&
+      !options.addons?.systemPromptService
+    ) {
+      const promptStateDir = join(canonicalRoot, ".resource-prompts");
+      if (
+        await lstat(promptStateDir).then(
+          (s) => s.isSymbolicLink(),
+          (e) => {
+            if (e.code === "ENOENT") return false;
+            throw e;
+          },
+        )
+      )
+        throw Error("Addon resource prompt state cannot be a symlink");
+      resourcePromptHost = await createResourcePromptHost({
+        ...options.resourcePrompts,
+        stateDir: promptStateDir,
+        getWorkDir: () => cwd,
+        env:
+          options.resourcePrompts?.env ??
+          options.harness.productRuntime?.env ??
+          {},
+      });
+      await owner.close();
+      owner = createSessionAddonHost({
+        ...options.addons,
+        systemPromptService: resourcePromptHost.service,
+      });
+      native = owner.native;
+    }
     const runtimeConfig = await owner.resolve({
       sessionId,
       cwd,
@@ -92,7 +136,7 @@ export async function createAddonSession(options: {
       cwd,
       systemPromptFile,
       promptVarsFile,
-      language: options.language,
+      language: options.language ?? resourcePromptHost?.resolveCliLanguage(),
       envRouteMode: options.envRouteMode,
     });
     const cliOptions: any = {
@@ -161,6 +205,7 @@ export async function createAddonSession(options: {
       manifest: runtimeConfig.addonManifest,
       cliArgs,
       owner,
+      resourcePromptHost,
       tempDir,
       async prompt(
         input: Parameters<typeof backend.prompt>[1],

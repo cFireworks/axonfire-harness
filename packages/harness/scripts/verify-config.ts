@@ -6,6 +6,7 @@ import {
   verifyDefaultConfiguration,
 } from "../src/config/product-config.js";
 import { loadMemoryPolicy } from "../src/memory/memory-extraction-prompts.js";
+import { verifyDesktopTemplateAssets } from "../src/prompts/desktop-template-assets.js";
 
 const files = {
   default: "product.json",
@@ -28,4 +29,6 @@ for (const [name, filename] of Object.entries(files)) {
 
 const result = await verifyDefaultConfiguration();
 await loadMemoryPolicy();
-process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+process.stdout.write(
+  `${JSON.stringify({ ...result, desktopTemplates: verifyDesktopTemplateAssets() }, null, 2)}\n`,
+);
