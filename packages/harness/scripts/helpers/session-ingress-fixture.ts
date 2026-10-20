@@ -42,7 +42,10 @@ export function sessionIngressFixture(
     },
   };
   const lifecycle = createNativeAcpLifecycle({
-    modules: { 92537: { Subject }, 47005: { BODY_MIDDLEWARE_PRIORITY: 200 } },
+    modules: {
+      92537: { Subject },
+      47005: patch.httpModule ?? { BODY_MIDDLEWARE_PRIORITY: 200 },
+    },
   });
   const services = createNativeAcpServices({
     modules: {

@@ -27,7 +27,7 @@ const controller = new native.AgentController();
 
 工厂返回这 4 个类，错误类/helper 保持其原声明作用域。缺少依赖会明确失败，不会补空权限服务或“已登录”账户。一个父 runtime 应复用一个工厂闭包；每请求新建闭包会重置原类共享 `setupFired`，不是源语义。该接口不是新的默认 CLI/Web 启动器。
 
-原 route 元数据为 `GET /internal/agent/models → getModels`、`POST /internal/agent → run`，POST 的 Body 参数是 0、Header 参数是 1；验证不执行 decorator。这里只记录/恢复入口代码，**没有新增 listener**。真实 HTTP path resolver、matcher、request context、连接 guard、安全 token 与认证仍需父 runtime 统一接线。不要把内部控制器暴露为无认证公网 API。
+原 route 元数据为 `GET /internal/agent/models → getModels`、`POST /internal/agent → run`，POST 的 Body 参数是 0、Header 参数是 1；验证不执行 decorator。这里只记录/恢复入口代码，**没有新增默认 listener**。原 HTTP path resolver、matcher、真实 CLS request context 与 MVC 核心现已另行恢复，并在自有 loopback HTTP 中实际接通，见[HTTP 核心](native-http.md)；连接 guard、安全 token、真实认证和父应用默认启动仍须统一接线。不要把内部控制器暴露为无认证公网 API。
 
 ## 原行为保留
 
@@ -51,4 +51,4 @@ npm run verify:session-ingress -w @axonfire/harness -- /absolute/path/codebuddy.
 
 源码验证对全部完整声明/类体、静态配置、自引用、模块绑定、route 和参数位置核对 AST；参考侧只执行经校验的原惰性声明。44 组有限行为差分覆盖以上主要分支；另 2 项测试运行完整原 ACP Agent，验证匿名认证以及初始化失败在 REST/new-session rendezvous 之前拒绝。认证初始化和会话服务在这些组件测试里是明确的 owned doubles，不是原产品账户实现；没有读取账户、发生产请求或伪造登录成功。
 
-本文件对应入口组件测试中的 SessionManager 仍是明确的 in-memory double，不冒充原实现。完整原 CLI Manager/Store 现已另行恢复并通过真实 SDK 集成，见[原生会话栈](native-session-stack.md)。已确认其同 ID 合并/异 ID 完成旧 subjects、空 meta 冷恢复等与现有独立宿主不同；只有继续接通原 AgentService、父 HTTP Context 和 Agent.setSession/View handshake 后，才能把这些入口称作完整新会话父 runtime。默认 CLI/Web、已有 ACP ViewHost、115 product prompts/22 Desktop 文本/6 JSON、SDK 依赖均未改写。
+本文件对应入口组件测试中的 SessionManager 仍是明确的 in-memory double，不冒充原实现。完整原 CLI Manager/Store 已另行恢复，见[原生会话栈](native-session-stack.md)。后续 HTTP 集成已实际组合完整原 ingress/AgentService/Manager/Store/Runner，支持真实 SDK Read 与全新 Manager 的空 meta 磁盘冷恢复，不预加载会话。但测试 JSON view 不是原 AcpView，Agent.setSession/View 新会话 handshake、真实认证/父 bootstrap 尚未接通，仍不能称完整默认父 runtime。默认 CLI/Web、已有 ACP ViewHost、115 product prompts/22 Desktop 文本/6 JSON、SDK 依赖均未改写。

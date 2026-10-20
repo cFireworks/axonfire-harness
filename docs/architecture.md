@@ -16,6 +16,8 @@
 
 Web 使用单运行槽以避免用户在同一进程对多个会话并发修改共享运行状态；不是多用户服务。固定 IPv4 loopback 地址，拒绝其它 Host / Origin，写接口需要随机 CSRF token，不返回 API key、不序列化上游异常。默认工具审批只能保护当前宿主边界，不等同于原产品完整 ToolPermissionService 或 OS 隔离。
 
+原 HTTP/MVC/CLS 核心现由 `http/native-http-runtime` 提供 35 完整类、39 完整 factory 与 6 个原配置键；`createNativeHttpHost` 为完整原 async_hooks namespace 提供独立 process facade、真实 Node hooks 和显式关闭屏障，不污染进程真实 namespace registry。真实 owned Node HTTP 已连接原路由/参数/View resolver、完整原 ingress/AgentService/Manager/Store/Runner 和固定 SDK，覆盖 Read、全新 Manager 磁盘冷恢复及模型回调逐请求 CLS。JSON view/pipe/认证外缘仍为明确测试适配器；默认 Web listener 未替换，完整 AcpView 新会话 handshake、真实认证和父 bootstrap 未完成。见[HTTP 核心与边界](native-http.md)。
+
 结果分派默认使用完整原 `InterruptionService.waitFor`，与 SessionManager 的 stream/history/gate 消费者分开。默认/非默认 Agent、headless、错误收尾和 Stop 续跑由原方法驱动；主 prompt 不再补发 Stop。独立宿主仅增加历史刷盘与异步续跑发布 barrier。较早报告中将该剩余分派归为 SessionManager 的表述已在还原状态中纠正。
 
 完整InterruptionService（原构造器及32个成员）、ToolAlwaysApprovalService和BackgroundTaskToolApprovalService现已直接移植。`nativeApprovals: true`将原approve/reject、queue、handleInterruptions、SDK permission request/denial与callbacks接到同一结果所有权桥接；不修改原方法体的批准/拒绝/compaction/channel race分支。独立宿主额外跟踪原fire-and-forget run与早期Deferred拒绝，并等待sole stream consumer刷盘。CLI/Web的默认兼容控制器暂时保留，不能将开发者路径与默认路径混为一谈。

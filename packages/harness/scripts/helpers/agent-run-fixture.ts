@@ -28,7 +28,9 @@ export async function agentRunFixture(
   factories = agentRunFactories,
   patch: any = {},
 ) {
-  const f = await sessionStackFixture(),
+  const f = await sessionStackFixture(undefined, {
+      httpModule: patch.httpModule,
+    }),
     calls: any[] = [],
     scheduled: Array<() => Promise<any>> = [],
     env: any = { ...patch.env },

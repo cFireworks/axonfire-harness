@@ -36,7 +36,9 @@ export async function sessionStackFixture(
     cwd = path.join(root, "cwd");
   await io.mkdir(project, { recursive: true });
   await io.mkdir(cwd);
-  const ingress = sessionIngressFixture(),
+  const ingress = sessionIngressFixture(undefined, {
+      httpModule: patch.httpModule,
+    }),
     calls: any[] = [],
     logs = ingress.logs,
     pending = new Set<Promise<any>>(),
@@ -93,7 +95,7 @@ export async function sessionStackFixture(
     16928: path,
     94317: { AsyncLocalStorage },
     18553: sdk,
-    47005: {
+    47005: patch.httpModule ?? {
       AttributeScope: { Request: scope },
       Context: {
         getAttr(key: any, requested: any) {

@@ -1059,3 +1059,21 @@ REA 6.7.0对native-runner/host两文件的静态证据为`ev_d74ffcc1a6cc4fa99e8
 仓库分层与开箱即用CLI/Web命令保持，smoke:native-runner纳入根smoke与CI，公开嵌入接口见[Runner创建链](native-runner.md)。这次切换仅限Runner，不等于完整原生父runtime完成。下一步是父HTTP Context→SessionMiddleWare→controller→Agent.setSession/View rendezvous、父资源所有权与真实认证/网关入口；Desktop HistoryStore、daemon自动重启、Ask/Plan回放、request-send服务与Docs仍未完成，整体目标继续进行。
 
 最终门槛：check/build、1460核心+11Web、1381项编译JS smoke、62组源码/行为校验、原配置字节与真实CLI/Web seed/reload启动均通过。修正fixture依赖后61/62组重新成对校验通过；宿主immediate直接执行原async同步前段的受控测试也通过，不额外加微任务。无原应用/bundle/旧node_modules的暂存快照重新npm ci/check/build，并在最终源码版本的build成功后顺序执行全部1460项编译核心测试、11项Web、配置和CLI/Web实际启动，均通过。115 product prompts、6 JSON、22 Desktop资源（304358字节）及SDK固定版本未改。发布审计720文件，在所检查的凭据/运行文件规则内无发现，不是安全证明；既有17项依赖告警（10中危/7高危）保留。
+
+## 2026-10-21：原 HTTP / MVC / CLS 与真实请求执行链
+
+固定 CLI SHA 不变。新增 native-http-runtime：35 个完整主要类、75 成员、37 完整声明、2 个 CJS 常量赋值，覆盖 middleware/dispatcher/chain/mapping/matcher/path、trace、5 个错误类、MVC route builder/provider/adapter、8 个参数 resolver、3 个响应 resolver 与 View resolver/provider。另恢复39个完整惰性factory，包括Base/Web Context、Node async_hooks CLS及emitter-listener/shimmer、UrlPattern、compose、Deferred、Prioritizeable、metadata helpers、CustomError/ErrorUtil、URL/HTTP tokens/类型/headers等。factory内部类/原型方法不重复计入35类。6个Value注入键/绑定/目标属性独立核对，只恢复键不推断默认配置值。聚合模块仅为明确局部投影，未执行DI decorators/应用bootstrap/REST client，不冒充整个框架。
+
+保留原Request/Session/Application真值fallback、Application=0差异、缺HTTP Session抛错、Context.run返回undefined、runPromise无效返回留下context、destroyNamespace只tombstone不disable hook。保留compose顺序/重复next、正优先级过滤及provider缓存、path startsWith、正则match数组与负specificity导致regex routes被过滤的源缺陷。RouteProvider.init仍由父宿主显式调用，原方法不返回build Promise/没有catch，重复init更新route但Deferred仍保留首次结果。View默认值/headers修改、falsy model跳过渲染但仍响应、继承错误view、trace/end/skip顺序均按原类。UrlPattern原EmptyStatement用局部prettier-ignore保留，未放松AST核对。
+
+createNativeHttpHost为明确新增的DI/资源所有权桥：完整原CLS使用私有process facade/namespace registry和真实Node hooks，不触碰进程真实process.namespaces；支持项目Node22.19+，不恢复Node<8分支。run借用原namespace.runAndReturn，保留返回/同步异常/真实Promise上下文；close拒绝新任务、等待run返回的Promise、禁用自有hooks和释放namespace，构造失败也清理。原Context.run不变；借用listener/父服务/任意fire-and-forget任务不由此host自动拥有。
+
+第63组verify:native-http核对全部声明/类体/绑定/CJS导出/完整factory及6配置注入，32组有限组件差分和2组真实HTTP/SDK成对集成通过，共34项专项。原样本参考侧替换完整HTTP、AgentService/utilities、Runner片段，既有已验证session/ingress依赖共用；不执行原bundle bootstrap。自有随机loopback Node HTTP经原Context/CLS、RouteBuilder/RouteProvider.init、MVC参数/响应/View resolver和完整原SessionMiddleWare/Controller，连接完整原AgentService/Manager/Store/Runner/Provider与固定npm SDK，执行Read自有UTF-8文件→JSONL→续轮。冷模式新建完整原Manager、空current，直接从磁盘恢复；不预加载/补meta。模型回调实际读到各请求header为0/0/1，验证Read后续调用与下一请求CLS隔离；未授权capability请求在分派前403，不进入模型。
+
+JSON view/Node parser/pipe、权限/Hook/initialized/telemetry外缘为明确owned测试适配器，capability不是产品登录，JSON view不是原AcpView。共享fixture允许在原session/lifecycle factory初始化前注入真实HTTP模块，默认旧组件边界不变，不靠晚替换枚举掩盖原常量捕获。没有线上模型/账户/网关请求，没有读取已安装auth缓存；SDK继续保留npm依赖。
+
+REA 6.7.0对runtime/host两份惰性源码的证据为`ev_8f8888af45c45262d005a3ccb4af4f9a06b99e861e6e82afa97ef8930b2570da`，16361 AST nodes、2 parsed files、0 parse failures。750节点/每文件750、150unknown/每文件150、45秒限制下semantic仍partial/truncated；静态图不代替运行时整体证明。OpenAI Docs仅核对[SDK应用上下文与模型输入边界](https://developers.openai.com/api/docs/guides/agents/define-agents)，以固定样本/SDK为实现依据。
+
+保持apps/cli、apps/web、packages/harness、docs、scripts分层；smoke:native-http纳入根smoke/CI，嵌入接口与源行为见[HTTP核心](native-http.md)。默认CLI/Web仍可独立启动，未切换为完整原生父HTTP runtime。下一步是原Agent.setSession/AcpView新会话rendezvous、父资源所有权、实际AuthenticationManager/网关与完整bootstrap；Desktop HistoryStore、daemon重启、Ask/Plan回放、request-send服务和外部Docs等未完成，整体目标仍进行中。
+
+最终门槛：check/build、1494核心+11Web、1415项编译JS smoke、63组源码/行为验证、原配置字节与真实CLI/Web seed/reload启动均通过。暂存快照不含原应用/bundle/旧node_modules，重新npm ci/check/build成功后，在harness workspace顺序执行全部1494项编译核心测试；11项Web、配置和CLI/Web实际启动也通过。115 product prompts、6 JSON、22 Desktop资源（304358字节）与SDK固定版本不变。发布审计729文件，在所检查的凭据/运行文件规则内无发现，不是安全证明；既有17项依赖告警（10中危/7高危）保留。
