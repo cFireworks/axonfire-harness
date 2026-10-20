@@ -72,7 +72,7 @@ npm run verify:config
 npm run verify:recovery -- /absolute/path/to/codebuddy.js
 ```
 
-最新验证：775 项核心测试、10 项 Web 宿主测试、697 项编译后 smoke、41 组原样本差分通过。原 ProductManager 现默认驱动配置合并、动态 provider 与 Agent/命令刷新，支持 SDK 初始化 prompt/Agent 覆盖及原 MCP prompt renderer。完整权限服务和原审批控制器通过 `nativePermissions`、`nativeApprovals` 显式使用；`sdkControl` 或 `nativeMcp` 默认启用这两条 native 路径及原生 MCP 宿主。stdio / HTTP / SSE 使用显式配置，SDK MCP 通过 initialize 注册。CLI/Web 默认保留兼容审批宿主。配置中的 115 个原始 prompt 和固定哈希保持不变。详细边界见 [还原状态](docs/recovery-status.md)，安装与启动验证见 [使用说明](docs/getting-started.md)。
+最新验证：794 项核心测试、10 项 Web 宿主测试、716 项编译后 smoke、42 组原样本差分通过。原 ProductManager 默认驱动配置合并、动态 provider 与 Agent/命令刷新；现已接入原 CustomAgents/CustomCommands 文件发现、Models/CustomModels、模型解析/过滤及企业策略。支持 SDK 初始化覆盖、原 MCP prompt renderer，以及项目 `.codebuddy/agents/`、`commands/`、`models.json`（路径与缓存边界见使用说明）。完整权限服务和原审批控制器通过 `nativePermissions`、`nativeApprovals` 显式使用；`sdkControl` 或 `nativeMcp` 默认启用这两条 native 路径及原生 MCP 宿主。stdio / HTTP / SSE 使用显式配置，SDK MCP 通过 initialize 注册。CLI/Web 默认保留兼容审批宿主。配置中的 115 个原始 prompt 和固定哈希保持不变。详细边界见 [还原状态](docs/recovery-status.md)，安装与启动验证见 [使用说明](docs/getting-started.md)。
 
 本地工作台演示：
 

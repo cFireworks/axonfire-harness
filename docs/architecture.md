@@ -32,6 +32,12 @@ SDK控制协议现由原StdoutWriter、Permission/Hooks/McpMessage/Elicitation�
 
 原ProductManager、五种merge strategy及DefaultProductMerger、Client/Env/CLI options/SDK initialize/Plugins/MCP prompt/default providers、GzipUtils/MemoryLocalStorage和MCP prompt renderer已逐类移植。稳定与volatile配置分离，原provider优先级、同优先级反序、原finally同步队列/失败语义和480秒proxy过期/2秒节流不重写。压缩包的匿名provider constructor.name仍保持缩写，不能因可读类名命中原字符串prefetch名单而改变样本调度。
 
-ConfigWatch/McpWatch原类驱动缓存失效、CWD重绑与状态变化后的sync，独立host只负责自有FS/环境/缓存/定时器和发布关闭屏障。默认不加载原账户、远端产品配置或安装缓存。新快照同步更新同一个ProductConfiguration视图，ToolManager清描述缓存，CommandManager刷新，AgentManager监听原onDidChange重建；SDK初始化等待该重建。原插件完整刷新事务、其余Model/文件发现provider和SettingsManager磁盘服务不因该链路可运行就算完成。SDK instructions的职责参考[OpenAI Docs](https://developers.openai.com/api/docs/guides/agents/define-agents)，实际调用与生命周期仍按锁定0.5.2及真实SDK回归。
+ConfigWatch/McpWatch原类驱动缓存失效、CWD重绑与状态变化后的sync，独立host只负责自有FS/环境/缓存/定时器和发布关闭屏障。默认不加载原账户、远端产品配置或安装缓存。新快照同步更新同一个ProductConfiguration视图，ToolManager清描述缓存，CommandManager刷新，AgentManager监听原onDidChange重建；SDK初始化等待该重建。原插件完整刷新事务、Cloud product provider和SettingsManager磁盘服务不因该链路可运行就算完成。SDK instructions的职责参考[OpenAI Docs](https://developers.openai.com/api/docs/guides/agents/define-agents)，实际调用与生命周期仍按锁定0.5.2及真实SDK回归。
 
-下一批优先CustomAgents/CustomCommands原文件发现provider、Models/Agent-model providers和插件跨服务刷新事务，随后SDK输入/启动/鉴权、Hook服务端、AutoMode backend和SettingsManager持久化。统一默认审批时还须验证原policy allow与独立guard的边界，不能只因为可选路径测试通过就声明默认已等价。新增Web UI不计为这些原产品服务已恢复。
+CustomAgents/CustomCommands、Models/CustomModels、AgentModelResolver、AvailableModelsFilter、企业custom-model filter及Craft-to-cli同步现默认加入同一个ProductManager。原DirectoryScan、颜色、加载时变量与plugin变量完整方法，以及原模型能力目录/类型/策略常量的纯factory一并保留；目录数据不当作新SDK实现。SDK自定义model/provider边界参考[OpenAI Docs](https://developers.openai.com/api/docs/guides/agents/models)，实际API版本仍锁定0.5.2。
+
+`native-product-source-host`只负责owned路径、显式认证/REST/工作区适配器与生命周期：默认认证为空，不读取安装账号，也不调用真实企业服务。原企业策略core/CLI/disk/cloud类全部保留；匿名/个人/feature-off、远端检查、失败开放/旧拒绝保留由原方法决定，不以永远allowed的stub替代。默认user-home映射到本次state，policy缓存也不接原账号目录。原本不返回unsubscribe的Models.init订阅在宿主边界追踪；关闭时清订阅、interval/immediate、watch和inflight策略/磁盘任务。
+
+注意原AgentManager只淘汰plugin缓存：删除普通Agent文件后，新product快照不再包含它，但先前注册过的非插件SDK Agent仍可能由get(name)取出。命令删除会刷新命令表。这个原样本行为保持不变，不能把文件发现已恢复表述为所有旧实例都被清理。
+
+下一批优先插件跨服务刷新事务及Cloud product/环境服务，随后SDK输入/启动/鉴权、Hook服务端、AutoMode backend和SettingsManager持久化。统一默认审批时还须验证原policy allow与独立guard的边界，不能只因为可选路径测试通过就声明默认已等价。新增Web UI不计为这些原产品服务已恢复。

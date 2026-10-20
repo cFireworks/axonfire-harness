@@ -707,7 +707,8 @@ test("owned product close waits pending provider and suppresses post-close publi
     ],
   });
   const start = host.start();
-  while (!entered) await Promise.resolve();
+  // Filesystem-backed providers must be allowed to complete I/O before this provider.
+  while (!entered) await new Promise<void>((resolve) => setImmediate(resolve));
   const close = host.close();
   pending.resolve();
   await Promise.all([start, close]);

@@ -3,6 +3,10 @@ import * as fs from "node:fs";
 import { BehaviorSubject } from "rxjs";
 import { createNativeProductWatchers } from "./native-product-watchers.js";
 import { ProductProviderPriority } from "./native-product-constants.js";
+import {
+  createNativeProductSourceHost,
+  type NativeProductSourceOptions,
+} from "./native-product-source-host.js";
 
 export type NativeProductHostOptions = {
   initialConfiguration: any;
@@ -24,6 +28,7 @@ export type NativeProductHostOptions = {
   cwdService?: any;
   serverModelManager?: any;
   watchDependencies?: Record<string, any>;
+  sources?: NativeProductSourceOptions;
 };
 /** Owns DI, publication and shutdown only; provider/merge/cache decisions remain native. */
 export function createNativeProductHost(options: NativeProductHostOptions) {
@@ -245,6 +250,15 @@ export function createNativeProductHost(options: NativeProductHostOptions) {
     plugins: options.plugins,
     ...options.watchDependencies,
   });
+  const sourceHost = createNativeProductSourceHost({
+    runtime,
+    productManager: facade,
+    productMerger: merger,
+    logger,
+    watch: options.watch,
+    sources: options.sources,
+  });
+  providers.push(...sourceHost.providers);
   const watcherClasses = createNativeProductWatchers(runtime),
     configWatch = Object.assign(new watcherClasses.ConfigWatchServiceImpl(), {
       logger,
@@ -274,11 +288,13 @@ export function createNativeProductHost(options: NativeProductHostOptions) {
     configWatch,
     mcpWatch,
     watcherClasses,
+    sourceHost,
     async start() {
       if (closed) throw Error("Product host is closed");
       if (!started) {
         started = true;
         manager.init();
+        sourceHost.start();
       }
       await manager.promise;
       await flushPublications();
@@ -289,6 +305,8 @@ export function createNativeProductHost(options: NativeProductHostOptions) {
       }
     },
     async flush() {
+      await drain();
+      await sourceHost.flush();
       await drain();
       await flushPublications();
     },
@@ -304,7 +322,9 @@ export function createNativeProductHost(options: NativeProductHostOptions) {
       manager.onDidChangeEmitter.dispose();
       for (const timer of timers) cancel(timer);
       timers.clear();
+      const sourceClosing = sourceHost.close();
       closing = (async () => {
+        await sourceClosing;
         await drain();
         manager.configuration.complete();
         if (!options.storage) storage.emitter?.dispose();

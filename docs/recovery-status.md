@@ -17,7 +17,7 @@
 | ---: | ----------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |    1 | OpenAI Agents SDK | 完成                         | 精确锁定 `@openai/agents* 0.5.2`、`openai 6.25.0`；SDK 不重写                                                                                                                                                                                                                         |
 |    2 | Product config    | 100% 字节保留                | default/cloudhosted/internal/ioa/selfhosted/sandbox 六份原始 JSON；SHA 验证                                                                                                                                                                                                           |
-|    2 | ProductManager / providers | 原manager、merger与首批provider完整类默认接入 | 19个完整原类、112处成员/函数AST、743次比较；stable/volatile、优先级、缓存/proxy throttle、SDK覆盖、插件组件/MCP prompt命令、文件与MCP状态watcher已接真实SDK。Cloud/Models/Agent-model及文件发现provider、插件完整刷新事务/环境服务和磁盘Settings仍待补，不等于完整产品bootstrap |
+|    2 | ProductManager / providers | 原manager、merger及文件/模型provider默认接入 | 首批19类/112处AST/743次比较；新增15类与变量helper共118处AST/263次比较及7个原纯factory。CustomAgents/Commands发现、Models/CustomModels、模型解析/过滤与企业策略默认接入，真实SDK验证文件刷新与本地模型HTTP。Cloud product、完整插件刷新事务/环境服务和磁盘Settings仍待补，不等于完整产品bootstrap |
 |    2 | Prompt registry   | 100% 内容保留                | 115 模板、284,899 Unicode code point；Nunjucks `autoescape:false`、编译缓存、失败回退                                                                                                                                                                                                 |
 |    2 | Tool registry | 47个不同名称均有handler | 原48条声明含一条重复Agent。新增WeChatReply/WeComReply与bridge，默认CLI声明不变；WeCom连接沿原逻辑补入已构造Agent内存tools。47/47只是名称覆盖，已有工具的客户端/宿主分支、动态缓存/插件等仍待补；不是整体100% |
 |    2 | AgentManager | 完整原类移植，68个非constructor方法结构对照 | eager构建/ready与models屏障、pending/force重建/指纹、CLI/handoff/asTool、模型继承/related/env、插件replace/volatile expert/settings优先级、MCP首轮等待/原生defer/权限门槛已恢复；74个原YAML模块factory逐字保留。独立host明确适配DI/Deferred/Emitter，不等于完整ProductManager/插件loader/工具索引热刷新服务 |
@@ -589,3 +589,28 @@ constructor.name是本批独立核查点。原manager用可读provider名称字�
 新增27项专项覆盖策略/循环/replace、gzip/cache晚到和finally失败、命名分支、proxy节流、feature prompt、原SDK/CLI/Env/Client provider、优先级、watch路由/EMFILE/Windows、取消与发布错误恢复。三条真实SDK链路验证initialize prompt/custom-agent确实进入模型请求、插件移除后的Agent/命令刷新、原MCP prompt经自有loopback HTTP回注；另用真正的owned fs.watch rename验证skill配置刷新，测试等待期间仅ref自有watcher，结束关闭。均不使用真实账号、外网模型、联系人或桌面。
 
 本批775核心、10Web宿主、697编译JS smoke、41组样本差分、check/build/config与CLI/Web实际启动通过；固定SDK/OpenAI、依赖锁、六份JSON/115 Prompt与memory policy保持不变。OpenAI Docs仅核对Agent instructions/运行时上下文边界，实际行为仍以锁定SDK与原样本为准。整体目标继续进行；下一批优先原CustomAgents/CustomCommands发现器、Models/Agent-model provider及插件刷新事务，再推进环境/SDK启动与剩余宿主服务，不以本批完整类群宣称整个harness已100%完成。
+
+## 文件发现、模型来源/解析与企业策略批次
+
+本批补齐上一批明确缺失的文件/模型provider，不替换SDK或六份原JSON。以下仍为固定SHA样本的UTF-16位移，不是字节位移。
+
+- 完整CustomCommandsProductProvider `9884646..9886370`、CustomAgentsProductProvider `9887502..9889624`、ModelsProductProvider `9908398..9911296`、CustomModelsProductProvider `15631247..15637656`。
+- 完整AgentModelResolverProvider `15242324..15243876`、AvailableModelsFilterProvider `15244778..15245391`、EnterpriseCustomModelPolicyFilterProvider `15215137..15216830`、CraftToCliAgentModelsSyncProvider `9883035..9883686`。8个provider默认加入同一个原ProductManager，不是只导出未使用类。
+- 完整EnterpriseCustomModelPolicyServiceImpl `15218023..15226745`、CliEnterpriseCustomModelPolicyServiceImpl `15205780..15209592`、PolicyDiskCacheImpl `15211363..15212558`、CloudEnterprisePolicyService `15212826..15214360`。CLI策略服务默认接入；Cloud服务完整类可显式使用，不冒充Cloud product provider已恢复。
+- 完整DirectoryScanUtils `13223474..13224875`、ColorUtils `13220744..13223330`、MissingPluginUserConfigError `9813953..9814156`。原Path四个目录方法、环境变量展开、两种加载时变量方法及13个plugin变量/环境/Hook配置函数一并恢复。简单frontmatter复用已恢复MemoryMarkdownUtils，完整YAML复用原74模块parser。
+
+模型能力目录与类型/策略常量保留原纯module factory：55119/66954/95198/47023/17489/90276的原文gzip保存在独立文件，解压后合成文本SHA-256 `914831e9049e5296cd6211bd03b0d15cb7b6a5b2e12c8220af1a5d30a6bcacea`；不是安装包或SDK代码副本。Ceph检测82005完整factory单独保留，并验证其AST。目录元数据是固定样本快照，不代表当前模型服务可用性或推荐。
+
+文件发现保留project后user数组顺序、嵌套命令冒号名、大小写敏感`.md`、canonical realpath、symlink循环去重、100深度上限与Ceph跳过；命令与Agent的两种frontmatter不能混用。加载时变量保留session占位到运行期，plugin敏感option在content中保留原提示，不泄露实际值。模型配置保留user/project两阶段merge、原disabled默认、custom-local前缀/alias、URL的replace symbol、env解析、能力补全和availableModels原列表规则；项目primitive列表可替换user列表，并非无条件union两层。
+
+企业模型接口保留480秒cache、30秒起指数退避/300秒上限、force绕过、旧成功结果fallback和chat模型反向unshift关系。Agent模型解析只按id/name，不按alias，variant置前、unknown保留、explicit限制与Craft补入按原逻辑。企业策略保留owner切换隔离、并发fetch合并、5分钟/30秒cache、1.5秒timeout、URL enterprise编码、401匿名不缓存、未知错误fail-open、旧denial的stale-cache、远端allowed变化触发sync和磁盘stale先回后刷新；不以永远allowed的policy stub代替。
+
+新source host只接owned路径、认证/REST/workspace适配器及资源所有权：默认认证为空，产品REST必须显式注入，不读取安装账号或原用户home。user路径默认重定向state；环境默认空，显式productRuntime.env才参与展开。跟踪原未保存的Models.init订阅、策略interval/immediate、queueMicrotask、watch与inflight策略/磁盘任务；close等待自有任务并阻止晚到sync。watch:false是明确的独立宿主选项，不改原provider的解析方法。
+
+保留一个重要原行为：普通Agent文件删除后，product快照不含其定义，但原AgentManager仅清plugin registry，已构建的非plugin SDK Agent可能仍由get(name)取出。测试明确断言该差异，不以修改原manager使测试“更合理”。命令更新/删除真实刷新命令表；原静态prompt registry数量与内容不变。
+
+`verify:product-sources`验证15个完整原类、变量函数与Path方法，共118处完整成员/函数AST；263次有限比较覆盖模型解析/过滤、成功/失败/force/cache/backoff、企业policy响应/时钟、实际临时文件及symlink/深度、frontmatter、变量/颜色、两层models.json与feature矩阵、policy filter/Craft同步。原完整方法体在同一显式DI边界执行，7个纯factory另做原文/AST核对；不是独立运行完整原bootstrap，也不是全状态空间100%。
+
+新增19项专项含真实SDK文件命令改写/刷新/删除、原Agent缓存行为、models.json经原WorkBuddyModelProvider到自有loopback Chat Completions SSE，以及真实models.json watch/debounce/close。所有文件/HTTP/账号/时钟均自有或fake，不访问原应用账户、真实企业/模型服务、联系人或桌面。
+
+本批794核心、10Web宿主、716编译JS smoke、42组样本差分、check/build/config与CLI/Web实际启动通过。SDK/OpenAI、依赖锁、六份JSON/115 Prompt与memory policy不变；旧依赖audit风险不因本批功能恢复消失。下一批优先插件跨服务刷新事务、Cloud product与环境服务，再推进SDK输入/启动/鉴权、Hook服务端、Auto classifier backend和SettingsManager持久化。核心方法/字符串的有限AST与差分结果不等于整个harness已100%恢复，整体目标继续进行。

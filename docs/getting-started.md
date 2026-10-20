@@ -46,7 +46,7 @@ Web 的 `--cwd` 指定工具工作目录：`npm start -- --cwd /absolute/path/to
 
 ## 原生 MCP（嵌入 API）
 
-最新门槛为775核心 + 10宿主、697编译smoke、41组样本差分。stdio / HTTP / SSE override、SdkMcpTransport / SdkMcpServer、底层manager和结果处理之后，现已接入完整顶层McpManager、ConfigManager/Store、连接/模型/权限/toggle、Ready/CLI配置初始化、环境展开/diagnostics与plugin registry类。ProductManager、MCP状态watcher和prompt命令已接入；产品插件加载器的完整刷新事务仍是后续边界。
+最新门槛为794核心 + 10宿主、716编译smoke、42组样本差分。stdio / HTTP / SSE override、SdkMcpTransport / SdkMcpServer、底层manager和结果处理之后，现已接入完整顶层McpManager、ConfigManager/Store、连接/模型/权限/toggle、Ready/CLI配置初始化、环境展开/diagnostics与plugin registry类。ProductManager、MCP状态watcher和prompt命令已接入；文件/模型providers及企业模型策略见文末。产品插件加载器的完整刷新事务仍是后续边界。
 
 普通嵌入调用可在已有模型配置上添加：
 
@@ -109,7 +109,17 @@ await harness.agents.waitForRebuildSettled(0);
 
 同步后的prompt/Agent/tool描述索引与命令表会刷新。SDK控制通道的initialize现可应用systemPrompt、appendSystemPrompt和自定义agents（每项须有description/prompt），仍按原字段，不把自定义Agents SDK接口冒充原JSONL协议。MCP prompt在连接后通过原provider转成命令，原renderer负责引号参数、角色/资源文本和剩余参数；必要时调用全量sync等待发现，不把volatile sync误当成刷新全部MCP prompt。
 
-`productRuntime.providers` 可附加显式provider（priority > 0，provide({force,current})；按需声明volatile）。默认接入原Client/Env/CLI options/SDK initialize/Plugins/MCP prompt/default provider，以及已有Skill provider和明确标记的宿主命令/skill选项适配器。完整Cloud/Models/Agent model与CustomAgents/CustomCommands文件发现provider尚未全部接入；文件watch到commands/agents变化不代表缺失的发现器已经实现。插件组件来源默认沿用显式agentManager.plugins，移除插件后重放volatile快照不会残留其Agent instructions或命令。
+`productRuntime.providers` 可附加显式provider（priority > 0，provide({force,current})；按需声明volatile）。默认接入原Client/Env/CLI options/SDK initialize/Plugins/MCP prompt/default provider、CustomAgents/CustomCommands、Models/CustomModels、Agent model解析/可用过滤/企业策略与Craft-to-cli同步，以及已有Skill provider和明确标记的宿主命令/skill选项适配器。Cloud product、完整环境/插件加载与原子跨服务刷新仍待补。插件组件来源默认沿用显式agentManager.plugins，移除插件后重放volatile快照不会残留其Agent instructions或命令。
+
+### 本地 Agent、命令与模型文件
+
+工作目录支持 `.codebuddy/agents/**/*.md`、`.codebuddy/commands/**/*.md` 和 `.codebuddy/models.json`。Agent采用完整YAML frontmatter，命令采用原简单frontmatter解析；不要假设两者对嵌套YAML的行为相同。子目录命令使用`dir:name`，执行时加`/`。新增目录可调用 `await harness.productManager.sync(true)` 显式刷新；已有受watch目录按原2秒初始化/3秒debounce规则刷新，models.json已有文件的独立watch使用1秒debounce。
+
+用户路径重定向到本次state，**不是系统home或已安装WorkBuddy**：Agent为`<state>/agents/`，命令为`<state>/commands/`；WorkBuddy模型默认为`<state>/.workbuddy/models.json`，可由原`config.customUserDataDir`覆盖。嵌入时可显式传`productRuntime.env.WORKBUDDY_CONFIG_DIR` / `CODEBUDDY_CONFIG_DIR`改变模型路径，并通过该owned env展开`${KEY}`/`${URL}`；此env默认空对象，不自动拷贝宿主环境或安装账号。原模型前缀feature开启时，本地id变为`custom-local:<id>`，原id保留为alias。
+
+企业来源仅通过`productRuntime.sources.authenticationManager`（含`currentSessionSubject`）与`restOperations.get`显式注入；原模型接口/策略URL、缓存与失败处理保持样本行为。默认无企业账号，永不从模型API key推断产品账号。策略磁盘缓存写入本次owned home下`.codebuddy/.policy-cache.json`，不是原应用缓存。`productRuntime.watch:false`禁用宿主watch，仍可手动sync。
+
+删除普通Agent文件会移除配置快照中的定义；原AgentManager已注册的非插件实例缓存仍可能残留，这是保留的样本行为。自定义模型文件可能包含密钥，请勿提交实际凭据。`models.json`不是安全沙箱或受信任来源验证器。
 
 缓存默认用本宿主独立的原MemoryLocalStorage；可用`productRuntime.storage`注入自己拥有的get/set及可选getSync。缓存保留原gzip/base64、稳定快照与版本key，不自动读取原应用的本地存储。`productRuntime.env`是显式拥有的配置环境对象，默认空；原Env provider可处理其中的ACC_PRODUCT_CONFIG等字段，不会自动扫描进程中可能包含账号的产品配置环境。模型API key仍使用原CLI/Web自己的配置，不映射为产品账号。
 
