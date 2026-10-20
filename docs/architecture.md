@@ -70,7 +70,7 @@ Desktop侧会话Addon链现有完整纯函数与ModeService三类、CWD错误类
 
 源craft/expert默认bypassPermissions，这会绕过现有standalone mutation guard；该默认被保留而非改成兼容策略，嵌入者如需审批应显式default。原prompt-vars写入/健康检查/11109修复方法在owned随机temp根运行，关闭保留state，只移除本次temp；工作目录预检不会自动创建丢失的项目。借用的resolver/prompt renderer生命周期由调用方管理，不读取原账户或自动初始化模板服务。
 
-后续继续UserPromptService到原SessionManager/ACP/SDK消息链的接线、daemon会话动态配置/自动重启及完整SDK输入/启动/鉴权、Hook服务端和AutoMode backend。统一默认审批时还须验证原policy allow与独立guard的边界，不能只因为可选路径测试通过就声明默认已等价。新增Web UI不计为这些原产品服务已恢复。
+后续继续完整SessionManager/RPC/回放、daemon会话动态配置/自动重启及完整SDK启动/鉴权、Hook服务端和AutoMode backend。统一默认审批时还须验证原policy allow与独立guard的边界，不能只因为可选路径测试通过就声明默认已等价。新增Web UI不计为这些原产品服务已恢复。
 
 环境核心现由原ProductEnvServiceImpl、ClientInternetEnviromentProductProvider、SettingsEndpointProductProvider及六个helper驱动；BooleanUtils完整类一并保留。原tl/td/eM类名、6000/6005顺序、10秒endpoint缓存、按环境永久JSON缓存、两套新旧变量优先级与switch吞sync异常语义不重写。ProductManager/环境/默认Cloud共用显式env对象；SDK initialize调用原switch，settings endpoint变化调用原sync，正常Agent发布路径负责重建。原环境JSON的endpoint可以后覆盖设置值，不能私自调优先级；六份原JSON不修改。
 
@@ -80,8 +80,14 @@ native-product-environment-host只负责只读路径/DI/订阅与Promise所有�
 
 原Desktop资源PromptRenderer/SystemPromptService及九collector现以完整12类/67成员、61函数/36初始化移植，runtime-context13声明、Node代理5个完整惰性CJS factory和22份模板文本分别固化；Nunjucks继续使用锁定依赖，差分另加载原24个compiler/runtime factory（不启动可选watcher）核对实际渲染。async helper绑定仅在外层接所有权observer，原函数/class body不改，legacy archive迁移的queueMicrotask和未await写入也会被close等待。
 
-Addon默认从该服务取原变量和CLI语言，显式custom service/resolver优先，普通CLI/Web仍为独立原入口。新host不是原全局应用单例：默认固定product快照/匿名/无BinaryManager，允许明确借用live product、auth和binary接口。用户目录、可写归档/身份根及请求/代理origin在外层限制，不读取安装账户。UserPromptService首条隐藏上下文/Teams/Connector/additional-data的完整声明与17个section已恢复为独立ACP宿主，仍未接到原SessionManager/SDK消息转换链；原daemon动态配置/重启、真实认证与BinaryManager服务仍未恢复。
+Addon默认从该服务取原变量和CLI语言，显式custom service/resolver优先，普通CLI/Web仍为独立原入口。新host不是原全局应用单例：默认固定product快照/匿名/无BinaryManager，允许明确借用live product、auth和binary接口。用户目录、可写归档/身份根及请求/代理origin在外层限制，不读取安装账户。UserPromptService首条隐藏上下文/Teams/Connector/additional-data的完整声明与17个section已恢复为独立ACP宿主，现经Addon.promptAcp接入原SessionManager的meta/首轮核心与CLI转换链；完整daemon/RPC/回放、动态配置/重启、真实认证与BinaryManager服务仍未恢复。
 
 `native-user-prompt`保留18个完整类（服务+17 sections）/91成员、141全函数和58初始化，所有恢复声明的AST与固定coordinator独立对照。`user-prompt-host`只承担DI、只读文件边界和生命周期，不把ACP blocks冒充SDK items；它默认拥有资源PromptHost，也可借用，不复制或重写renderUserContext。每host缓存隔离；cleanup调用原方法，dispose另释放section图（原cleanup不清Docs routing FIFO）。显式项目resolver/Connector/Expert/账户和live Product借用，不自动连接原应用。
 
 保留源服务的不一致：Netdrive session级缓存先标记再await，第二个并发请求不共享in-flight结果；指令正文去重不看project/version；空connector列表不清旧指纹，显示名变化不算状态变化；Todo XML支持从URI回落ID，但chip替换只看metadata.todoId；Agent Mail虚拟条目仍依赖ConnectorService存在。Tencent Docs的外部引擎与完整DocumentService未冒充已恢复，source section和入参/门控可验证，但外部renderer字节不在本批证明范围。
+
+`protocol/acp-input-host`是显式Addon SDK入口，不是新agent loop。8个完整CLI惰性factory包含prompt-codec/XML、AcpUtils、StreamJsonUtils、timestamps、AnsiUtils及Agent/compact常量；另保留原getVisibleTodoItems及applyAcpPromptTimestamp。原CLI renderer的3个完整方法承担command annotation、tracking metadata与local-command处理。原Desktop SessionManager选取8个完整方法和15 helper支撑meta/首轮、事件去重、合成用户事件、专家状态持久化/effect queue，未把fragment声称为整个SessionManager。
+
+`promptAcp`先组合再记录原始prompt的合成事件，原CLI转换后把SDK items交给已有backend；后续SDK history inputSubject经原AcpUtils投影，驱动原updatePromptHistoryState。回放只record(isReplay:true)，保留新backend false标志，而不是统计SDK历史长度；首次发送即使失败也已置true。SDK压缩输出与session separator清false/清专家；成功且本轮未见compact才持久化本轮专家。storage桥用现有SDK session.meta/SessionStore，不猜原daemon账号数据库。
+
+IO只在外层owned fs/OS/env适配：剪贴板缓存和时间/原扩展名规则不改，文件读取限project/state/显式root；依赖模块未知会明确抛出所需adapter，不用静默空输出。无隐式ACP transport/broadcast、Electron或生产认证。完整AcpView.executePrompt/通知队列/连接guard、任务与Plan重放、daemon动态配置/自动重启等仍待恢复；CLI/Web默认入口与Addon.prompt均未变为ACP输入。

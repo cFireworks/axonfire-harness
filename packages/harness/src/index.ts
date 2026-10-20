@@ -324,3 +324,7 @@ export * from './hooks/native-tool-execution-pipeline.js';
 export * from './tools/native-tool-errors.js';
 export * from './prompts/native-user-prompt.js';
 export * from './prompts/user-prompt-host.js';
+export * from './protocol/captured-acp-modules.js';
+export * from './protocol/native-acp-input-renderer.js';
+export * from './protocol/acp-input-host.js';
+export * from './sessions/native-session-prompt.js';

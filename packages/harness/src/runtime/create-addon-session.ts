@@ -12,6 +12,11 @@ import {
   createResourcePromptHost,
   type ResourcePromptHostOptions,
 } from "../prompts/resource-prompt-host.js";
+import {
+  createAcpInputHost,
+  type AcpInputHostOptions,
+  type AcpPromptRequest,
+} from "../protocol/acp-input-host.js";
 const activeStates = new Set<string>();
 /** One independently owned backend per Desktop-style session. Not a daemon replacement.
  * Trusted settings/plugins can execute Hooks. Native craft/expert default to
@@ -26,6 +31,12 @@ export async function createAddonSession(options: {
   addons?: SessionAddonHostOptions;
   resourcePrompts?:
     | Omit<ResourcePromptHostOptions, "stateDir" | "getWorkDir">
+    | false;
+  acpInput?:
+    | Omit<
+        AcpInputHostOptions,
+        "stateDir" | "getWorkDir" | "backend" | "session" | "desiredConfig"
+      >
     | false;
   language?: string;
   envRouteMode?: string;
@@ -58,6 +69,10 @@ export async function createAddonSession(options: {
   let resourcePromptHost:
     | Awaited<ReturnType<typeof createResourcePromptHost>>
     | undefined;
+  let acpInputHost: Awaited<ReturnType<typeof createAcpInputHost>> | undefined;
+  let acpStarting:
+    | Promise<Awaited<ReturnType<typeof createAcpInputHost>>>
+    | undefined;
   activeStates.add(stateDir);
   let native = owner.native,
     systemPromptFile: string | null = null,
@@ -65,13 +80,18 @@ export async function createAddonSession(options: {
   async function close() {
     return (closing ??= (async () => {
       closed = true;
-      const promptClosing = resourcePromptHost?.close();
+      // Keep borrowed prompt resources alive until accepted ACP composition settles.
+      const acpClosing = acpStarting?.then(
+        (host) => host.close(),
+        () => undefined,
+      );
       try {
         await harness?.close();
       } finally {
         try {
+          await acpClosing;
           await owner.close();
-          await promptClosing;
+          await resourcePromptHost?.close();
           native.cleanupAgentCliSystemPromptFile(systemPromptFile);
           native.cleanupAgentCliPromptVarsFile(promptVarsFile);
           if (tempDir) await rm(tempDir, { recursive: true, force: true });
@@ -206,6 +226,9 @@ export async function createAddonSession(options: {
       cliArgs,
       owner,
       resourcePromptHost,
+      get acpInputHost() {
+        return acpInputHost;
+      },
       tempDir,
       async prompt(
         input: Parameters<typeof backend.prompt>[1],
@@ -218,6 +241,56 @@ export async function createAddonSession(options: {
           runtimeConfig.promptVariables,
         );
         return backend.prompt(session, input, promptOptions);
+      },
+      async promptAcp(
+        request: AcpPromptRequest,
+        promptOptions?: Parameters<typeof backend.prompt>[2],
+      ) {
+        if (closed) throw Error("Addon session backend is closed");
+        if (options.acpInput === false)
+          throw Error("Addon ACP input is disabled");
+        const acpOptions = options.acpInput;
+        if (!acpStarting)
+          acpStarting = (async () => {
+            const acpStateDir = join(stateDir, "acp-input");
+            if (
+              await lstat(acpStateDir).then(
+                (s) => s.isSymbolicLink(),
+                (e) => {
+                  if (e.code === "ENOENT") return false;
+                  throw e;
+                },
+              )
+            )
+              throw Error("Addon ACP input state cannot be a symlink");
+            const host = await createAcpInputHost({
+              ...acpOptions,
+              stateDir: acpStateDir,
+              getWorkDir: () => cwd,
+              backend,
+              session,
+              desiredConfig: options.desiredConfig,
+              readRoots: [stateDir, ...(acpOptions?.readRoots ?? [])],
+              userPrompts: {
+                ...(resourcePromptHost ? { resourcePromptHost } : {}),
+                ...acpOptions?.userPrompts,
+              },
+            });
+            acpInputHost = host;
+            if (closed) {
+              await host.close();
+              throw Error("Addon session backend is closed");
+            }
+            return host;
+          })();
+        const host = await acpStarting;
+        if (closed) throw Error("Addon session backend is closed");
+        native.ensureAgentCliPromptVarsFile(
+          sessionId,
+          promptVarsFile,
+          runtimeConfig.promptVariables,
+        );
+        return host.prompt(request, promptOptions);
       },
       close,
     };

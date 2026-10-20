@@ -46,7 +46,7 @@ Web 的 `--cwd` 指定工具工作目录：`npm start -- --cwd /absolute/path/to
 
 ## 原生 MCP（嵌入 API）
 
-最新门槛见[还原状态](recovery-status.md)末尾。完整原MCP类群、ProductManager、文件/模型providers及企业模型策略已接入。插件loader、active snapshot提交和完整刷新事务、本地/Git/HTTP/ZIP市场与市场存储/文件锁/更新检查现已接入。Git/npm/subdir安装器、原OptionsStorage/ErrorCollector、SettingsManager和PluginPolicy现默认接入；内置seed/controller/validator已接显式资源根。权限/MCP/SDK设置消费者和Cloud product核心现已接入；真实账户、UserPromptService到原SessionManager/SDK的接线与产品bootstrap仍待补；原环境核心及两个providers、资源PromptService和九collector已接入，不能据此宣称所有产品链路完成。
+最新门槛见[还原状态](recovery-status.md)末尾。完整原MCP类群、ProductManager、文件/模型providers及企业模型策略已接入。插件loader、active snapshot提交和完整刷新事务、本地/Git/HTTP/ZIP市场与市场存储/文件锁/更新检查现已接入。Git/npm/subdir安装器、原OptionsStorage/ErrorCollector、SettingsManager和PluginPolicy现默认接入；内置seed/controller/validator已接显式资源根。权限/MCP/SDK设置消费者和Cloud product核心现已接入；真实账户、完整SessionManager/RPC与产品bootstrap仍待补；Addon显式promptAcp已接用户上下文核心与SDK转换链；原环境核心及两个providers、资源PromptService和九collector已接入，不能据此宣称所有产品链路完成。
 
 普通嵌入调用可在已有模型配置上添加：
 
@@ -279,7 +279,7 @@ try {
 
 默认产品来源是固定原product快照，不冒充完整Desktop应用的全局ProductManager；要消费动态产品/feature/model目录，请显式传入同一live productManager。默认无账户、无token、无BinaryManager，不扫描安装环境。可显式提供`auth`（getAccount/getToken）、`authentication.buildAuthHeaders`和`binaryManager.generatePromptContext`；它们仍是借用adapter，完整登录与二进制安装服务未完成。默认注册类型为样本python/node，扩展adapter可提供getRegisteredBinaryTypes。
 
-资源为`config/desktop-prompts/`的15份tpl+7份style，与115份product prompts分开逐字节校验。原kind/fallback、autoescape:false、scene优先于expertId、九collector顺序均保留。`templatesDir`只能指向可信模板。style/customPrompt/身份内容并非全部进入system prompt：原renderUserContext供首条用户上下文使用。完整WorkbuddyUserPromptService及17个section现提供独立ACP组合API（见下节），但实际SessionManager→ACP/SDK消息编排仍未接入；**不要把这三个独立渲染方法和变量文件可用当作首条隐藏上下文链已完整恢复**。work-mode插件抑制旧system-prompt的规则不改写，原插件合成仍需显式可信assetsRoot，不会因新增tpl就生成整套插件。
+资源为`config/desktop-prompts/`的15份tpl+7份style，与115份product prompts分开逐字节校验。原kind/fallback、autoescape:false、scene优先于expertId、九collector顺序均保留。`templatesDir`只能指向可信模板。style/customPrompt/身份内容并非全部进入system prompt：原renderUserContext供首条用户上下文使用。完整WorkbuddyUserPromptService及17个section现提供独立ACP组合API（见下节），其核心现经Addon.promptAcp接入真实SDK，完整SessionManager/RPC/回放控制仍未恢复；**不要把这三个独立渲染方法和变量文件可用当作首条隐藏上下文链已完整恢复**。work-mode插件抑制旧system-prompt的规则不改写，原插件合成仍需显式可信assetsRoot，不会因新增tpl就生成整套插件。
 
 平台home映射为`<prompt-state>/home`；默认身份/归档根为`home/.workbuddy`，app配置为`home/.workbuddy/app/app-config.json`，与CLI的四scope SettingsManager不是同一存储。WORKBUDDY_CONFIG_DIR等仅消费显式env；不读取真实home/安装账户。身份首次渲染会按原wx写默认SOUL/IDENTITY/USER/BOOTSTRAP及workspace-state；删除BOOTSTRAP会完成onboarding且不再自动补种。默认文件内容保持原文。项目MEMORY.md读取沿会话cwd，用户级读取沿owned home；桥拒绝越界symlink，但不是OS沙箱。
 
@@ -406,4 +406,30 @@ try {
 
 Tencent Docs section、metadata/selection解析、feature gate和512项FIFO已按原文恢复；外部`@tencent/tencent-docs-ai-engine`渲染器和完整DocumentService还没有还原。启用原AI edit灰度时，需显式提供`tencentDocsEngine`及可选`tencentDocsDocumentService`适配器；缺engine会明确报错，不返回伪造的空文档上下文。测试替身只证明调用入参、门控和缓存分支，不证明外部引擎prompt字节。
 
-该API尚未自动接入`createAddonSession.prompt`或CLI/Web：原SessionManager的meta富化、历史首轮判定、附件/ACP codec及SDK消息/重放链仍待恢复。独立ACP组合成功，不等于完整产品消息pipeline已完成。
+独立组合API仍不向模型发请求。需要实际运行时可调用下面的`createAddonSession.promptAcp`：它接入原meta富化、首轮状态核心及CLI转换链；原有`.prompt`和CLI/Web默认入口不改。完整SessionManager/RPC、任务/Plan回放控制与产品bootstrap仍未据此恢复。
+
+## ACP 输入 → 真实 SDK（Addon 显式入口）
+
+在前文`createAddonSession`示例中，用以下调用替换`backend.prompt(...)`，仍在`finally`中关闭backend：
+
+```js
+const answer = await backend.promptAcp({
+  prompt: [
+    { type: 'text', text: '概述这个文件' },
+    { type: 'resource_link', uri: 'file:///absolute/owned/project/README.md', name: 'README.md' },
+  ],
+  _meta: { 'codebuddy.ai': { colorScheme: 'dark' } },
+}, { onText: text => process.stdout.write(text) });
+```
+
+此接口返回独立宿主的文本结果，不冒充完整ACP RPC的`PromptResponse`。它依次运行原`composePromptForBackend/enrichPromptMeta`、合成用户事件、原本地命令分派及`AcpUtils.promptToUserMessage → StreamJsonUtils → annotatePromptDerivedContent → AgentService/SDK`。首次调用惰性创建`backend.acpInputHost`；`acpInput:false`显式关闭该入口。自定义`acpInput.userPrompts`可借用用户PromptHost依赖/项目resolver；默认借用Addon的资源PromptHost，若没有则创建独立owned服务。
+
+首轮规则按原样保留：实时user_message_chunk置`hasUserMessageSinceLastCompact=true`，compact/separator事件清false及上一位专家；历史回放用`isReplay`而**不修改该标志**，因此新backend恢复SDK历史时仍重新注入首轮上下文。普通发送在SDK成功前就记录合成用户事件，所以发送失败后该标志也不会自动回滚。source v1专家选择状态写到本宿主`session.meta.axonfireAcpOwnerRecord`并由现有SessionStore持久化；这是显式storage适配，不是原daemon账号/history store。
+
+`acpInput.projectId`提供当前会话项目ID；上一专家由宿主覆盖metadata，不信任请求中伪造的previousExpertSelection。完整mode/runtime动态重启尚未接入，不要通过手动改`acpInputHost.state.desiredConfig`冒充模式切换。底层`acceptSessionUpdate(payload,{isReplay})`可接调用方的ACP通知；SDK历史新增事件已使用原输出投影驱动首轮/compact状态。
+
+图片data和原本地路径选择、缓存文件名/扩展名/sha1沿源逻辑；owned缓存位于`<session state>/acp-input/cli/clipboard-images`。外部路径/symlink不可读时回落到传入的base64，不读取安装账户或任意home。文件不是有效图片时不会因此自动“修复”内容；原`source.type:'text'` document转换也保留其base64前缀但不重新编码的怪异行为。SDK依赖未修改。
+
+原local-command分支在SDK转换/图片写盘之前执行。`/stats`、`/rewind`返回原TUI-only说明，普通命令经实际CommandManager运行；不存在的TUI执行器未伪造注册。原命令类和已有宿主执行器仍有独立范围，不能把此接口当全部CLI UI功能已恢复。本入口不打开ACP网络连接、不广播、不启动Electron；普通CLI/Web仍走原独立入口。
+
+同一ACP会话拒绝并发入口；Addon关闭先关闭SDK后端并join已接受的ACP组合，再释放借用的prompt资源。onSessionUpdate异步观察者被跟踪/记录错误，不因fire-and-forget产生未处理rejection。显式借用的外部服务仍自行负责取消、网络权限与生命周期。没有操作系统沙箱、跨进程事务或完整daemon重放保证。
