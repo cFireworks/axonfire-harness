@@ -1,0 +1,17 @@
+export const SessionRunStatus = { IDLE: "idle", PREPARING: "preparing", PENDING: "pending", AGENT_RUNNING: "agent_running", MODEL_REQUESTING: "model_requesting", MODEL_STREAMING: "model_streaming", MODEL_DONE: "model_done", TOOL_EXECUTING: "tool_executing", WAITING_FOR_PERMISSION: "waiting_for_permission", WAITING_FOR_USER: "waiting_for_user", RETRYING: "retrying", COMPACTING: "compacting", CANCELLING: "cancelling" } as const;
+export type SessionRunStatus = typeof SessionRunStatus[keyof typeof SessionRunStatus];
+export const SessionRunEventType = { RUN_PREPARING: "RUN_PREPARING", RUN_ACCEPTED: "RUN_ACCEPTED", RUN_SKIPPED: "RUN_SKIPPED", AGENT_STARTED: "AGENT_STARTED", AGENT_ENDED: "AGENT_ENDED", TOOL_STARTED: "TOOL_STARTED", TOOL_ENDED: "TOOL_ENDED", AGENT_HANDOFF: "AGENT_HANDOFF", MODEL_REQUEST_STARTED: "MODEL_REQUEST_STARTED", MODEL_STREAM_STARTED: "MODEL_STREAM_STARTED", MODEL_RESPONSE_DONE: "MODEL_RESPONSE_DONE", WAITING_FOR_PERMISSION: "WAITING_FOR_PERMISSION", WAITING_FOR_USER: "WAITING_FOR_USER", RETRYING: "RETRYING", COMPACT_STARTED: "COMPACT_STARTED", COMPACT_ENDED: "COMPACT_ENDED", COMPACT_FAILED: "COMPACT_FAILED", CANCEL_REQUESTED: "CANCEL_REQUESTED", RUN_FAILED: "RUN_FAILED", FORCE_IDLE: "FORCE_IDLE" } as const;
+export type SessionRunEventType = typeof SessionRunEventType[keyof typeof SessionRunEventType];
+export const SessionRunLegacyAgentState = { AGENT_PENDING: "agent_pending", AGENT_START: "agent_start", AGENT_TOOL_START: "agent_tool_start", AGENT_TOOL_END: "agent_tool_end", AGENT_HANDOFF: "agent_handoff", AGENT_END: "agent_end" } as const;
+export const SessionRunLifecycle = { IDLE: "idle", PREPARING: "preparing", RUNNING: "running", WAITING: "waiting", RETRYING: "retrying", COMPACTING: "compacting", CANCELLING: "cancelling" } as const;
+export type SessionRunLifecycle = typeof SessionRunLifecycle[keyof typeof SessionRunLifecycle];
+export const SessionRunProjectedPhase = { IDLE: "idle", PREPARING: "preparing", MODEL_REQUESTING: "model_requesting", MODEL_STREAMING: "model_streaming", MODEL_DONE: "model_done", TOOL_EXECUTING: "tool_executing", WAITING_FOR_PERMISSION: "waiting_for_permission", WAITING_FOR_USER: "waiting_for_user", RETRYING: "retrying" } as const;
+export type SessionRunEvent = { type: SessionRunEventType; reason?: string | undefined; toolName?: string | undefined; streamingToolName?: string | undefined };
+export type SessionRunState = { status: SessionRunStatus; lastTransition?: { event: SessionRunEventType; from: SessionRunStatus; to: SessionRunStatus; reason: string | undefined; at: number } };
+export const SESSION_RUN_STATE_PROJECTION_SCHEMA = "session-run-state.v1";
+export function deriveSessionRunLifecycle(status: SessionRunStatus): SessionRunLifecycle | undefined {
+  switch (status) { case "idle": return "idle"; case "preparing": case "pending": return "preparing"; case "waiting_for_permission": case "waiting_for_user": return "waiting"; case "retrying": return "retrying"; case "compacting": return "compacting"; case "cancelling": return "cancelling"; case "agent_running": case "model_requesting": case "model_streaming": case "model_done": case "tool_executing": return "running"; }
+}
+export const isSessionRunStatusBusy = (status: SessionRunStatus): boolean => status !== "idle";
+export const isSessionRunStatusIdle = (status: SessionRunStatus): boolean => status === "idle";
+export const isSessionRunStatusBusyForQueue = (status: SessionRunStatus): boolean => status !== "idle" && status !== "preparing";

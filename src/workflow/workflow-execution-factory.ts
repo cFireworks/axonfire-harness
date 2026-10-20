@@ -1,0 +1,8 @@
+import { WorkflowExecution, type WorkflowDurability, type WorkflowExecutionDeps } from "./workflow-execution.js";
+import { WorkflowCallDurability, type WorkflowBudgetFactory, type WorkflowCacheKeyHasher, type WorkflowJournalFactory } from "./workflow-durability.js";
+import type { WorkflowEmitter, WorkflowPauseGate, WorkflowRunRequest, WorkflowSpawner } from "./workflow-types.js";
+export class WorkflowExecutionFactory {
+  constructor(readonly spawner: WorkflowSpawner, readonly emitter: WorkflowEmitter, readonly cacheKeyHasher?: WorkflowCacheKeyHasher, readonly journalFactory?: WorkflowJournalFactory, readonly budgetFactory?: WorkflowBudgetFactory) {}
+  async create(request: WorkflowRunRequest, nestedInvoker?: WorkflowExecutionDeps["nestedInvoker"], pauseGate?: WorkflowPauseGate): Promise<WorkflowExecution> { const durability = await this.buildDurability(request); return new WorkflowExecution({ spawner: this.spawner, emitter: this.emitter, request, ...(durability ? { durability } : {}), ...(nestedInvoker ? { nestedInvoker } : {}), ...(pauseGate ? { pauseGate } : {}) }); }
+  async buildDurability(request: WorkflowRunRequest): Promise<WorkflowDurability | undefined> { if (!this.cacheKeyHasher || !this.journalFactory || !this.budgetFactory) return; const sessionId = request.parentSessionId || "orphan"; let journal; try { journal = await this.journalFactory.create(sessionId, request.runId); } catch { return; } const budget = this.budgetFactory.create(request.parsed.meta.budget), snapshot = request.resumeFromRunId ? await this.journalFactory.load(sessionId, request.resumeFromRunId).catch(() => undefined) : undefined; return new WorkflowCallDurability(this.cacheKeyHasher, budget, journal, snapshot); }
+}

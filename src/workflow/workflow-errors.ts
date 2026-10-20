@@ -1,0 +1,10 @@
+export class WorkflowError extends Error { constructor(message: string, options?: { cause?: unknown }) { super(message); this.name = this.constructor.name; if (options?.cause !== undefined) this.cause = options.cause; } }
+export class WorkflowSourceError extends WorkflowError { readonly errorCode = 1; constructor(readonly reason: string, message: string) { super(message); } }
+export class WorkflowParseError extends WorkflowError { readonly errorCode = 2; constructor(message: string, readonly loc?: unknown) { super(message); } }
+export class WorkflowCompileError extends WorkflowError { readonly errorCode = 3; }
+export class WorkflowDeterminismError extends WorkflowError { readonly errorCode = 4; constructor(readonly violations: Array<{ pattern: string; line: number; column: number }>) { super(`Workflow script must be deterministic; found ${violations.length} forbidden call(s): ` + violations.map((item) => `${item.pattern} at ${item.line}:${item.column}`).join(", ")); } }
+export class WorkflowAbortedError extends WorkflowError { readonly errorCode = 5; constructor(readonly reason: string) { super(`Workflow aborted: ${reason}`); } }
+export class WorkflowAgentCapError extends WorkflowError { readonly errorCode = 6; constructor(readonly cap: number) { super(`Workflow exceeded the per-run agent cap (${cap}). Set a budget on the run to bound work, or break the task into smaller workflows.`); } }
+export class WorkflowBudgetExceededError extends WorkflowError { readonly errorCode = 7; constructor(readonly total: number, readonly spent: number, readonly remainingNeeded: number) { super(`Workflow budget exhausted: total=${total}, spent=${spent}, next call needs >= ${remainingNeeded} tokens.`); } }
+export class WorkflowSandboxError extends WorkflowError { readonly errorCode = 8; }
+export class WorkflowParallelExhaustedError extends WorkflowError { readonly errorCode = 9; constructor(readonly total: number, readonly errors: string[]) { super(`parallel(): all ${total} subtasks failed. Pass { allowAllFailures: true } to opt out. First few errors: ${errors.slice(0, 3).join(" | ") || "(no detail)"}`); } }

@@ -1,0 +1,448 @@
+{
+  "sourceSHA256": "4120898f1ded86ac545316721d216c827a325c2513a8fae4bcd8c8bbbf211afd",
+  "normalOffset": [
+    7528426,
+    7537041
+  ],
+  "conditionalOffset": [
+    7537267,
+    7539317
+  ],
+  "normal": [
+    {
+      "name": "/add-dir",
+      "description": "Add a new working directory",
+      "argumentHint": "<path>",
+      "requiredVariables": [],
+      "prompt": "",
+      "disableModelInvocation": true
+    },
+    {
+      "name": "/agents",
+      "description": "Manage agent configurations",
+      "requiredVariables": [],
+      "prompt": "",
+      "disableModelInvocation": true
+    },
+    {
+      "name": "/branch",
+      "description": "Create a branch of the current conversation at this point",
+      "argumentHint": "[name]",
+      "requiredVariables": [],
+      "prompt": "",
+      "disableModelInvocation": true
+    },
+    {
+      "name": "/btw",
+      "description": "Ask a quick side question without interrupting the main Agent work",
+      "argumentHint": "<question>",
+      "requiredVariables": [],
+      "prompt": "",
+      "disableModelInvocation": true
+    },
+    {
+      "name": "/clear",
+      "description": "Start a fresh conversation (previous chats remain accessible via /resume)",
+      "requiredVariables": [],
+      "prompt": ""
+    },
+    {
+      "name": "/config",
+      "description": "Manage settings. Subcommands: \"list\" to show current settings, \"get <key>\" to read a value, \"set <key> <value>\" to change a value",
+      "requiredVariables": [],
+      "prompt": ""
+    },
+    {
+      "name": "/context",
+      "description": "Calculate and display context token distribution",
+      "requiredVariables": [],
+      "prompt": "",
+      "disableModelInvocation": true
+    },
+    {
+      "name": "/cost",
+      "description": "Show the total cost and duration of the current session",
+      "requiredVariables": [],
+      "prompt": "",
+      "disableModelInvocation": true
+    },
+    {
+      "name": "/doctor",
+      "description": "Diagnose and verify your CodeBuddy installation and settings",
+      "requiredVariables": [],
+      "prompt": "",
+      "disableModelInvocation": true
+    },
+    {
+      "name": "/exit",
+      "description": "Exit the CodeBuddy",
+      "requiredVariables": [],
+      "prompt": "",
+      "disableModelInvocation": true
+    },
+    {
+      "name": "/export",
+      "description": "Export the current conversation to a file or clipboard",
+      "requiredVariables": [],
+      "prompt": "",
+      "disableModelInvocation": true
+    },
+    {
+      "name": "/feedback",
+      "description": "Open the issue feedback page to report bugs or suggest features",
+      "requiredVariables": [],
+      "prompt": "",
+      "disableModelInvocation": true
+    },
+    {
+      "name": "/fork",
+      "description": "Create a branch of the current conversation at this point (alias for /branch)",
+      "argumentHint": "[name]",
+      "requiredVariables": [],
+      "prompt": "",
+      "disableModelInvocation": true
+    },
+    {
+      "name": "/gateway",
+      "description": "Manage the remote control gateway. Subcommands: \"status\" to show current status, \"stop\" to stop the gateway, \"token\" to regenerate access token, \"tunnel\" to start with tunnel",
+      "requiredVariables": [],
+      "prompt": ""
+    },
+    {
+      "name": "/goal",
+      "description": "Keep working until a condition is met. Use \"/goal clear\" to stop early. Example: /goal all tests pass",
+      "argumentHint": "<condition> | clear",
+      "requiredVariables": [],
+      "prompt": ""
+    },
+    {
+      "name": "/remote-control",
+      "description": "Manage remote control long connection clients (start, stop, status, list)",
+      "requiredVariables": [],
+      "prompt": "",
+      "disableModelInvocation": true
+    },
+    {
+      "name": "/help",
+      "description": "Show help and available commands",
+      "requiredVariables": [],
+      "prompt": ""
+    },
+    {
+      "name": "/hooks",
+      "description": "Manage hook configurations for tool events",
+      "requiredVariables": [],
+      "prompt": "",
+      "disableModelInvocation": true
+    },
+    {
+      "name": "/keybindings",
+      "description": "Open keybindings configuration",
+      "requiredVariables": [],
+      "prompt": "",
+      "disableModelInvocation": true
+    },
+    {
+      "name": "/ide",
+      "description": "Manage IDE integrations and show status",
+      "requiredVariables": [],
+      "prompt": "",
+      "disableModelInvocation": true
+    },
+    {
+      "name": "/install-github-app",
+      "description": "Set up ${NAME} GitHub Actions for a repository",
+      "requiredVariables": [],
+      "prompt": "",
+      "disableModelInvocation": true
+    },
+    {
+      "name": "/login",
+      "description": "Switch Tencent Cloud CodeBuddy accounts",
+      "requiredVariables": [],
+      "prompt": "",
+      "disableModelInvocation": true
+    },
+    {
+      "name": "/logout",
+      "description": "Sign out from your undefined account",
+      "requiredVariables": [],
+      "prompt": "",
+      "disableModelInvocation": true
+    },
+    {
+      "name": "/mcp",
+      "description": "Manage MCP servers",
+      "requiredVariables": [],
+      "prompt": "",
+      "disableModelInvocation": true
+    },
+    {
+      "name": "/memory",
+      "description": "Edit CodeBuddy memory files",
+      "requiredVariables": [],
+      "prompt": "",
+      "disableModelInvocation": true
+    },
+    {
+      "name": "/migrate-installer",
+      "description": "Migrate from global npm installation to local installation",
+      "requiredVariables": [],
+      "prompt": "",
+      "disableModelInvocation": true
+    },
+    {
+      "name": "/model",
+      "description": "Set or list AI models. Use \"list\" to show available models with current selection, or specify a model id to switch (e.g., /model gpt-4o)",
+      "argumentHint": "[list | model-id]",
+      "requiredVariables": [],
+      "prompt": ""
+    },
+    {
+      "name": "/permissions",
+      "description": "Manage allow & deny tool permission rules",
+      "requiredVariables": [],
+      "prompt": "",
+      "disableModelInvocation": true
+    },
+    {
+      "name": "/plan",
+      "description": "Preview the current plan file content",
+      "requiredVariables": [],
+      "prompt": ""
+    },
+    {
+      "name": "/pr-comments",
+      "description": "Get comments from a GitHub pull request",
+      "requiredVariables": [],
+      "prompt": "",
+      "disableModelInvocation": true
+    },
+    {
+      "name": "/release-notes",
+      "description": "View release notes",
+      "requiredVariables": [],
+      "prompt": "",
+      "disableModelInvocation": true
+    },
+    {
+      "name": "/rename",
+      "description": "Rename the current conversation. Requires a name argument (e.g., /rename my-session)",
+      "argumentHint": "<name>",
+      "requiredVariables": [],
+      "prompt": ""
+    },
+    {
+      "name": "/resume",
+      "description": "List or resume sessions. Use \"list\" to show all sessions with ids, or specify a session id to resume (e.g., /resume <session-id>)",
+      "requiredVariables": [],
+      "prompt": ""
+    },
+    {
+      "name": "/review",
+      "description": "Review a pull request",
+      "requiredVariables": [],
+      "prompt": "",
+      "disableModelInvocation": true
+    },
+    {
+      "name": "/rewind",
+      "description": "Restore the code and/or conversation to a previous point (Beta)",
+      "requiredVariables": [],
+      "prompt": "",
+      "disableModelInvocation": true
+    },
+    {
+      "name": "/sandbox",
+      "description": "Configure and manage sandbox security settings",
+      "requiredVariables": [],
+      "prompt": "",
+      "disableModelInvocation": true
+    },
+    {
+      "name": "/skills",
+      "description": "List available skills",
+      "requiredVariables": [],
+      "prompt": ""
+    },
+    {
+      "name": "/status",
+      "description": "Show CodeBuddy status including version, model, account, API connectivity, and tool statuses",
+      "requiredVariables": [],
+      "prompt": ""
+    },
+    {
+      "name": "/terminal-setup",
+      "description": "Configure terminal key binding for newlines (Shift+Enter or Option+Enter)",
+      "requiredVariables": [],
+      "prompt": "",
+      "disableModelInvocation": true
+    },
+    {
+      "name": "/upgrade",
+      "description": "Upgrade to Max for higher rate limits and more Opus",
+      "requiredVariables": [],
+      "prompt": "",
+      "disableModelInvocation": true
+    },
+    {
+      "name": "/vim",
+      "description": "Toggle between Vim and Normal editing modes",
+      "requiredVariables": [],
+      "prompt": "",
+      "disableModelInvocation": true
+    },
+    {
+      "name": "/tasks",
+      "description": "List and manage background tasks",
+      "requiredVariables": [],
+      "prompt": ""
+    },
+    {
+      "name": "/todos",
+      "description": "Display the current session's todo list",
+      "requiredVariables": [],
+      "prompt": ""
+    },
+    {
+      "name": "/plugin",
+      "description": "Manage CodeBuddy Code plugins",
+      "requiredVariables": [],
+      "prompt": "",
+      "disableModelInvocation": true
+    },
+    {
+      "name": "/reload-plugins",
+      "description": "Reload all plugins, skills, agents, hooks, and MCP/LSP servers without restarting",
+      "argumentHint": "[--force]",
+      "requiredVariables": [],
+      "prompt": "",
+      "disableModelInvocation": true
+    },
+    {
+      "name": "/plugin-validate",
+      "description": "Validate a plugin directory structure and manifest",
+      "argumentHint": "[path]",
+      "requiredVariables": [],
+      "prompt": "",
+      "disableModelInvocation": true
+    },
+    {
+      "name": "/theme",
+      "description": "Config CodeBuddy Code Theme",
+      "requiredVariables": [],
+      "prompt": ""
+    },
+    {
+      "name": "/output-style",
+      "description": "Set the output style directly or from a selection menu",
+      "argumentHint": "",
+      "requiredVariables": [],
+      "prompt": ""
+    },
+    {
+      "name": "/stats",
+      "description": "Show your CodeBuddy Code usage statistics and activity",
+      "requiredVariables": [],
+      "prompt": "",
+      "disableModelInvocation": true
+    },
+    {
+      "name": "/workflows",
+      "description": "List running and saved Dynamic Workflows",
+      "requiredVariables": [],
+      "prompt": "",
+      "disableModelInvocation": true
+    },
+    {
+      "name": "/effort",
+      "description": "Set the model effort level (low, medium, high, xhigh, max, ultracode)",
+      "argumentHint": "[low | medium | high | xhigh | max | ultracode]",
+      "requiredVariables": [],
+      "prompt": "",
+      "disableModelInvocation": true
+    },
+    {
+      "name": "/deep-research",
+      "description": "Run a multi-angle web research workflow on a question and produce a cited report",
+      "argumentHint": "<question>",
+      "requiredVariables": [],
+      "prompt": "",
+      "disableModelInvocation": true
+    },
+    {
+      "name": "/simplify",
+      "description": "Clean up the changed code without changing behavior — reuse, simplification, efficiency, and altitude cleanups",
+      "argumentHint": "[target]",
+      "requiredVariables": [],
+      "prompt": "",
+      "disableModelInvocation": true
+    },
+    {
+      "name": "/code-review",
+      "description": "Review the current diff for correctness bugs and quality cleanups. Pass --fix to apply findings, --comment to post as PR comments",
+      "argumentHint": "[--fix] [--comment] [target]",
+      "requiredVariables": [],
+      "prompt": "",
+      "disableModelInvocation": true
+    },
+    {
+      "name": "/verify",
+      "description": "Verify code changes work as expected by running the app and tests",
+      "argumentHint": "[description]",
+      "requiredVariables": [],
+      "prompt": "",
+      "disableModelInvocation": true
+    },
+    {
+      "name": "/copy",
+      "description": "Copy the last response to clipboard",
+      "argumentHint": "[N]",
+      "requiredVariables": [],
+      "prompt": "",
+      "disableModelInvocation": true
+    },
+    {
+      "name": "/debug",
+      "description": "Enable debug logging and help diagnose session issues",
+      "argumentHint": "[issue description]",
+      "requiredVariables": [],
+      "prompt": "",
+      "disableModelInvocation": true
+    }
+  ],
+  "conditional": [
+    {
+      "name": "/model:text-to-image",
+      "description": "Set or list text-to-image models. Use \"list\" to show available models, or specify a model id to switch",
+      "argumentHint": "[list | model-id]",
+      "requiredVariables": [],
+      "prompt": "",
+      "disableModelInvocation": false
+    },
+    {
+      "name": "/model:image-to-image",
+      "description": "Set or list image-to-image models. Use \"list\" to show available models, or specify a model id to switch",
+      "argumentHint": "[list | model-id]",
+      "requiredVariables": [],
+      "prompt": "",
+      "disableModelInvocation": false
+    },
+    {
+      "name": "/model:text-to-video",
+      "description": "Set or list text-to-video models. Use \"list\" to show available models, or specify a model id to switch",
+      "argumentHint": "[list | model-id]",
+      "requiredVariables": [],
+      "prompt": "",
+      "disableModelInvocation": false
+    },
+    {
+      "name": "/model:image-to-video",
+      "description": "Set or list image-to-video models. Use \"list\" to show available models, or specify a model id to switch",
+      "argumentHint": "[list | model-id]",
+      "requiredVariables": [],
+      "prompt": "",
+      "disableModelInvocation": false
+    }
+  ]
+}

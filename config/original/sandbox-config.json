@@ -1,0 +1,11 @@
+{
+  "bundleId": "com.workbuddy.workbuddy",
+  "appGroupId": "group.com.workbuddy.workbuddy",
+  "fileProviderBundleId": "com.workbuddy.workbuddy.FileProvider",
+  "networkExtensionBundleId": "com.workbuddy.workbuddy.NetworkExtension",
+  "helperBundleId": "com.workbuddy.workbuddy.SandboxHelper",
+  "productName": "WorkBuddy",
+  "logSubsystem": "com.workbuddy.workbuddy.sandbox",
+  "tunnelDescription": "WorkBuddy 沙盒网络代理",
+  "signingMode": "full"
+}

@@ -1,0 +1,15 @@
+node_modules/
+dist/
+coverage/
+*.log
+.DS_Store
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+.workbuddy-harness/
+.axonfire/
+outputs/
+work/
+*.jsonl

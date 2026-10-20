@@ -1,0 +1,201 @@
+import { HookEvent } from "./hook-constants.js";
+export function createHookEventMetadata(productName: string) {
+  const ed = HookEvent,
+    eg = { PRODUCT_NAME: productName };
+  const eh: any = [
+    ed.USER_PROMPT_SUBMIT,
+    ed.NOTIFICATION,
+    ed.STOP,
+    ed.SUBAGENT_STOP,
+    ed.WORKTREE_CREATE,
+    ed.WORKTREE_REMOVE,
+    ed.POST_COMPACT,
+    ed.ELICITATION_RESULT,
+    ed.TASK_CREATED,
+    ed.TASK_COMPLETED,
+    ed.TEAMMATE_IDLE,
+    ed.CWD_CHANGED,
+    ed.FILE_CHANGED,
+    ed.FINAL_STOP,
+  ];
+  const ef: any = {
+    [ed.PRE_TOOL_USE]: [
+      "Input to command is JSON of tool call arguments.",
+      "Exit code 0 - stdout/stderr not shown",
+      "Exit code 2 - show stderr to model and block tool call",
+      "Other exit codes - show stderr to user only but continue with tool call",
+    ],
+    [ed.POST_TOOL_USE]: [
+      'Input to command is JSON with fields "inputs" (tool call arguments) and "response" (tool call response). ',
+      "Exit code 0 - stdout shown in transcript mode (Ctrl-R)",
+      "Exit code 2 - show stderr to model immediately",
+      "Other exit codes - show stderr to user only",
+    ],
+    [ed.NOTIFICATION]: [],
+    [ed.USER_PROMPT_SUBMIT]: [
+      "Input to command is JSON with original user prompt text.",
+      `Exit code 0 - stdout shown to ${eg.PRODUCT_NAME}`,
+      "Exit code 2 - block processing, erase original prompt, and show stderr to user only",
+      "Other exit codes - show stderr to user only",
+    ],
+    [ed.SESSION_START]: [
+      "Input to command is JSON with session start source.",
+      `Exit code 0 - stdout shown to ${eg.PRODUCT_NAME}`,
+      "Blocking errors are ignored",
+      "Other exit codes - show stderr to user only",
+    ],
+    [ed.SESSION_END]: [
+      "Input to command is JSON with session end reason.",
+      "Exit code 0 - command completes successfully",
+      "Other exit codes - show stderr to user only",
+    ],
+    [ed.STOP]: [
+      "Exit code 0 - stdout/stderr not shown",
+      "Exit code 2 - show stderr to model and continue conversation",
+      "Other exit codes - show stderr to user only",
+    ],
+    [ed.SUBAGENT_STOP]: [
+      "Exit code 0 - stdout/stderr not shown",
+      "Exit code 2 - show stderr to subagent and continue having it run",
+      "Other exit codes - show stderr to user only",
+    ],
+    [ed.PRE_COMPACT]: [
+      "Input to command is JSON with compaction details.",
+      "Exit code 0 - stdout appended as custom compact instructions",
+      "Exit code 2 - block compaction",
+      "Other exit codes - show stderr to user only but continue with compaction",
+    ],
+    [ed.WORKTREE_CREATE]: [
+      "Input to command is JSON with worktree name and session info.",
+      "Exit code 0 - stdout must contain the absolute path to the created worktree",
+      "Other exit codes - worktree creation fails",
+    ],
+    [ed.WORKTREE_REMOVE]: [
+      "Input to command is JSON with worktree path to remove.",
+      "Exit code 0 - worktree removal handled by hook",
+      "Other exit codes - show stderr to user only",
+    ],
+    [ed.POST_TOOL_USE_FAILURE]: [
+      'Input to command is JSON with fields "tool_name", "tool_input", "error", optional "is_interrupt".',
+      "Exit code 0 - stdout shown in transcript mode (Ctrl-R)",
+      "Exit code 2 - show stderr to model immediately",
+      "Other exit codes - show stderr to user only",
+    ],
+    [ed.SUBAGENT_START]: [
+      "Input to command is JSON with agent_id / agent_type.",
+      `Exit code 0 - stdout shown to ${eg.PRODUCT_NAME}`,
+      "Blocking errors are ignored",
+      "Other exit codes - show stderr to user only",
+    ],
+    [ed.STOP_FAILURE]: [
+      "Input to command is JSON with error / error_details / last_assistant_message.",
+      "Exit code 0 - stdout/stderr not shown",
+      "Other exit codes - show stderr to user only",
+    ],
+    [ed.POST_COMPACT]: [
+      "Input to command is JSON with trigger + compact_summary.",
+      "Exit code 0 - stdout/stderr not shown",
+      "Other exit codes - show stderr to user only",
+    ],
+    [ed.CONFIG_CHANGE]: [
+      "Input to command is JSON with source + optional file_path.",
+      "Exit code 0 - command completes successfully",
+      "Other exit codes - show stderr to user only",
+    ],
+    [ed.INSTRUCTIONS_LOADED]: [
+      "Input to command is JSON with file_path / memory_type / load_reason.",
+      "Exit code 0 - command completes successfully",
+      "Other exit codes - show stderr to user only",
+    ],
+    [ed.PERMISSION_REQUEST]: [
+      "Input to command is JSON with tool_name / tool_input / permission_suggestions.",
+      "Exit code 0 - stdout JSON decision may override user prompt (allow/deny + updatedInput)",
+      "Other exit codes - show stderr to user only",
+    ],
+    [ed.PERMISSION_DENIED]: [
+      "Input to command is JSON with tool_name / tool_input / tool_use_id / reason.",
+      "Exit code 0 - hookSpecificOutput.retry requests model retry",
+      "Other exit codes - show stderr to user only",
+    ],
+    [ed.ELICITATION]: [
+      "Input to command is JSON with mcp_server_name / message / mode / url / elicitation_id / requested_schema.",
+      "Exit code 0 - hookSpecificOutput.action + content auto-responds for the user",
+      "Other exit codes - show stderr to user only",
+    ],
+    [ed.ELICITATION_RESULT]: [
+      "Input to command is JSON with mcp_server_name / elicitation_id / mode / action / content.",
+      "Exit code 0 - stdout/stderr not shown",
+      "Other exit codes - show stderr to user only",
+    ],
+    [ed.TASK_CREATED]: [
+      "Input to command is JSON with task_id / task_subject / task_description / teammate_name / team_name.",
+      "Exit code 0 - stdout/stderr not shown",
+      "Other exit codes - show stderr to user only",
+    ],
+    [ed.TASK_COMPLETED]: [
+      "Input to command is JSON with task_id / task_subject / task_description / teammate_name / team_name.",
+      "Exit code 0 - stdout/stderr not shown",
+      "Other exit codes - show stderr to user only",
+    ],
+    [ed.TEAMMATE_IDLE]: [
+      "Input to command is JSON with teammate_name / team_name.",
+      "Exit code 0 - stdout/stderr not shown",
+      "Other exit codes - show stderr to user only",
+    ],
+    [ed.SETUP]: [
+      "Input to command is JSON with trigger (init|maintenance).",
+      `Exit code 0 - stdout shown to ${eg.PRODUCT_NAME}; additionalContext injected into first prompt`,
+      "Other exit codes - show stderr to user only",
+    ],
+    [ed.FILE_CHANGED]: [
+      "Input to command is JSON with file_path + event (change|add|unlink).",
+      "Exit code 0 - stdout/stderr not shown",
+      "Other exit codes - show stderr to user only",
+    ],
+    [ed.CWD_CHANGED]: [
+      "Input to command is JSON with old_cwd / new_cwd.",
+      "Exit code 0 - stdout/stderr not shown",
+      "Other exit codes - show stderr to user only",
+    ],
+    [ed.FINAL_STOP]: [
+      "Internal-only event. Triggered when the current run/turn reaches a final terminal state.",
+      "Internal HookInput includes final_stop_reason (completed|cancelled|failed|interrupted).",
+      "Does NOT support continueRequest — any continuation in result is ignored.",
+    ],
+  };
+  const em: any = {
+    [ed.PRE_TOOL_USE]: "Before a tool is executed",
+    [ed.POST_TOOL_USE]: "After a tool completes successfully",
+    [ed.NOTIFICATION]: "For permission requests or idle periods",
+    [ed.USER_PROMPT_SUBMIT]: "When user submits a prompt",
+    [ed.SESSION_START]: "When starting or resuming a session",
+    [ed.SESSION_END]: "When session terminates",
+    [ed.STOP]: "When main agent finishes responding",
+    [ed.SUBAGENT_STOP]: "When subagent finishes responding",
+    [ed.PRE_COMPACT]: "Before context compaction",
+    [ed.WORKTREE_CREATE]: "When a worktree is being created",
+    [ed.WORKTREE_REMOVE]: "When a worktree is being removed",
+    [ed.POST_TOOL_USE_FAILURE]: "After a tool fails or is interrupted",
+    [ed.SUBAGENT_START]: "Before a subagent starts running",
+    [ed.STOP_FAILURE]: "When Stop hook execution itself fails",
+    [ed.POST_COMPACT]: "After context compaction completes",
+    [ed.CONFIG_CHANGE]: "When a settings file changes",
+    [ed.INSTRUCTIONS_LOADED]: "When an instruction file is loaded",
+    [ed.PERMISSION_REQUEST]: "Before a tool permission prompt",
+    [ed.PERMISSION_DENIED]: "After a tool permission is denied",
+    [ed.ELICITATION]: "Before an MCP elicitation prompt",
+    [ed.ELICITATION_RESULT]: "After an MCP elicitation resolves",
+    [ed.TASK_CREATED]: "When a task is created",
+    [ed.TASK_COMPLETED]: "When a task completes",
+    [ed.TEAMMATE_IDLE]: "When a teammate becomes idle",
+    [ed.SETUP]: "During startup or maintenance",
+    [ed.FILE_CHANGED]: "When a watched file changes",
+    [ed.CWD_CHANGED]: "When the working directory changes",
+    [ed.FINAL_STOP]: "When the current turn reaches a final terminal state",
+  };
+  return {
+    EVENTS_WITHOUT_MATCHER: eh,
+    HOOK_EVENT_IO_DESCRIPTIONS: ef,
+    HOOK_EVENT_TITLES: em,
+  };
+}

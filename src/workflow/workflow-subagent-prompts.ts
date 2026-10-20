@@ -1,0 +1,11 @@
+import type { WorkflowSubagentSpec } from "./subagent-types.js";
+const SCHEMA = "- Your final answer MUST conform to the provided JSON Schema. Use the StructuredOutput tool to return your result.", TEXT = "- Return your final answer in plain text. Be concise and self-contained.";
+export class WorkflowSubagentPrompts {
+  constructor(readonly promptManager?: { get?(name: string): Promise<{ template?: string } | undefined>; render(template: string, options: { variables: Record<string, unknown> }): Promise<string | undefined> }) {}
+  async buildAsync(spec: WorkflowSubagentSpec) { return { systemPreamble: await this.buildSystemPreamble(spec), userPrompt: this.buildUserPrompt(spec) }; }
+  build(spec: WorkflowSubagentSpec) { return { systemPreamble: this.buildFallbackPreamble(spec), userPrompt: this.buildUserPrompt(spec) }; }
+  async buildSystemPreamble(spec: WorkflowSubagentSpec): Promise<string> { try { const prompt = await this.promptManager?.get?.("workflow-subagent-system-preamble"); if (!prompt?.template) return this.buildFallbackPreamble(spec); return await this.promptManager!.render(prompt.template, { variables: { contextLines: this.buildContextLines(spec), outputDirective: spec.schema ? SCHEMA : TEXT } }) ?? this.buildFallbackPreamble(spec); } catch { return this.buildFallbackPreamble(spec); } }
+  buildFallbackPreamble(spec: WorkflowSubagentSpec): string { return "# Workflow context\nYou are running as a sub-agent inside a Dynamic Workflow.\n" + this.buildContextLines(spec) + "\n# Constraints\n- You MUST NOT spawn another sub-agent (Agent / SendMessage tools are disabled).\n- Your final answer is consumed programmatically by the workflow script.\n" + (spec.schema ? SCHEMA : TEXT); }
+  buildContextLines(spec: WorkflowSubagentSpec): string { const lines: string[] = []; if (spec.label) lines.push(`- Label: ${spec.label}`); if (spec.phase) lines.push(`- Phase: ${spec.phase}`); if (spec.agentType) lines.push(`- Agent type: ${spec.agentType}`); if (spec.isolation && spec.isolation !== "inherit") lines.push(`- Isolation: ${spec.isolation}`); return lines.join("\n"); }
+  buildUserPrompt(spec: WorkflowSubagentSpec): string { return (spec.label ? `[${spec.label}]\n\n` : "") + spec.prompt; }
+}
