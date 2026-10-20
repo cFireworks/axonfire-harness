@@ -1161,3 +1161,17 @@ REA最终证据 `ev_aaad63cee936ed5d48ff5ca77468a470989df2b69d8ceb565f3faa3c8383
 下一步优先可复用默认native父装配与实际CLI/独立进程生命周期，再继续生产auth/REST、跨工作目录恢复/全部配置模式、Desktop HistoryStore/回放及剩余资源边界；整体目标保持进行中。
 
 最终门槛：check/build、1589核心+11Web、1510编译JS smoke、67组源码/行为验证、配置校验与CLI/Web seed/reload实际启动全部通过。对最终代码的干净暂存检出重新npm ci/check/build后，1589编译核心+11Web、配置和实际启动再次通过，不依赖原应用/bundle或旧node_modules；第65/67组在最后参考图去重后再次通过。SDK、6 JSON/115 product prompts/22 Desktop资源（304358字节）未变；761文件发布审计在已检查规则内无发现，不是完整安全证明。17项既有依赖告警（10中危/7高危）仍保留，未升级样本依赖来掩盖差异。
+
+## 2026-10-21：公开可复用原生父 HTTP 装配
+
+新增[公开父 HTTP 宿主](native-agent-http-host.md) `createNativeAgentHttpHost`，从测试helper移出真实Node监听、原RouteBuilder/Provider/MVC/CLS/参数与响应解析/Dispatcher/View装配、原路由元数据、本机REST传输以及启动/关闭回收。运行时没有scripts/test/bundle依赖；父链helper不再借nativeHttpFixture装配HTTP。已有12种Read/Write/Ask/Plan、4冷恢复、4异常入口及第65/67组原参考图成对验证全部改用公开宿主，未以兼容View或人工resolve替代原AcpView/setSession。
+
+新桥只拥有IPv4 loopback监听、原namespace、本机capability、有界JSON解析和自身REST IO；controller、session middleware、View/SDK、认证、pipe和endpoint均为明确借入。原RouteBuilder预构建成功后由原RouteProvider.init/provide发布同次路由结果，收拢原fire-and-forget错误边界。默认随机端口、1MiB限制等明确是桥选项，不冒称原产品配置。停止准入后须先关闭借入的rendezvous/View，再关闭HTTP；不伪造idle或取消无权拥有的服务。
+
+15项新增测试覆盖真实原MVC/Body/Header/GET models、并发原CLS、双重准入/内部目标限制、JSON/媒体/体积/路由边界、原CliServerErrorHandler、路由/绑定/endpoint失败回滚、并发start-close、两阶段关闭和半截body回收。独立测试的JSON view/controller是明确适配器；完整父链测试仍用原Controller/Ingress/ACP View和真实SDK。没有把这些单元测试计为新恢复的原类，也没有新增无来源的产品接口或升级SDK。
+
+REA证据 `ev_b0aea3f15293ce0da56b4cb9c2abbef1ccb6f0d13869afb68b5a1230383f5421`：9433 AST nodes、2 parsed、0 skipped/parse failures；750 semantic/每文件750、150 unknown/每文件150、45秒上限下partial/truncated，不是完整等价证明。仍仅owned文件/loopback/确定模型，无安装账户/生产请求。
+
+下一步继续将完整原会话栈与AgentService/认证/配置的父装配迁出测试边界，接默认可运行入口和独立OS进程恢复；同时保留生产auth/REST、原JSON/pipe/Body/Cookie/HTTP Session、跨cwd/配置、Desktop HistoryStore等未完成前沿。公开HTTP只是完整默认父启动的一个实质组成部分，整体目标仍进行中。
+
+最终门槛：check/build、1604核心+11Web、1525编译JS smoke、全部67组源码/行为验证、原配置校验和CLI/Web seed/reload实际启动通过。最终暂存代码干净检出重新npm ci/check/build后，1604编译核心+11Web、配置与实际启动再次通过，无bundle/原应用或旧node_modules依赖。SDK和6 JSON/115 product prompts/22 Desktop资源（304358字节）不变；764文件发布审计在已检查规则内无发现，不是安全证明。既有17依赖告警（10中危/7高危）未隐藏。

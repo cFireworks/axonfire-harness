@@ -43,6 +43,8 @@ ToolPermissionHost 的可选 factory 注入只用于明确替换实现边界，�
 
 ## 新增资源所有权桥
 
+后续[公开父 HTTP 装配](native-agent-http-host.md)已将真实监听、原路由/MVC/CLS装配、内部REST传输与失败/关闭回收移出本测试helper。以下既有父链及冷恢复场景现通过公开运行时模块执行，不再使用nativeHttpFixture装配父HTTP；完整默认父启动入口仍未完成。
+
 后续[完整 Ask/Plan 服务批次](native-interaction-services.md)已替换 Ask span double 并接入原 AskService/PlanStorage、Defer 权限和 ExitPlan input processor；新增六组问答/计划真实 ACP 集成，包括扩展 RPC 回答、跳过、取消及计划批准/拒绝/退出。普通 Plan 默认进入和退出各审批一次，计划文件 Write 无额外审批；具体原行为和剩余边界见该文。
 
 `createAcpRendezvousHost` 与已有 `createAcpViewHost` 不同：前者由真实HTTP/MVC调用render，支持源新会话交接；后者借用一个已创建的 standalone session/审批lease。两者都不复制agent loop，不把新的桥称作原源码。

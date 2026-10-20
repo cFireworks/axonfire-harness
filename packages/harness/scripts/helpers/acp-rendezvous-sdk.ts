@@ -4,7 +4,6 @@ import assert from "node:assert/strict";
 import * as io from "node:fs/promises";
 import * as fs from "node:fs";
 import { join } from "node:path";
-import { createServer, type Server } from "node:http";
 import { EventEmitter } from "node:events";
 import { isDeepStrictEqual } from "node:util";
 import { randomUUID } from "node:crypto";
@@ -25,6 +24,7 @@ import { createNativeSessionIngress } from "../../src/sessions/native-session-in
 import { createCapturedAcpSdk } from "../../src/vendor/captured-acp-sdk.js";
 import { createNativeRunner } from "../../src/runner/native-runner.js";
 import { createNativeHttpRuntime } from "../../src/http/native-http-runtime.js";
+import { createNativeAgentHttpHost } from "../../src/http/native-agent-http-host.js";
 import { createNativeAuthenticationRuntime } from "../../src/auth/native-authentication.js";
 import { loadProductConfiguration } from "../../src/config/product-config.js";
 import { ProductPromptRenderer } from "../../src/prompts/prompt-renderer.js";
@@ -51,7 +51,6 @@ import { AskUserQuestionTool } from "../../src/tools/ask-user-question.js";
 import { PlanTools } from "../../src/tools/plan-tools.js";
 import { ExitPlanModeToolCallProcessor } from "../../src/sessions/exit-plan-mode-tool-call-processor.js";
 import { agentRunFixture, agentRunFactories } from "./agent-run-fixture.js";
-import { nativeHttpFixture } from "./native-http-fixture.js";
 import { authenticationFixture } from "./authentication-fixture.js";
 import {
   acpProtocolFixture,
@@ -110,7 +109,24 @@ export async function acpRendezvousSdk(
 ) {
   return withTrace(new LocalNoopTrace(), async () => {
     let initializePermissions: ((session: any) => Promise<void>) | undefined;
-    const h = nativeHttpFixture(factories.http),
+    const httpLogs: any[] = [],
+      capability = randomUUID();
+    const h = createNativeAgentHttpHost({
+        sourceFactory: factories.http,
+        maxBodyBytes: 8192,
+        capability,
+        logger: {
+          info: (...args: any[]) => {
+            httpLogs.push(["info", ...args]);
+          },
+          error: (...args: any[]) => {
+            httpLogs.push(["error", ...args]);
+          },
+        },
+        onDispatch(request, response) {
+          httpRequests.push({ request, response });
+        },
+      }),
       f = await agentRunFixture(factories.agentRun, {
         emptyMeta: true,
         httpModule: h.native.getModule(47005),
@@ -139,8 +155,7 @@ export async function acpRendezvousSdk(
       authToken,
     );
     f.service.authenticationManager = auth.manager;
-    let server: Server | undefined,
-      agents: AgentManager | undefined,
+    let agents: AgentManager | undefined,
       p: ReturnType<typeof acpProtocolFixture> | undefined;
     let host: ReturnType<typeof createAcpRendezvousHost> | undefined,
       services: ReturnType<typeof createAcpServicesHost> | undefined;
@@ -176,12 +191,10 @@ export async function acpRendezvousSdk(
       approvalMode = writeMode || askMode || planMode;
     let asks: any, plans: any;
     const interactionTimers = new Set<ReturnType<typeof setTimeout>>();
-    const transports = new Set<Promise<any>>();
     const interruptionSubscriptions = new Set<any>(),
       interruptionJobs = new Set<Promise<any>>();
     const modelBarriers = new Set<any>();
-    const capability = randomUUID(),
-      connectionId = "owned-parent-connection";
+    const connectionId = "owned-parent-connection";
     async function checked<T>(
       label: string,
       operation: Promise<T>,
@@ -593,7 +606,7 @@ export async function acpRendezvousSdk(
         };
       const parentModules: any = {
         ...f.modules,
-        80699: { ...f.common, Deferred: h.host.common.Deferred },
+        80699: { ...f.common, Deferred: h.native.common.Deferred },
         47005: h.native.getModule(47005),
         67062: {
           MediaType: {
@@ -981,8 +994,7 @@ export async function acpRendezvousSdk(
         }),
         { readable: toClient.readable, writable: toAgent.writable },
       );
-      let origin = "",
-        accepting = true;
+      let origin = "";
       const restFactory = parentNative.rest.RestOperationsFactory;
       p.modules[67062].RestOperationsFactory = restFactory;
       p.modules[67062].HttpHeaders = h.native.getModule(14516).HttpHeaders;
@@ -991,31 +1003,8 @@ export async function acpRendezvousSdk(
         default: {
           create: () => ({
             post(target: string, body: any, options: any) {
-              if (!accepting)
-                return Promise.reject(Error("Owned parent REST is closed"));
-              const url = new URL(target);
-              assert.equal(url.origin, origin);
               restCalls.push({ body, options });
-              const pending = fetch(url, {
-                method: "POST",
-                headers: {
-                  ...options.headers,
-                  authorization: "Bearer " + capability,
-                },
-                body: JSON.stringify(body),
-              }).then(async (response) => {
-                if (response.status !== 200)
-                  throw Error(
-                    "Owned native HTTP failed: " + (await response.text()),
-                  );
-                return { status: response.status, data: await response.text() };
-              });
-              transports.add(pending);
-              void pending.then(
-                () => transports.delete(pending),
-                () => transports.delete(pending),
-              );
-              return pending;
+              return h.post(target, body, options);
             },
           }),
         },
@@ -1033,94 +1022,17 @@ export async function acpRendezvousSdk(
         inputFormat: "stream-json",
       });
       p.setDependency(placeholders[74183].CliRuntimeOptions, cliOptions);
-      const key = h.native.getModule(90014).METADATA_KEY,
-        ctor = f.controller.constructor;
-      h.define(key.controller, ctor, { path: "internal/agent" });
-      h.define(key.controllerMethod, ctor, [
-        { key: "run", method: "POST", options: "" },
-      ]);
-      h.define(key.controllerBody, ctor, [{ parameterIndex: 0 }], "run");
-      h.define(
-        key.controllerRequestHeader,
-        ctor,
-        [{ parameterIndex: 1 }],
-        "run",
-      );
-      const builder = new h.C.RouteBuilder();
-      builder.controllers = [f.controller];
-      builder.pathResolver = h.pathResolver;
-      const provider = new h.C.RouteProviderImpl();
-      provider.routeBuilder = builder;
-      provider.init();
-      await provider.provide();
-      const matcher = new h.C.RouteMetadataMatcherImpl();
-      Object.assign(matcher, {
-        routeProvider: provider,
-        requestMatcher: h.matcher,
-      });
-      const { adapter } = h.mvc([]);
-      adapter.routeMetadataMatcher = matcher;
-      const resolver = new h.C.ViewResolverImpl();
-      resolver.defaultViewName = "acp";
-      resolver.viewProvider = new h.C.ViewProvider([host.view]);
-      adapter.viewResolver = resolver;
-      const http = new h.C.HttpMiddleware();
-      http.logger = f.logger;
       const errorHandler = new parentNative.CliServerErrorHandler();
       errorHandler.logger = f.logger;
-      const dispatcher = new h.C.DispatcherImpl();
-      Object.assign(dispatcher, {
-        logger: f.logger,
-        handlerExecutionChain: h.chain,
-        middlewareProvider: new h.C.MiddlewareProvider([http, f.middleware]),
-        handlerMapping: new h.C.HandlerMappingImpl([adapter]),
-        errorHandlerProvider: new h.C.ErrorHandlerProvider([errorHandler]),
+      origin = await h.start({
+        controller: f.controller,
+        sessionMiddleware: f.middleware,
+        views: [host.view],
+        defaultViewName: "acp",
+        errorHandlers: [errorHandler],
+        pipeManager: { apply: async () => {} },
+        endpointProvider,
       });
-      server = createServer((req, res) => {
-        void (async () => {
-          if (
-            !accepting ||
-            req.headers.authorization !== "Bearer " + capability ||
-            req.headers[parentNative.security.CUSTOM_REQUEST_HEADER] !== "1"
-          ) {
-            res.writeHead(403);
-            res.end();
-            return;
-          }
-          const chunks: Buffer[] = [];
-          let bytes = 0;
-          for await (const part of req) {
-            bytes += part.length;
-            if (bytes > 8192) {
-              res.writeHead(413);
-              res.end();
-              return;
-            }
-            chunks.push(part);
-          }
-          const request: any = req;
-          request.path = new URL(req.url!, "http://127.0.0.1").pathname;
-          request.body = JSON.parse(Buffer.concat(chunks).toString("utf8"));
-          request.query = {};
-          request.get = (name: string) => req.headers[name.toLowerCase()];
-          httpRequests.push({ request, response: res });
-          await h.run((ctx) => dispatcher.dispatch(ctx), request, res as any);
-        })().catch((error) => {
-          errors.push(["HTTP", error.message]);
-          if (!res.writableEnded) {
-            res.statusCode = 500;
-            res.end("owned HTTP failed");
-          }
-        });
-      });
-      await new Promise<void>((resolve, reject) => {
-        server!.once("error", reject);
-        server!.listen(0, "127.0.0.1", resolve);
-      });
-      const address = server.address();
-      assert.ok(address && typeof address !== "string");
-      origin = "http://127.0.0.1:" + address.port;
-      await endpointProvider.setServer(server);
       const initialized: any = await checked(
         "initialize",
         client.initialize({
@@ -1175,9 +1087,9 @@ export async function acpRendezvousSdk(
       assert.equal(p.agent.getCurrentSessionId(), session.id);
       assert.equal(p.agent.getSessionRequest(), undefined);
       async function finishOwnedParent() {
-        accepting = false;
+        h.stopAccepting();
         await host!.close();
-        await Promise.allSettled([...transports]);
+        await h.close();
         await Promise.allSettled([...interruptionJobs]);
         for (const sub of interruptionSubscriptions) sub.unsubscribe();
         assert.equal(httpRequests[0].response.writableEnded, true);
@@ -1187,6 +1099,11 @@ export async function acpRendezvousSdk(
         assert.equal(tasks.eventNames().length, 0);
         assert.equal(host!.asynchronousErrors.length, 0);
         assert.equal(f.errors.length, 0);
+        assert.deepEqual(h.errors, []);
+        assert.equal(h.pendingDispatchCount, 0);
+        assert.equal(h.pendingTransportCount, 0);
+        assert.equal(h.hookCount, 0);
+        assert.equal(h.listening, false);
         assert.equal(
           errors.filter((e) => !expectedProtocolDiagnostics.has(e)).length,
           0,
@@ -1226,15 +1143,13 @@ export async function acpRendezvousSdk(
             return diagnostic[3];
           },
           async postInternal(body: any) {
-            return rest
-              .create()
-              .post(origin + "/internal/agent", body, {
-                headers: parentNative.security.withSecurityHeader({
-                  "content-type": "application/json",
-                  "acp-connection-id": connectionId,
-                }),
-                proxy: false,
-              });
+            return rest.create().post(origin + "/internal/agent", body, {
+              headers: parentNative.security.withSecurityHeader({
+                "content-type": "application/json",
+                "acp-connection-id": connectionId,
+              }),
+              proxy: false,
+            });
           },
         });
         await f.drain();
@@ -1509,11 +1424,7 @@ export async function acpRendezvousSdk(
       await host?.close();
       await Promise.allSettled([...interruptionJobs]);
       for (const sub of interruptionSubscriptions) sub.unsubscribe();
-      if (server) {
-        server.closeAllConnections();
-        await new Promise<void>((resolve) => server!.close(() => resolve()));
-      }
-      await Promise.allSettled([...transports]);
+      await h.close();
       await services?.close();
       if (client && endpoint) {
         await Promise.allSettled([

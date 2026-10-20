@@ -2,6 +2,8 @@
 
 固定 WorkBuddy 5.3.14 CLI SHA-256：`4120898f1ded86ac545316721d216c827a325c2513a8fae4bcd8c8bbbf211afd`。源码位置使用 UTF-16 偏移。`native-http-runtime.ts` 保存完整声明/惰性 factory，不执行原 DI decorators 或应用 bootstrap。
 
+后续已提供[公开父 HTTP 装配](native-agent-http-host.md)，将原路由/MVC/CLS与真实Node监听及内部REST传输移出测试helper；已有ACP父链与磁盘恢复成对验证改接此运行时模块。它是新增所有权桥，不是完整原产品bootstrap或生产认证server。
+
 ## 源码范围
 
 | 部分 | 完整恢复内容 |
