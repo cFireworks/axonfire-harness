@@ -16,7 +16,7 @@ Web 使用单运行槽以避免用户在同一进程对多个会话并发修改�
 
 SDK控制协议现由原StdoutWriter、Permission/Hooks/McpMessage/Elicitation客户端、ControlSignalHandler和初始化/模式/模型handler组成，所有I/O在工厂闭包显式注入。提供 `sdkControl` 时自动连接原Hook调用与权限控制器，默认启用两条native权限路径；`receive/receiveLine`消费控制响应，输出按JSONL保留原前缀分发和stdout背压行为。独立宿主拥有定时器/drain监听/拒绝Promise的清理，不添加原请求中不存在的默认permission timeout，不关闭外部stream。
 
-初始化handler的完整原方法已移植；SDK MCP server和ProductManager现接入原生宿主，prompt/Agent初始化覆盖由原provider→merger→发布→AgentManager重建实现。环境切换仍需真实adapter，模型API key也不映射成原账号token。完整stdin/headless parser、SDK鉴权命令及产品启动与这些可用控制组件仍有区别。
+初始化handler的完整原方法已移植；SDK MCP server和ProductManager现接入原生宿主，prompt/Agent初始化覆盖由原provider→merger→发布→AgentManager重建实现。原环境切换与环境JSON/endpoint providers现已默认接入，模型API key仍不映射成原账号token，完整登录/认证storage并未恢复。完整stdin/headless parser、SDK鉴权命令及产品启动与这些可用控制组件仍有区别。
 
 原生MCP模块将server/tool/Hook proxy、六个remote override、SDK server/JSON-RPC transport、transport registry、subagent白名单、JSONC配置工具与结果截断/落盘按完整原类/函数移植。外层 `native-mcp-host` 只负责显式配置、DI与资源所有权，不扫描安装账户或配置。已有Agent持有同一个live connectedServersCache，增删连接通过splice更新；工具元数据收集仍调用原proxy.listTools。
 
@@ -32,7 +32,7 @@ SDK控制协议现由原StdoutWriter、Permission/Hooks/McpMessage/Elicitation�
 
 原ProductManager、五种merge strategy及DefaultProductMerger、Client/Env/CLI options/SDK initialize/Plugins/MCP prompt/default providers、GzipUtils/MemoryLocalStorage和MCP prompt renderer已逐类移植。稳定与volatile配置分离，原provider优先级、同优先级反序、原finally同步队列/失败语义和480秒proxy过期/2秒节流不重写。压缩包的匿名provider constructor.name仍保持缩写，不能因可读类名命中原字符串prefetch名单而改变样本调度。
 
-ConfigWatch/McpWatch原类驱动缓存失效、CWD重绑与状态变化后的sync，独立host只负责自有FS/环境/缓存/定时器和发布关闭屏障。默认不加载原账户、远端产品配置或安装缓存。新快照同步更新同一个ProductConfiguration视图，ToolManager清描述缓存，CommandManager刷新，AgentManager监听原onDidChange重建；SDK初始化等待该重建。原插件刷新事务、Cloud product核心和SettingsManager磁盘服务已在后续批次独立还原验证；完整账户/环境与其余bootstrap仍未完成。SDK instructions的职责参考[OpenAI Docs](https://developers.openai.com/api/docs/guides/agents/define-agents)，实际调用与生命周期仍按锁定0.5.2及真实SDK回归。
+ConfigWatch/McpWatch原类驱动缓存失效、CWD重绑与状态变化后的sync，独立host只负责自有FS/环境/缓存/定时器和发布关闭屏障。默认不加载原账户、远端产品配置或安装缓存。新快照同步更新同一个ProductConfiguration视图，ToolManager清描述缓存，CommandManager刷新，AgentManager监听原onDidChange重建；SDK初始化等待该重建。原插件刷新事务、Cloud product核心和SettingsManager磁盘服务已在后续批次独立还原验证；原环境核心及两个providers现已单独恢复验证；完整账户与其余bootstrap仍未完成。SDK instructions的职责参考[OpenAI Docs](https://developers.openai.com/api/docs/guides/agents/define-agents)，实际调用与生命周期仍按锁定0.5.2及真实SDK回归。
 
 CustomAgents/CustomCommands、Models/CustomModels、AgentModelResolver、AvailableModelsFilter、企业custom-model filter及Craft-to-cli同步现默认加入同一个ProductManager。原DirectoryScan、颜色、加载时变量与plugin变量完整方法，以及原模型能力目录/类型/策略常量的纯factory一并保留；目录数据不当作新SDK实现。SDK自定义model/provider边界参考[OpenAI Docs](https://developers.openai.com/api/docs/guides/agents/models)，实际API版本仍锁定0.5.2。
 
@@ -70,4 +70,10 @@ Desktop侧会话Addon链现有完整纯函数与ModeService三类、CWD错误类
 
 源craft/expert默认bypassPermissions，这会绕过现有standalone mutation guard；该默认被保留而非改成兼容策略，嵌入者如需审批应显式default。原prompt-vars写入/健康检查/11109修复方法在owned随机temp根运行，关闭保留state，只移除本次temp；工作目录预检不会自动创建丢失的项目。借用的resolver/prompt renderer生命周期由调用方管理，不读取原账户或自动初始化模板服务。
 
-后续继续完整资源prompt服务、daemon会话动态配置/自动重启、环境及完整SDK输入/启动/鉴权、Hook服务端和AutoMode backend。统一默认审批时还须验证原policy allow与独立guard的边界，不能只因为可选路径测试通过就声明默认已等价。新增Web UI不计为这些原产品服务已恢复。
+后续继续完整资源prompt服务、daemon会话动态配置/自动重启及完整SDK输入/启动/鉴权、Hook服务端和AutoMode backend。统一默认审批时还须验证原policy allow与独立guard的边界，不能只因为可选路径测试通过就声明默认已等价。新增Web UI不计为这些原产品服务已恢复。
+
+环境核心现由原ProductEnvServiceImpl、ClientInternetEnviromentProductProvider、SettingsEndpointProductProvider及六个helper驱动；BooleanUtils完整类一并保留。原tl/td/eM类名、6000/6005顺序、10秒endpoint缓存、按环境永久JSON缓存、两套新旧变量优先级与switch吞sync异常语义不重写。ProductManager/环境/默认Cloud共用显式env对象；SDK initialize调用原switch，settings endpoint变化调用原sync，正常Agent发布路径负责重建。原环境JSON的endpoint可以后覆盖设置值，不能私自调优先级；六份原JSON不修改。
+
+native-product-environment-host只负责只读路径/DI/订阅与Promise所有权：平台home位于state下，产品JSON来自仓库或显式资源根；不读取真实home/安装session。它跟踪原回调中未await的sync，关闭共享settings之前等待所有已接受的环境任务，borrowed ProductManager保留原receiver/原型方法。独立ProductHost按需拥有完整SettingsHost并连接原watcher.clearSettingsCache。没有实现真实认证storage或自动AuthenticationManager→switchBySession链，模型地址/API key也不成为产品endpoint/token。
+
+原SettingsManager慢读在新写后回填旧cache的竞态已与原endpoint/权限类联合复现；原非事务persist可随后覆盖新规则。专项测试显式保留该失败时序；串行规则转换测试在步骤间join已有消费者，不把稳定测试等同于修复源程序一致性。宿主所有权桥不新增业务全局锁，也不宣称OS沙箱或跨进程事务。

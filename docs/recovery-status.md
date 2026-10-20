@@ -17,7 +17,7 @@
 | ---: | ----------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |    1 | OpenAI Agents SDK | 完成                         | 精确锁定 `@openai/agents* 0.5.2`、`openai 6.25.0`；SDK 不重写                                                                                                                                                                                                                         |
 |    2 | Product config    | 100% 字节保留                | default/cloudhosted/internal/ioa/selfhosted/sandbox 六份原始 JSON；SHA 验证                                                                                                                                                                                                           |
-|    2 | ProductManager / providers | 原manager、merger及文件/模型provider默认接入 | 首批19类/112处AST/743次比较；文件/模型15类及helper为118处AST/263次比较。插件刷新队列与原SettingsManager/PluginPolicy现默认接入，seed物化/交接已接显式资源根；Cloud四类22成员/8常量/38次比较现已默认接入，认证/REST为显式边界；Addon核心与独立后端已恢复（见后文）；完整资源Prompt服务、daemon动态会话编排和环境服务仍待补，不等于完整产品bootstrap |
+|    2 | ProductManager / providers | 原manager、merger及文件/模型provider默认接入 | 首批19类/112处AST/743次比较；文件/模型15类及helper为118处AST/263次比较。插件刷新队列与原SettingsManager/PluginPolicy现默认接入，seed物化/交接已接显式资源根；Cloud四类22成员/8常量/38次比较现已默认接入，认证/REST为显式边界；Addon核心与独立后端已恢复（见后文）；原环境三类和BooleanUtils/6helper共21成员、397次比较现已接入；完整资源Prompt服务、daemon动态会话编排和登录/鉴权仍待补，不等于完整产品bootstrap |
 |    2 | PluginManager / loaders / refresh | 完整核心类、市场、安装器和设置/策略主路径默认接入 | 首批14完整类含PluginManager194成员与七loader/事务/reload/style：294处AST/472次比较；市场/锁15类+19helper：129处AST/584次比较；Git/npm/subdir/Options/ErrorCollector5类：45处AST/120次比较。原PluginPolicy与Settings/CLI服务已默认连接，支持磁盘启停/卸载/重启及实时产品策略；资源seed/MCPB与完整产品控制器仍待补 |
 |    2 | Settings / PluginPolicy | 6完整类与原常量默认接入 | SettingsManager/Controller/ValidateMiddleWare、CliSettings/SettingSourcesProvider、PluginPolicy，另3个helper共66处完整AST、9个pure factory与94次有限行为比较；JSONC/作用域/缓存/损坏拒写/锁/Hook/CLI队列和策略事件保留。权限/MCP/SDK消费者已补原分scope读写和关闭屏障（另105成员/154组联合复验）；完整路由/环境bootstrap仍未据此宣称恢复 |
 |    2 | Builtin seed / plugin controller | 原物化与metadata交接链已接入 | 43个Desktop seed/复制函数、5个资源解析函数/7级候选、完整PluginController23方法及Validator/Error类：78处AST、12初始化表达式、113次有限比较。显式资源根启动接原manager事务/刷新；第三方二进制不分发，完整Electron/daemon/session-addon未据此标为恢复 |
@@ -817,3 +817,27 @@ SDK initialize原switchEnvironmentIfNeeded先set enterpriseEndpoint（默认USER
 REA对上述七个惰性完整类再次分析，证据`ev_e4d6aa312fc274bf8969d8201a0188d3758131be352c407b76d1ad7cea83aceb`；750节点/每文件750节点、150unknown、45秒，semantic graph为partial/truncated。未执行原bootstrap，SDK/OpenAI锁定版本、依赖锁、六份JSON、115 Prompt与memory policy摘要均未改。
 
 本批最终门槛：1021核心、11Web、942编译JS smoke（821既有+23设置+29seed+22Cloud+18Addon+29消费者）、50组样本源码差分及check/build/config、CLI/Web实际启动全部通过。新的暂存快照不含原应用/bundle/旧node_modules，重新npm ci/check/build，314项编译后设置消费者/Addon/Cloud/产品/插件/市场/设置/权限/seed/SDK控制专项、11项Web测试及实际CLI/Web seed/reload启动全部通过。发布审计594文件，在所检查的凭据/运行文件规则内无发现，不是安全证明；既有17项audit风险（10中危/7高危）未强制升级。后续继续资源PromptService、daemon会话动态配置/自动重启、client-settings endpoint与完整环境/鉴权/启动链；原消费者接线已恢复不等于整个harness全部100%完成。
+
+## 原产品环境服务与 client-settings endpoint 批次
+
+固定CLI SHA不变。新增完整ProductEnvServiceImpl `9860010..9862805`、ClientInternetEnviromentProductProvider `9865679..9868185`、SettingsEndpointProductProvider `9890783..9892221`及BooleanUtils `15165544..15165887`，共4类21成员；完整findProductJson `9862806..9862889`、resolveEnvFromSessionFileSync `9862889..9864084`、matchDomainList `9864084..9864267`、isBuiltinModelsDisabled `15245802..15245976`、stripBuiltinModelsIfDisabled `15246138..15246237`、ObjectUtils.isChanged原函数 `15169398..15169461`共6函数。所有索引为固定样本UTF-16；完整方法体/参数AST核对，不只对照选中分支。保留原tl/td/eM constructor.name，不因可读命名误触发ProductManager按名字选择的预取逻辑。
+
+原环境getCurrent依次检查settings.env新/旧拼写、显式env新/旧拼写、产品networkEnvironment、当前session域名；provider的顺序却为settings新、env新、settings旧、env旧、current.networkEnvironment、ENV_PRODUCT_CLI_ACCOUNT_TYPE，再尝试productConfigEnv。这个差别及字符串productConfigEnv按字符再查env的边界均保留。switch先提交env/lastSwitchedEnv再sync并吞异常，同一值不重试；switchBySession保留显式设置/环境覆盖保护。域名通配符仍只跨单标签，其他regex元字符不全面转义，非法模式仍可throw。
+
+ClientInternetEnviromentProductProvider按lower-case环境名加载product.<env>.json，6005优先级在endpoint provider6000之后合并，故环境JSON显式endpoint可覆盖settings endpoint。deploymentType先看current endpoint是否符合cloudHostedDomain，再按selfhosted/cloudhosted推断；缺文件保留原警告/降级且不缓存失败，成功JSON永久Map缓存、不被force/磁盘改写/strip-model env改变自动清除。stripBuiltinModelsIfDisabled与完整BooleanUtils实际原语义及抛错类型均保留，六份原JSON不改。
+
+SettingsEndpointProductProvider保留10秒TTL、force不跳过、显式env变化即失效；三个配置值沿原trim，不做类型强制修复。selfhosted/cloudhosted且enterpriseEndpoint非空优先，其后staging+current stagingEndpoint，再普通endpoint。原SettingsChange清cachedConfig并generateConfig，仅ObjectUtils.isChanged(lastConfig,next)才触发原fire-and-forget sync；不擅自把全部设置变化都变成环境重建。
+
+root默认注入同一原SettingsManager；SDK initialize的switchEnvironmentIfNeeded现在实际调用原环境服务，USER enterpriseEndpoint持久化后经原ProductManager发布/Agent重建，并可关闭/重启恢复。sdkControl.initializeDependencies仍最后覆盖；默认匿名account:null，显式sources.authenticationManager可作为借用来源，但模型API key不冒充产品token。ProductManager/环境/默认Cloud沿同一显式env对象，不写process.env。独立ProductHost未给manager时拥有完整SettingsHost，clearSettingsCache也接同一实例；不关闭借用manager。
+
+earlyEnvInit/同步session推断未删改原方法。原PathUtils/平台home只读桥把真实home重定向至本次state/product-environment/platform-home，仅允许产品JSON和state内USER/session布局；默认无session文件，不读取安装账户/真实home。显式resourcesRoot可以换可信产品文件，symlink越界/资源路径穿越被桥拒绝，不是OS沙箱或全部竞态防护。early helper先检查authentication.id，直接读USER不应用setting-sources合并过滤，损坏JSON分支和三平台布局均测试；none不是禁止所有读盘。真实认证storage/登录命令和自动AuthenticationManager→switchBySession调用链仍待恢复。
+
+所有权桥跟踪原settings回调、未await的sync和已接受的服务/嵌套方法，使用活动async token允许旧任务收敛而拒绝新调用。root在关闭共享SettingsHost之前先关闭环境入口并join；独立ProductHost并发start共享初始化屏障，close等待unfinished start，不会在close后又挂载环境订阅。借用ProductManager通过代理保留prototype方法及原this。
+
+全量回归一度暴露连续权限规则测试磁盘allow丢失；不能简单当作测试噪声。现用受控真实临时文件读时序，完整原SettingsManager、endpoint和ToolPermissionService联合对照：慢读先捕获Write；新写提交Write+Read；旧读晚到回填60秒cache；下一次remove Write从旧cache构造set，磁盘变空而context保留Read。原类与port均确定性复现。未通过新增全局锁改变源码语义；旧串行转换测试在每步等待environment/settings消费者settle，并单列这一丢规则的竞态测试。源get/set非事务、cache无版本屏障这一风险明确保留。
+
+第51组verify:product-environment涵盖4完整类21成员/6函数及398组有限行为比较，其中1组是上述跨完整原类的真实文件竞态；27专项覆盖三平台owned早期推断、scope/none、TTL/永久缓存、JSON优先级、SDK完整initialize/真实SDK调用/重启、Agent刷新、设置回调、原型receiver、并发start/close及安全路径边界。不是全认证、所有并发或整个harness100%。
+
+REA对四个惰性完整类和三个session helper再次静态分析，证据`ev_617c617aa0417d2060733603a0d0c2cb61cb798f9824fe67291f73d1fcd2da21`；750节点/每文件750、150unknown、45秒，semantic graph为partial/truncated，未执行原bootstrap。SDK/OpenAI版本、依赖锁、六份JSON、115 Prompt及memory policy摘要保持不变。
+
+本批最终门槛：1048核心、11Web、969编译JS smoke（942既有+27环境专项）、51组样本源码差分、check/build/config与实际CLI/Web启动全部通过。无原应用/bundle/旧node_modules的全新暂存快照重新npm ci/check/build，341项编译后环境/设置消费者/Addon/Cloud/产品/插件/市场/设置/权限/seed/SDK控制测试、11项Web测试及CLI/Web实际seed/reload启动均通过。发布审计601文件，在所检查的凭据/运行文件规则内无发现，不是安全证明；既有17项audit告警（10中危/7高危）未强制升级。上述失败时序已明确区分原竞态与串行测试前提，不以一次重试通过代替原因分析。后续优先WorkbuddySystemPromptService/原PromptRenderer与九collector/资源模板，再继续daemon动态配置/自动重启、完整认证storage/登录/SDK启动及其他产品providers；整体目标仍未完成。

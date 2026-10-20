@@ -812,6 +812,7 @@ export async function createHarness(options: HarnessOptions) {
   const explicitProductProvider = { priority: 21001, volatile: true, async provide() { return { mergeStrategy: "smartMerge", ...(options.skills ? { skills: options.skills } : {}), ...(options.commands ? { commands: options.commands } : {}) }; } };
   productRuntime = createNativeProductHost({
     initialConfiguration: product.raw, getWorkDir, getHomeDir: () => stateDir,
+    settingsManager: pluginSettings,
     ...(sdkControl ? { sdkInitializeState: sdkControl.initializeState } : {}),
     ...(pluginSource ? { plugins: pluginSource } : {}),
     ...(options.agentManager?.getCliOptions ? { cliOptions: options.agentManager.getCliOptions } : {}),
@@ -851,6 +852,7 @@ export async function createHarness(options: HarnessOptions) {
     logger: { warn: (...args: any[]) => options.logger?.warn(args.map(String).join(' ')) },
     initializeDependencies: {
       productManager: productRuntime.facade,
+      ...(productRuntime.environmentHost ? { productEnvService: productRuntime.environmentHost.service, authManager: productRuntime.sourceHost.authentication } : {}),
       ...(nativeMcp ? { mcpReadyService: { waitForServersReady: () => mcp.waitForServersReady() }, mcpManager: { add: connectNativeMcp } } : {}),
       ...options.sdkControl?.initializeDependencies,
     },
@@ -978,7 +980,8 @@ export async function createHarness(options: HarnessOptions) {
     for (const session of active.keys()) session.abortController.abort();
     sdkControl?.close();
     const mcpClosing = nativeMcp?.close();
-    const settingsConsumersSettled=Promise.allSettled([mcpClosing,interruptions.waitForPermissionWrites(),permissions.waitForUpdates()]);
+    const environmentClosing=productRuntime?.environmentHost?.close();
+    const settingsConsumersSettled=Promise.allSettled([mcpClosing,environmentClosing,interruptions.waitForPermissionWrites(),permissions.waitForUpdates()]);
     const pluginClosing = pluginHost?.close(settingsConsumersSettled);
     await mcpClosing;
     channelHost.close(); channelClients?.close(); channelApprovalTargets.clear();

@@ -42,11 +42,11 @@ Web 的 `--cwd` 指定工具工作目录：`npm start -- --cwd /absolute/path/to
 
 `hook_`、`mcp_`、`elic_`响应也按原前缀分发；MCP成功payload为 `response.mcp_response`，Hook成功payload为原hook输出对象。权限请求默认无超时，Hook默认60秒；关闭可取消全部pending。`initialize`、`get_available_modes`、`get_available_models`、`set_permission_mode`、`set_model`已注册。独立宿主默认initialize返回account:null，不映射模型API key为产品账号。
 
-`sdkControl.initializeDependencies` 可覆盖原ProductManager/env/账号等依赖。ProductManager现已默认接入：systemPrompt/appendSystemPrompt/agents经原provider合并后重建Agent，不再返回“缺少adapter”或只回复成功而不生效。环境切换仍需真实adapter，不返回假成功。后续MCP批次已接入原SdkMcpServer/transport与Hook proxy，见下节；SDK stdin/headless启动程序、鉴权命令及其余产品provider仍未完成。显式SDK客户端allowed可授权独立guard；Hook allow与完整native政策到guard的统一仍是后续默认路径对齐边界。
+`sdkControl.initializeDependencies` 可覆盖原ProductManager/env/账号等依赖。ProductManager现已默认接入：systemPrompt/appendSystemPrompt/agents经原provider合并后重建Agent，不再返回“缺少adapter”或只回复成功而不生效。环境切换现已默认调用原ProductEnvServiceImpl，并经原环境JSON/endpoint providers刷新产品配置；完整登录/鉴权仍待恢复。后续MCP批次已接入原SdkMcpServer/transport与Hook proxy，见下节；SDK stdin/headless启动程序、鉴权命令及其余产品provider仍未完成。显式SDK客户端allowed可授权独立guard；Hook allow与完整native政策到guard的统一仍是后续默认路径对齐边界。
 
 ## 原生 MCP（嵌入 API）
 
-最新门槛见[还原状态](recovery-status.md)末尾。完整原MCP类群、ProductManager、文件/模型providers及企业模型策略已接入。插件loader、active snapshot提交和完整刷新事务、本地/Git/HTTP/ZIP市场与市场存储/文件锁/更新检查现已接入。Git/npm/subdir安装器、原OptionsStorage/ErrorCollector、SettingsManager和PluginPolicy现默认接入；内置seed/controller/validator已接显式资源根。权限/MCP/SDK设置消费者和Cloud product核心现已接入；真实账户/环境、资源PromptService与完整产品bootstrap仍待补，不能据此宣称所有产品链路完成。
+最新门槛见[还原状态](recovery-status.md)末尾。完整原MCP类群、ProductManager、文件/模型providers及企业模型策略已接入。插件loader、active snapshot提交和完整刷新事务、本地/Git/HTTP/ZIP市场与市场存储/文件锁/更新检查现已接入。Git/npm/subdir安装器、原OptionsStorage/ErrorCollector、SettingsManager和PluginPolicy现默认接入；内置seed/controller/validator已接显式资源根。权限/MCP/SDK设置消费者和Cloud product核心现已接入；真实账户、资源PromptService与完整产品bootstrap仍待补；原环境核心及两个providers已接入，不能据此宣称所有产品链路完成。
 
 普通嵌入调用可在已有模型配置上添加：
 
@@ -109,7 +109,7 @@ await harness.agents.waitForRebuildSettled(0);
 
 同步后的prompt/Agent/tool描述索引与命令表会刷新。SDK控制通道的initialize现可应用systemPrompt、appendSystemPrompt和自定义agents（每项须有description/prompt），仍按原字段，不把自定义Agents SDK接口冒充原JSONL协议。MCP prompt在连接后通过原provider转成命令，原renderer负责引号参数、角色/资源文本和剩余参数；必要时调用全量sync等待发现，不把volatile sync误当成刷新全部MCP prompt。
 
-`productRuntime.providers` 可附加显式provider（priority > 0，provide({force,current})；按需声明volatile）。默认接入原Client/Env/CLI options/SDK initialize/Plugins/MCP prompt/default provider、CustomAgents/CustomCommands、Models/CustomModels、Agent model解析/可用过滤/企业策略与Craft-to-cli同步，以及已有Skill provider和明确标记的宿主命令/skill选项适配器。Cloud product核心、插件加载及原刷新事务已接入；完整账户/环境与其余bootstrap仍待补。插件组件来源优先使用显式agentManager.plugins，否则使用原PluginManager，移除插件后重放volatile快照不会残留其Agent instructions或命令。
+`productRuntime.providers` 可附加显式provider（priority > 0，provide({force,current})；按需声明volatile）。默认接入原Client/Env/CLI options/SDK initialize/Plugins/MCP prompt/default provider、CustomAgents/CustomCommands、Models/CustomModels、Agent model解析/可用过滤/企业策略与Craft-to-cli同步，以及已有Skill provider和明确标记的宿主命令/skill选项适配器。Cloud product核心、插件加载及原刷新事务已接入；原环境服务及环境JSON/endpoint providers已接入；完整账户与其余bootstrap仍待补。插件组件来源优先使用显式agentManager.plugins，否则使用原PluginManager，移除插件后重放volatile快照不会残留其Agent instructions或命令。
 
 ### 本地 Agent、命令与模型文件
 
@@ -193,6 +193,32 @@ npm必须使用可信包和registry：原安装参数没有ignore-scripts，启�
 缓存默认用本宿主独立的原MemoryLocalStorage；可用`productRuntime.storage`注入自己拥有的get/set及可选getSync。缓存保留原gzip/base64、稳定快照与版本key，不自动读取原应用的本地存储。`productRuntime.env`是显式拥有的配置环境对象，默认空；原Env provider可处理其中的ACC_PRODUCT_CONFIG等字段，不会自动扫描进程中可能包含账号的产品配置环境。模型API key仍使用原CLI/Web自己的配置，不映射为产品账号。
 
 原ConfigWatch/McpWatch服务默认接线：文件watch setup延迟2秒、change debounce 3秒、rename即时刷新；MCP connected/disconnected合并后触发全量sync。用户/项目路径沿宿主state/工作目录，不监听安装应用目录；`productRuntime.watch:false`可禁用。原watcher unref，不靠它保持进程存活，关闭会取消订阅、watcher及pending任务，防止关闭中的初始化重新挂载。默认已连接原SettingsManager.clearCache；全局CWD变化也清理设置缓存。
+
+### 原环境切换与设置 endpoint
+
+`harness.productRuntime.environmentHost`默认恢复原ProductEnvServiceImpl、ClientInternetEnviromentProductProvider和SettingsEndpointProductProvider，root与原SettingsManager共用设置；SDK initialize的environment/endpoint现在直接调用原服务并刷新ProductManager，不再要求空缺的环境adapter。完整登录/认证storage/鉴权命令仍未移植，不会把模型API key当作产品账号；没有显式authenticationManager时account仍为null。
+
+```ts
+await harness.productRuntime.environmentHost.service.switch('internal');
+await harness.productRuntime.flush();
+await harness.agents.waitForRebuildSettled();
+// 持久化endpoint（与模型的OPENAI_BASE_URL不是同一设置）
+await harness.settingsManager.set('enterpriseEndpoint', 'https://your-owned-service');
+await harness.productRuntime.environmentHost.service.switch('selfhosted');
+await harness.productRuntime.flush();
+```
+
+只切换产品配置不会发起登录，也不会自动改变独立模型provider的网络地址。`productRuntime.env`仍是显式对象，不修改宿主process.env；环境服务、providers、ProductManager与默认Cloud host共用同一对象。可经`productRuntime.environment.resourcesRoot`显式提供可信的product.json/product.<environment>.json目录；默认使用仓库六份固定JSON。此配置可含可执行Hook/插件策略，只接受可信来源。`environment:false`仅供嵌入者显式禁用，禁用且无initializeDependencies覆盖时SDK环境操作仍报缺少adapter。
+
+原优先级保留：endpoint provider为6000，环境JSON provider为6005，因此后者声明的endpoint可覆盖前者，不能把用户endpoint宣传为无条件最高优先级。selfhosted/cloudhosted环境优先选非空enterpriseEndpoint，否则staging路由与当前stagingEndpoint匹配，再回退普通endpoint；字符串沿原trim，不自动修复错误类型。getCurrent的设置/进程新旧拼写优先级与环境JSON provider并不完全相同，`CODEBUDDY_INTERNET_ENVIROMENT`兼容拼写仍存在。
+
+endpoint缓存10秒且force不跳过，环境变量变化或原SettingsChange会失效；环境JSON按lower-case环境名终身缓存，force/磁盘改写不清除此Map。设置变化回调只在生成的endpoint配置改变时触发sync；其他环境输入更改后可显式sync，不能假设所有设置自动重建。原switch先改环境再sync并吞掉sync异常，同一环境不自动重试；Promise resolve不是远端鉴权或网络就绪证明。
+
+原earlyEnvInit和session域名推断函数完整保留，但平台home重定向到`<state>/product-environment/platform-home/`，原三平台CodeBuddyExtension/Data/Public/auth相对布局只在此根读取；USER设置为`<state>/settings.json`。默认没有session文件，不扫描真实home或安装账号，不建议手工复制生产凭据。外部symlink和资源路径穿越被独立只读桥拒绝，此桥不是OS沙箱；并非实现了原认证storage。early函数直接读USER文件，不应用setting-sources合并过滤；因此none仍不是禁止所有读盘。自动AuthenticationManager→switchBySession调用链留待认证批次，不凭一个Subject监听冒充完整生命周期。
+
+宿主跟踪设置回调及其原fire-and-forget sync；root关闭先停止新环境工作并等待旧任务，再关闭共享settings。独立ProductHost未提供settingsManager时创建自己的原SettingsHost；借用manager不擅自关闭。并发start等待同一初始化屏障，关闭也等待已接受的初始化。
+
+一致性限制来自原代码：一个慢设置读可以在新写入之后把旧文件快照写回60秒缓存。ToolPermissionService的persist又是分开的get/set，所以后续更新可能把旧规则写回磁盘；内存上下文与磁盘可不一致。完整原SettingsManager+endpoint+权限类的受控读写时序已差分复现，未加全局串行锁掩盖样本行为。需要逐步串行验证时，更新后等待`environmentHost.flush()`及`settingsHost.flush()`；这不是跨进程、跨所有消费者的事务保证。
 
 ### Desktop 风格的会话 Addon（独立后端接口）
 

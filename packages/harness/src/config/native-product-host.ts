@@ -3,6 +3,11 @@ import * as fs from "node:fs";
 import { BehaviorSubject } from "rxjs";
 import { createNativeProductWatchers } from "./native-product-watchers.js";
 import { ProductProviderPriority } from "./native-product-constants.js";
+import { createNativeSettingsHost } from "./native-settings-host.js";
+import {
+  createNativeProductEnvironmentHost,
+  type NativeProductEnvironmentOptions,
+} from "./native-product-environment-host.js";
 import {
   createNativeCloudProductHost,
   type NativeCloudProductOptions,
@@ -34,11 +39,14 @@ export type NativeProductHostOptions = {
   watchDependencies?: Record<string, any>;
   sources?: NativeProductSourceOptions;
   cloud?: NativeCloudProductOptions | false;
+  settingsManager?: any;
+  environment?: NativeProductEnvironmentOptions | false;
 };
 /** Owns DI, publication and shutdown only; provider/merge/cache decisions remain native. */
 export function createNativeProductHost(options: NativeProductHostOptions) {
   let closed = false,
     started = false,
+    starting: Promise<void> | undefined,
     closing: Promise<void> | undefined;
   const timers = new Set<any>(),
     pending = new Set<Promise<any>>(),
@@ -263,6 +271,33 @@ export function createNativeProductHost(options: NativeProductHostOptions) {
     sources: options.sources,
   });
   providers.push(...sourceHost.providers);
+  const ownedSettingsHost =
+    options.environment === false || options.settingsManager
+      ? undefined
+      : createNativeSettingsHost({
+          stateDir: options.getHomeDir(),
+          getWorkDir: options.getWorkDir,
+          logger,
+          cwdService: options.cwdService,
+          configuration: { cliOptions: options.cliOptions?.() ?? {} },
+        });
+  const environmentHost =
+    options.environment === false
+      ? undefined
+      : createNativeProductEnvironmentHost({
+          getHomeDir: options.getHomeDir,
+          settingsManager:
+            options.settingsManager ?? ownedSettingsHost!.manager,
+          productManager: { ...facade, configuration: manager.configuration },
+          authenticationManager: sourceHost.authentication,
+          logger,
+          env: runtime.env,
+          configuration: options.environment,
+        });
+  if (!("settings" in runtime.dependencies))
+    runtime.dependencies.settings =
+      options.settingsManager ?? ownedSettingsHost?.manager;
+  if (environmentHost) providers.push(...environmentHost.providers);
   const cloudHost =
     options.cloud === false
       ? undefined
@@ -271,7 +306,7 @@ export function createNativeProductHost(options: NativeProductHostOptions) {
           storage,
           logger,
           authenticationManager: sourceHost.authentication,
-          env: options.env,
+          env: runtime.env,
           ...(options.cloud ? { configuration: options.cloud } : {}),
         });
   if (cloudHost) providers.push(...cloudHost.providers);
@@ -306,14 +341,22 @@ export function createNativeProductHost(options: NativeProductHostOptions) {
     watcherClasses,
     sourceHost,
     cloudHost,
+    environmentHost,
+    ownedSettingsHost,
     async start() {
       if (closed) throw Error("Product host is closed");
       if (!started) {
         started = true;
-        manager.init();
-        sourceHost.start();
-        cloudHost?.start();
+        starting = (async () => {
+          if (ownedSettingsHost) await ownedSettingsHost.start();
+          if (closed) throw Error("Product host is closed");
+          environmentHost?.start();
+          manager.init();
+          sourceHost.start();
+          cloudHost?.start();
+        })();
       }
+      await starting;
       await manager.promise;
       await flushPublications();
       if (!closed && !watchesStarted && options.watch !== false) {
@@ -326,6 +369,7 @@ export function createNativeProductHost(options: NativeProductHostOptions) {
       await drain();
       await sourceHost.flush();
       await cloudHost?.flush();
+      await environmentHost?.flush();
       await drain();
       await flushPublications();
     },
@@ -343,10 +387,14 @@ export function createNativeProductHost(options: NativeProductHostOptions) {
       timers.clear();
       const sourceClosing = sourceHost.close();
       const cloudClosing = cloudHost?.close();
+      const environmentClosing = environmentHost?.close();
       closing = (async () => {
+        await Promise.allSettled([starting]);
+        await environmentClosing;
         await sourceClosing;
         await cloudClosing;
         await drain();
+        await ownedSettingsHost?.close();
         manager.configuration.complete();
         if (!options.storage) storage.emitter?.dispose();
       })();

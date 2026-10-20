@@ -275,8 +275,15 @@ test("native replace/remove rules, setMode and directory mutations use destinati
       update("userSettings", "removeDirectories", {
         directories: ["/owned/missing"],
       }),
-    ])
+    ]) {
       await h.permissions.service.applyUpdate(s, value);
+      // This test asserts sequential rule transformations, not atomic read/modify/write.
+      // The original endpoint provider now runs fire-and-forget setting reads; join
+      // accepted readers between updates. Its stale-cache race has its own exact
+      // original-vs-port interleaving test in product-environment-runtime.
+      await h.productRuntime.environmentHost?.flush();
+      await h.settingsHost.flush();
+    }
     const p = await h.settingsManager.get("permissions", "user");
     assert.deepEqual(p.allow, ["Read"]);
     assert.equal(p.defaultMode, "acceptEdits");
