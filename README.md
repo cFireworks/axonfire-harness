@@ -4,13 +4,9 @@
 
 > 这是进行中的代码还原项目，不是官方 WorkBuddy，也不宣称已 100% 还原全部产品逻辑。Web UI 是新增的独立宿主，不是原版界面。已还原部分、证据和剩余边界见 [还原状态](docs/recovery-status.md)。
 
-最新阶段恢复完整 ACP Agent/View/团队桥/增量解析器及依赖声明，并通过原样本 AST 与行为差分；真实 SDK 已验证其工具/文本转发和历史重放。完整 RPC、广播和审批 owner 尚未接管默认入口，见 [ACP 协议核心边界](docs/acp-protocol.md)。CLI/Web 的开箱即用入口保持不变。
+原生 ACP [协议核心](docs/acp-protocol.md)、[标题/广播/usage 服务](docs/acp-services.md)与[连接/修改版协议 SDK](docs/acp-connections.md)已逐模块恢复。完整原生 [Agent/View 循环](docs/acp-view-host.md)可显式接入已有 SDK 会话，以单一审批归属完成真实 Write/拒绝/Defer、续轮、队列与关闭，不靠 bypassPermissions。
 
-标题、friction/召回、广播与 usage 源服务也已恢复；完整 AcpView 执行链通过真实 SDK 集成，附有独立的订阅/定时器/异步任务宿主。其默认入口和外部服务边界见 [ACP 服务说明](docs/acp-services.md)。
-
-ACP 连接/Stream/guard 的 10 个完整类及样本修改版 ACP SDK 已恢复，通过完整 AST、原样本行为差分和真实本地 stdio/HTTP 双向传输测试；尚未接管默认业务/审批入口，见 [ACP 连接说明](docs/acp-connections.md)。OpenAI SDK 仍保留原依赖，不重新实现。
-
-完整原生 ACP Agent/View 循环现可显式接入已有 SDK 会话，以单一审批归属完成真实 Write/拒绝/Defer、续轮、队列与关闭；不再只测单次 executePrompt，也不靠 bypassPermissions。新会话/认证/默认入口尚未切换，见 [ACP View 宿主](docs/acp-view-host.md)。
+本阶段新增完整内部 AgentController、SessionFactory、SessionMiddleWare、sandbox 审批存储及原错误类，核对新建/恢复/fork、权限模式、Hook 和工具配置的原逻辑，见[会话入口说明](docs/session-ingress.md)。这些组件尚未接成完整新会话父 runtime；真实认证和默认入口切换仍待恢复。CLI/Web 继续使用已验证的独立宿主，OpenAI SDK 保留原依赖。
 
 ## 快速开始
 

@@ -6,6 +6,8 @@
 
 `packages/harness` 保留原来的模块组织，`src` 与 `config` 一起移动，因此源码和编译后的配置寻址仍有效。公开包入口导出 `createHarness` 和类型；SDK、模型配置、prompt、Session、Agent、工具、hook、workflow 等逻辑不由 Web 重写。独立宿主与原样本逐方法恢复部分在源文件和历史报告中区分。
 
+原内部会话入口的完整控制器、SessionFactory、SessionMiddleWare 与 SandboxApprovalStore 作为 `sessions/native-session-ingress` 显式导出，仍需父 runtime 注入实际 SessionManager、设置、权限、Hook、路径匹配和 HTTP Context 等服务。源码声明和外部静态值均独立核对，不执行原 decorators。当前 Web 的多会话缓存不能直接替代原版单当前会话切换/订阅回收语义；新入口未自动挂到 Web HTTP listener，也不把模型 API key 认作原账户。见[会话入口边界](session-ingress.md)。
+
 Web 使用单运行槽以避免用户在同一进程对多个会话并发修改共享运行状态；不是多用户服务。固定 IPv4 loopback 地址，拒绝其它 Host / Origin，写接口需要随机 CSRF token，不返回 API key、不序列化上游异常。默认工具审批只能保护当前宿主边界，不等同于原产品完整 ToolPermissionService 或 OS 隔离。
 
 结果分派默认使用完整原 `InterruptionService.waitFor`，与 SessionManager 的 stream/history/gate 消费者分开。默认/非默认 Agent、headless、错误收尾和 Stop 续跑由原方法驱动；主 prompt 不再补发 Stop。独立宿主仅增加历史刷盘与异步续跑发布 barrier。较早报告中将该剩余分派归为 SessionManager 的表述已在还原状态中纠正。

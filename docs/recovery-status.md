@@ -989,3 +989,19 @@ REA对生命周期/新View宿主/审批归属/权限观察桥/后端接线/团�
 全量干净编译首轮暴露两处验证问题：仓库根直接node --test误用package相对config路径，改在harness workspace执行；已有串行权限变换测试即使environment:false仍出现defaultMode丢失，说明仅关环境provider不排除其他源并发读，也不能把flush当全部消费者屏障。该聚焦断言改为专用真实SettingsHost/PermissionHost和session，保留相同磁盘/模式/重复项严格断言；其余默认完整消费者测试和完整原类的确定性慢读回填/丢规则对照仍保留。没有给原SettingsManager加锁、版本化缓存或改变生产语义，不把重跑通过当修复原竞态。
 
 最终门槛：check/build、1264核心+11Web、1185项编译JS smoke、58组源码/行为验证、原字节配置与CLI/Web实际启动通过。无原应用/bundle/旧node_modules的暂存快照重新npm ci/check/build，在正确workspace运行全部1264项编译后核心测试和11项Web全部通过，实际CLI/Web seed/reload启动与配置检查通过。115 product prompts、6 JSON、22 Desktop资源（304358字节）和SDK依赖版本保持不变。发布审计686文件，在所检查的凭据/运行文件规则内无发现，不是安全证明；既有17项依赖告警（10中危/7高危）保留。
+
+## 2026-10-21：完整内部 AgentController / SessionFactory / SessionMiddleWare
+
+固定 CLI SHA 不变。恢复完整内部 AgentController（3方法）、SessionFactoryImpl（create）、SessionMiddleWare（构造器/17方法）、SandboxApprovalStoreImpl（构造器/4方法）及 SessionNotFoundError/InvalidSessionIdError/ForkOperationError 完整构造器。合计7类30成员、10完整声明，包括 runState 属性 helper、两份默认状态和 sandbox key helper。STANDARD_HEADERS、setupFired 两个类外静态赋值、原var eO/eD、自引用/模块绑定均校验；GET models/POST run 与 Body0/Header1 的 decorator 元数据也核对，不执行decorators、不启动原应用。
+
+保留原 sessionId/resume 优先级、continue/current/store 分支、空ID truthiness、fork浅拷贝/force save、Usage活动分支、seed引用、ReplaySubject(0)在锁定RxJS仍缓存一项、runState按status/transition.at抑制更新。保留插件refresh→目录信任→类级Setup→SessionStart的次序、print/ACP跳信任、Hook不阻塞handle、Setup失败不重试、barrier identity清理；未给原忽略finally返回Promise的异步失败分支加业务修复。Plan/Auto/override/已有模式/危险跳过/设置scope的原优先级、undefined model override清旧值、Defer工具配置与错误文本均保留。控制器原print等待/普通setImmediate、trace重置、未校验Number(maxTurns)、stream-json报错、标准header黑名单与旧自定义header保留、getModels顶层字段过滤也未改写。
+
+第59组verify:session-ingress对全部完整声明/类体/静态值/自引用/绑定/routes/参数进行AST核对，执行44组有限行为差分。另2项完整原ACP Agent测试证明匿名认证与初始化失败在REST/新session rendezvous之前拒绝，不制造“已登录”状态，也不把模型API key当产品账户。组件测试的SessionManager/认证/路径/HTTP边界明确使用owned doubles；Usage沿用已还原UsageUtils和真实固定SDK Usage。没有凭空补出完整原SessionManager，也没有替换默认CLI/Web业务链。
+
+REA对完整native-session-ingress单文件的静态证据为`ev_ff9b11b7b4c10649ac812b0b2c378bf36c6ba379f250885f40e113c727a2d3bf`，3162 AST nodes、1 parsed file、0 parse failures。semantic上限750节点/150 unknown、45秒，仍partial/truncated；未执行bootstrap，不用这些有限测试声称整个运行时等价。
+
+仓库继续采用apps/cli、apps/web、packages/harness、docs、scripts分层和现有开箱即用命令。新增smoke:session-ingress并纳入根smoke:runtime/CI链；新源码通过workspace子路径显式访问。README合并旧ACP阶段描述并链接新[会话入口边界](session-ingress.md)，避免把组件恢复、已有会话完整View与默认父runtime混为一谈。
+
+剩余：完整原SessionManager/Store及其与HTTP Context/连接/Agent.setSession/View的rendezvous、实际认证storage/网关与默认启动入口、Ask/Plan/回放端到端、Desktop会话/HistoryStore、daemon自动重启回收、request-send telemetry/标题Hook、其余native与外部Docs引擎。原manager同ID合并/异ID完成旧subjects的语义已定位，不能用现有独立宿主多会话cache冒充。整体目标仍未完成。
+
+最终门槛：check/build、1310核心+11Web、1231项编译JS smoke、59组源码/行为校验、原配置字节及真实CLI/Web seed/reload启动均通过。暂存快照不带原应用/bundle/旧node_modules，重新npm ci/check/build后，在harness workspace执行全部1310项编译后核心测试及11项Web全部通过，配置与CLI/Web实际启动也通过。115 product prompts、6 JSON、22 Desktop资源（304358字节）和SDK依赖固定版本不变。发布审计693文件，在检查的凭据/运行文件规则内无发现，不是安全证明；既有17项依赖告警（10中危/7高危）保留。
