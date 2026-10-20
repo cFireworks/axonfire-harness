@@ -50,8 +50,8 @@
 |    7 | Compaction        | 工程压缩与策略主路径已实现   | 原始 XML engineering compact 通过 105 组安装包类差分；PreMessage/MaxToken/Blocking 策略、15% 工程摘要充分性阈值、24k summary maxTokens、末批工具输出截断重试、5 轮 fallback、连续 5 次上限、pending interruption gate、静默中止/恢复、摘要 Prompt、历史逻辑边界、继续消息和环境 override 已恢复；Blocking 的 ACP 60s result 观察、compact-agent microcompact、全部 hook/telemetry 侧效应仍待补 |
 |    7 | Memory extraction | 提取主路径与磁盘扫描已实现   | enabled/disabled 环境优先级、settings、消息游标、已有 memory write 检测、异步提取、隔离 RunContext/5 工具/5 turns、bypass 后恢复、无 transcript 污染、完整提取 Prompt 与独立 policy hash、4096-byte frontmatter 扫描/200 文件上限、manifest、MemoryLoadContext 已恢复；MemoryManager规则发现/导入/cache及条件注入现已恢复；MemoryRelevance/entrypoint/context/read freshness和原提取类现已恢复；产品REST/UI/watchers仍待补 |
 |    7 | Deferred tools    | 主路径高覆盖                 | MiniSearch `7.2.0` 索引、name boost=2/prefix/OR、精确 lookup、fuzzy fallback、3/20/30,000 限制、agent/session allowlist、Defer/NoDefer、AJV `8.17.1` allErrors/coerceTypes、builtin/MCP 分流、图片与 sideband meta 转换均已实现；本批补 wrapper deny/allow、目标强制审批、mandatory flag/target adapter、MCP 权限名转发并通过目标类差分。独立宿主只接 intrinsic approval+host guard，完整 classifier/mandatory target 服务、ACP progress/UI broadcast 与透明代理静态配置解析待补 |
-|    7 | Plan mode | handler 与默认 deferred 链路已验证 | Enter/Exit 原始 schema、旧 mode 保存/恢复、plan 文件命名/读写/缺失文案、子 Agent 禁用、teammate plan_approval_request、拒绝 Prompt/skipRun、PlanStrategy 的旧策略委派/计划文件放行已恢复；真实 SDK 验证默认 deferred→计划写入→Exit 审批→恢复。完整 Team lead approval response/宿主策略全集待接 |
-|    7 | AskUserQuestion | 真实 SDK 人工问答已接通 | 原始 advertised schema 与运行时友好校验差异、legacy normalization、19201..19204/90003/90004、ACP/stream-json/print capability、自由文本/三类跳过动作、early answer/per-call waiter/timeout/abort、wait span adapter 已恢复；宿主 callback 覆盖模型预填答案，真实 SDK 单次批准后消费答案。原产品 UI、ACP 连接与实际遥测 exporter 未接 |
+|    7 | Plan mode | 完整原存储/命名与 native 父审批接通 | Enter/Exit schema、mode 保存/恢复、子 Agent 禁用、teammate 请求、拒绝 Prompt/skipRun、PlanStrategy 已恢复；完整 PlanStorage 6 方法及原 PlanModeUtils 已替换公开重写。原ACP父链默认deferred Enter→计划Write→Exit批准/拒绝/扩展退出及精确usage成对验证通过。完整 Team lead approval response/宿主策略全集仍待接 |
+|    7 | AskUserQuestion | 完整原 AskService 与 native ACP 问答接通 | 原 advertised schema/友好校验、legacy normalization、19201..19204/90003/90004、capability、自由文本/跳过已恢复；完整原服务14成员/early answer/per-call waiter/timeout/abort/span替换公开重写。原ACP扩展映射问题与数组答案、skip、cancel接真实SDK并成对验证；原桌面UI/实际遥测exporter/所有失败竞态仍待补，standalone覆盖模型预填答案不冒充native父链证明 |
 |    7 | Skill / SlashCommand | 核心 handler 与 SDK 验证通过 | Skill 精确/短名/显示名/歧义、legacy 参数、session 替换、命令 fallback、fork AgentTask/model/hook 信任门、原始结果和插件遥测 adapter 已恢复；SlashCommand 原始 schema/审批委派/本地与自定义分流已恢复。原配置 19 个 Agent 均不暴露 SlashCommand，独立入口保留此边界；legacy handler 通过显式 SDK Agent 验证 |
 |    7 | SkillManage | 原始指引/文件读取协议已恢复 | 原 feature gate（当前 false）、list/create/modify/delete、30 条详情/30k 字符、registry 结构/失败回退、registry 或 agent_created 双来源判定、短名歧义/目录 100 条/模板与原始 workflow 文案已恢复。handler 不直接创建、写入或删除；真实 SDK 在显式内存 feature overlay 下通过默认 deferred 调用验证 |
 |    7 | NotebookEdit | 文件状态机与差分通过 | 原 schema、参数错误、隐式 insert/replace、绝对 .ipynb、50MiB 上限、JSON/nbformat/cells 校验、cell ID 精确/索引/partial、source 换行、创建/替换/插入/删除、execution/output 字段细节、refresh read state 已恢复；当前 Agent 均不暴露该 legacy handler，SDK 显式注册验证。原生文件遥测/代码比例报告与 sandbox 文件权限父类宿主仍为 adapter |
@@ -1129,3 +1129,19 @@ REA对权限host和父装配两份自有惰性源码给出 `ev_cbae15d40f0a5bf82
 剩余下一步：native父链AskUserQuestion/Plan审批与完整配置/模式前沿、load/resume/fork、可复用默认父装配和生产认证/REST。Write四种有限场景不代表这些路径、所有并发竞态或完整harness已100%完成。
 
 本轮门槛：check/build、1557核心+11Web、1478项编译JS smoke、65组源码/行为验证、原配置字节和CLI/Web seed/reload实际启动均通过。新的干净暂存检出不带原应用/bundle/旧node_modules，重新npm ci/check/build后，全部1557编译核心、11Web、配置校验和实际启动通过。SDK依赖、6 JSON/115 product prompts/22 Desktop资源（304358字节）不变；746文件发布审计在已检查规则内无发现，不是安全证明。npm ci仍报告既有17项依赖告警（10中危/7高危），本轮未为处理告警擅自升级样本依赖。
+
+## 2026-10-21：完整原 Ask/Plan 服务与 native 父链人工交互
+
+新增[完整交互服务](native-interaction-services.md)：AskServiceImpl14成员、PlanStorageServiceImpl6方法、完整PlanModeUtils2方法与getItemToolCallId、7业务声明/表达式、9原import declarator、原getter/初始化顺序及3完整factory（Ask token、Deferred、trace常量）。公开AskService继承原类，AnswerDeferred保留同一构造器，公开PlanStorage六方法全部委托原对象；CLI/Web因此也换成完整原服务，而非只在fixture中恢复。
+
+原ACP父链已注入完整AskService，替换等待span double；原Plan存储/ExitPlan input processor/Defer权限参与执行。六组新场景通过真实ACP扩展回答（q_0/数组映射）、跳过、取消及计划批准、拒绝、rejectAndExitPlan。Enter/Exit默认deferred各审批一次，计划Write不额外审批；拒绝后不执行Exit、不继续模型，普通拒绝保留plan模式，扩展退出恢复先前模式。原Hook pipeline外围观察实际工具执行，不靠模拟结果。
+
+保留原细节：setAsk可能消费earlyAnswers到legacy Deferred，后续acquire并非重复投递；同一RunState可跨多次审批复用，所以验证最近一次review后的续跑。deferred Exit普通options没有direct Exit才有的退出选项，使用真实扩展决策而非构造未公布选项。Ask/Plan所有配置/并发/预填答案/错误前沿尚未穷举。
+
+第66组检查完整服务/绑定/factory及PlanModeUtils AST，并做8有限行为差分、另1公开构造器测试；第65组扩展为12组完整原父链/HTTP/SDK成对集成，参考侧也替换原Ask/Plan服务。自有确定模型等待原inputSubject确认上一工具结果再返回下一响应，避免源历史消费者与极快模型的usage时序不等；未改业务类、未删usage比较，明确断言16 tokens/响应的完整累加，并连续三次重复全部12组源对照。缺失的CLI commandSafety外缘与原完整ACP ErrorUtils装配已明确补齐。
+
+REA最终证据 `ev_4f154f7cb260c162193fcc55684e5423ac08c8fee4aeb2be145df47546b2b588`：10479 AST nodes、2 parsed、0 skipped/parse failures；750 semantic/150unknown/45s下partial/truncated，不是完整运行时证明。仍只用owned文件/loopback/确定模型/显式账户double，不读取安装账号或发送生产请求。
+
+下一步优先原ACP父load/resume/fork与可复用默认父装配，再推进生产auth/REST、Desktop HistoryStore/回放和剩余配置/并发边界；本阶段不等于完整harness已100%完成。
+
+最终门槛：check/build、1572核心+11Web、1493编译JS smoke、66组源码/行为验证、原配置字节和CLI/Web seed/reload实际启动全部通过。干净暂存检出重新npm ci/check/build后，全部1572编译核心、11Web、配置与启动也通过，无原应用/bundle/旧node_modules依赖。SDK、6 JSON/115 product prompts/22 Desktop资源（304358字节）不变；752文件发布审计在已检查规则内无发现，不是安全证明。既有17依赖告警（10中危/7高危）保留，没有以升级样本依赖来隐藏差异。

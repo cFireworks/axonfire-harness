@@ -6,7 +6,9 @@
 
 原生 ACP [协议核心](docs/acp-protocol.md)、[标题/广播/usage 服务](docs/acp-services.md)与[连接/修改版协议 SDK](docs/acp-connections.md)已逐模块恢复。完整原生 [Agent/View 循环](docs/acp-view-host.md)可显式接入已有 SDK 会话，以单一审批归属完成真实 Write/拒绝/Defer、续轮、队列与关闭，不靠 bypassPermissions。
 
-内部会话入口见[入口说明](docs/session-ingress.md)；完整 CLI Manager/Store/取消草稿见[原生会话栈](docs/native-session-stack.md)；完整 AgentService、31 个本地 interceptor 及历史/消息/输入工具链见[原生执行链](docs/native-agent-run.md)。CLI/Web 的 Runner 决策已委托完整原类，见[Runner 创建链](docs/native-runner.md)。[原 HTTP/MVC/CLS](docs/native-http.md)与[原认证核心](docs/native-authentication.md)已恢复；[原 ACP 新会话交接](docs/acp-parent-rendezvous.md)现经真实 ACP/内部 HTTP、原 AcpView/setSession 和完整 InterruptionService 打通真实 SDK Read、续轮、同连接新会话切换及 Write 批准/拒绝/取消/会话 Always Allow，不靠手动 resolve、JSON 测试 view 或 bypassPermissions。生产认证/账户库、父链 Ask/Plan 审批及默认父启动入口仍待接线；模型 key 不算产品账户。OpenAI SDK 保留原依赖。
+内部会话入口见[入口说明](docs/session-ingress.md)；完整 CLI Manager/Store/取消草稿见[原生会话栈](docs/native-session-stack.md)；完整 AgentService、31 个本地 interceptor 及历史/消息/输入工具链见[原生执行链](docs/native-agent-run.md)。CLI/Web 的 Runner 决策已委托完整原类，见[Runner 创建链](docs/native-runner.md)。[原 HTTP/MVC/CLS](docs/native-http.md)与[原认证核心](docs/native-authentication.md)已恢复；[原 ACP 新会话交接](docs/acp-parent-rendezvous.md)现经真实 ACP/内部 HTTP、原 AcpView/setSession 和完整 InterruptionService 打通真实 SDK Read、续轮、同连接新会话切换及 Write 批准/拒绝/取消/会话 Always Allow，不靠手动 resolve、JSON 测试 view 或 bypassPermissions。生产认证/账户库、父链 load/resume/fork 及默认父启动入口仍待接线；模型 key 不算产品账户。OpenAI SDK 保留原依赖。
+
+[完整原 AskService / PlanStorage](docs/native-interaction-services.md) 已替换公开兼容入口的行为重写；原 ACP 父链现通过真实扩展 RPC 跑通问答、跳过、取消与计划批准/拒绝/退出，参考侧也使用原类验证。完整默认产品启动链与全部配置/并发分支仍在推进。
 
 ## 快速开始
 

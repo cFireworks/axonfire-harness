@@ -151,6 +151,7 @@ export * from "./tools/tool-execution-error.js";
 export * from "./plans/plan-storage-service.js";
 export * from "./tools/plan-tools.js";
 export * from "./interaction/ask-service.js";
+export * from "./interaction/native-interaction-services.js";
 export * from "./tools/ask-user-question.js";
 export * from "./tools/skill-tool.js";
 export * from "./tools/skill-manage-tool.js";

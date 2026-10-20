@@ -2,6 +2,7 @@
 // All IO, auth configuration, model and external service adapters are owned; no installed account or production traffic.
 import assert from "node:assert/strict";
 import * as io from "node:fs/promises";
+import * as fs from "node:fs";
 import { join } from "node:path";
 import { createServer, type Server } from "node:http";
 import { EventEmitter } from "node:events";
@@ -42,7 +43,10 @@ import {
 } from "../../src/permissions/tool-permission-host.js";
 import { createNativeSettingsHost } from "../../src/config/native-settings-host.js";
 import { createHookLifecycleHost } from "../../src/hooks/hook-lifecycle-runtime.js";
-import { PlanStorageService } from "../../src/plans/plan-storage-service.js";
+import { createNativeInteractionServices } from "../../src/interaction/native-interaction-services.js";
+import { AskUserQuestionTool } from "../../src/tools/ask-user-question.js";
+import { PlanTools } from "../../src/tools/plan-tools.js";
+import { ExitPlanModeToolCallProcessor } from "../../src/sessions/exit-plan-mode-tool-call-processor.js";
 import { agentRunFixture, agentRunFactories } from "./agent-run-fixture.js";
 import { nativeHttpFixture } from "./native-http-fixture.js";
 import { authenticationFixture } from "./authentication-fixture.js";
@@ -65,6 +69,7 @@ export const rendezvousFactories = {
   interruption: createNativeInterruptionService,
   approvals: createNativeToolApprovalServices,
   permission: nativeToolPermissionFactories,
+  interaction: createNativeInteractionServices,
 };
 
 export const ACP_RENDEZVOUS_MODES = [
@@ -74,6 +79,12 @@ export const ACP_RENDEZVOUS_MODES = [
   "write-reject",
   "write-cancel",
   "write-always",
+  "ask-answer",
+  "ask-skip",
+  "ask-cancel",
+  "plan-allow",
+  "plan-reject",
+  "plan-exit-reject",
 ] as const;
 export async function acpRendezvousSdk(
   factories = rendezvousFactories,
@@ -124,9 +135,11 @@ export async function acpRendezvousSdk(
       registration: any[] = [],
       errors: any[] = [],
       reviews: any[] = [],
-      decisions: any[] = [];
+      decisions: any[] = [],
+      executedTools: string[] = [];
     const resumedStates: any[] = [];
     let reviewedState: any;
+    let reviewResumeIndex = 0;
     const sourceRun = f.service.run.bind(f.service);
     f.service.run = (...args: any[]) => {
       if (args[1] instanceof f.originalSdk.RunState)
@@ -135,9 +148,15 @@ export async function acpRendezvousSdk(
     };
     const writeMode = mode.startsWith("write-"),
       writeAllowed = mode === "write-allow" || mode === "write-always";
+    const askMode = mode.startsWith("ask-"),
+      planMode = mode.startsWith("plan-"),
+      approvalMode = writeMode || askMode || planMode;
+    let asks: any, plans: any;
+    const interactionTimers = new Set<ReturnType<typeof setTimeout>>();
     const transports = new Set<Promise<any>>();
     const interruptionSubscriptions = new Set<any>(),
       interruptionJobs = new Set<Promise<any>>();
+    const modelBarriers = new Set<any>();
     const capability = randomUUID(),
       connectionId = "owned-parent-connection";
     async function checked<T>(
@@ -185,6 +204,33 @@ export async function acpRendezvousSdk(
         prompts = new ProductPromptRenderer(product),
         tools = new ToolManager(product, prompts),
         mcp = new McpRegistry();
+      await io.mkdir(join(f.root, "plans"));
+      const interactions = factories.interaction({
+        modules: {
+          16928: { join },
+          29827: { BehaviorSubject },
+          91943: io,
+          79896: fs,
+        },
+        getPlansDir: () => join(f.root, "plans"),
+        setTimeout(fn: () => void, ms: number) {
+          const timer = setTimeout(() => {
+            interactionTimers.delete(timer);
+            fn();
+          }, ms);
+          interactionTimers.add(timer);
+          return timer;
+        },
+        clearTimeout(timer: ReturnType<typeof setTimeout>) {
+          interactionTimers.delete(timer);
+          clearTimeout(timer);
+        },
+      });
+      asks = new interactions.AskServiceImpl();
+      asks.logger = f.logger;
+      asks.init();
+      plans = new interactions.PlanStorageServiceImpl();
+      plans.logger = f.logger;
       settings = createNativeSettingsHost({
         stateDir: join(f.root, "settings"),
         getWorkDir: () => f.cwd,
@@ -200,16 +246,30 @@ export async function acpRendezvousSdk(
         logger: f.logger,
         getAgentService: () => f.service,
       });
+      const sourceExecute = hooks.pipeline.executeToolWithHooks.bind(
+        hooks.pipeline,
+      );
+      hooks.pipeline.executeToolWithHooks = (...args: any[]) => {
+        executedTools.push(args[0].name);
+        return sourceExecute(...(args as [any, any, any, any, any]));
+      };
       permissions = createToolPermissionHost(
         {
           getWorkDir: () => f.cwd,
           getHomeDir: () => join(f.root, "settings"),
           settingsManager: settings.manager,
           sessionStore: f.store,
-          planStorageService: new PlanStorageService(join(f.root, "plans")),
+          planStorageService: plans,
           sessionHookManager: hooks.sessionManager,
           toolHookManager: hooks.toolManager,
           logger: f.logger,
+          commandSafety: {
+            platform: process.platform,
+            isWorkBuddyDesktop: () => false,
+            exec: async () => {
+              throw Error("Unexpected owned command availability probe");
+            },
+          },
           onSdkDecision(tool, context, input, callId, needsApproval) {
             decisions.push({ name: tool.name, callId, needsApproval });
           },
@@ -224,7 +284,19 @@ export async function acpRendezvousSdk(
       initializePermissions = permissions.initializeContext;
       f.manager.sessionHookManager = hooks.sessionManager;
       registerCoreFileTools(tools, { workDir: f.cwd });
-      registerDeferredRuntimeTools(tools, mcp, { cwd: f.cwd });
+      const deferred = registerDeferredRuntimeTools(tools, mcp, { cwd: f.cwd });
+      deferred.deferExecute.attachPermissionAdapter(permissions);
+      new AskUserQuestionTool(asks, {
+        getAcpCapabilities: (id) =>
+          id === connectionId ? p?.agent.getClientCapabilities() : undefined,
+      }).register(tools);
+      new PlanTools(plans, prompts, f.manager).register(tools);
+      (f.processors as any[]).push(
+        new ExitPlanModeToolCallProcessor({
+          planStorageService: plans,
+          consoleManager: f.logger,
+        }),
+      );
       agents = new AgentManager(
         product,
         prompts,
@@ -239,50 +311,124 @@ export async function acpRendezvousSdk(
       const model: Model = {
         getResponse: async () => ({ output: [], usage: new Usage() }),
         async *getStreamedResponse(request) {
+          if (planMode && turn > 0) {
+            // Owned deterministic model transport, not a business interception:
+            // let the sole original history consumer acknowledge the preceding
+            // tool result before this test model publishes another response.
+            const session = f.manager.getCurrent(),
+              callId = "parent-interaction-" + turn;
+            const delivered = (item: any) =>
+              item.type === "function_call_result" && item.callId === callId;
+            if (!session.history.some(delivered)) {
+              let sub: any;
+              const pending = new Promise<void>((resolve) => {
+                sub = session.inputSubject.subscribe((item: any) => {
+                  if (delivered(item)) resolve();
+                });
+                modelBarriers.add(sub);
+              });
+              try {
+                await checked("previous model result stored", pending);
+              } finally {
+                sub.unsubscribe();
+                modelBarriers.delete(sub);
+              }
+            }
+          }
           modelRequests.push({
             input: request.input,
             connectionId: h.context.getRequest().get("acp-connection-id"),
             sessionId: f.manager.getCurrent().id,
           });
+          ++turn;
+          const current = f.manager.getCurrent();
+          const call = (name: string, input: any) => [
+            {
+              type: "function_call",
+              id: "parent-interaction-" + turn,
+              callId: "parent-interaction-" + turn,
+              name,
+              arguments: JSON.stringify(input),
+              status: "completed",
+            },
+          ];
           const output: any[] =
-            ++turn === 1 || (mode === "write-always" && turn === 3)
-              ? [
-                  {
-                    type: "function_call",
-                    id: writeMode ? "parent-write-" + turn : "parent-read",
-                    callId: writeMode ? "parent-write-" + turn : "parent-read",
-                    name: writeMode ? "Write" : "Read",
-                    arguments: JSON.stringify(
-                      writeMode
-                        ? {
-                            file_path:
-                              turn === 1 ? writeFile : writeFile + ".second",
-                            content: writeContent,
-                          }
-                        : { file_path: file },
-                    ),
-                    status: "completed",
-                  },
-                ]
-              : [
-                  {
-                    type: "message",
-                    id: "parent-answer-" + turn,
-                    role: "assistant",
-                    status: "completed",
-                    content: [
-                      {
-                        type: "output_text",
-                        text:
-                          turn === 2
-                            ? writeMode
-                              ? "parent Write done"
-                              : "parent Read done"
-                            : "parent continued",
-                      },
-                    ],
-                  },
-                ];
+            askMode && turn === 1
+              ? call("AskUserQuestion", {
+                  questions: [
+                    {
+                      question: "Choose the parent approach?",
+                      header: "Approach",
+                      options: [
+                        { label: "A", description: "first" },
+                        { label: "B", description: "second" },
+                      ],
+                      multiSelect: false,
+                    },
+                  ],
+                })
+              : planMode && turn === 1
+                ? call("DeferExecuteTool", {
+                    toolName: "EnterPlanMode",
+                    params: {},
+                  })
+                : planMode && turn === 2
+                  ? call("Write", {
+                      file_path: plans.getPlanFilePath(current),
+                      content: "# Owned parent plan 中文😀\n",
+                    })
+                  : planMode && turn === 3
+                    ? call("DeferExecuteTool", {
+                        toolName: "ExitPlanMode",
+                        params: {},
+                      })
+                    : turn === 1 || (mode === "write-always" && turn === 3)
+                      ? [
+                          {
+                            type: "function_call",
+                            id: writeMode
+                              ? "parent-write-" + turn
+                              : "parent-read",
+                            callId: writeMode
+                              ? "parent-write-" + turn
+                              : "parent-read",
+                            name: writeMode ? "Write" : "Read",
+                            arguments: JSON.stringify(
+                              writeMode
+                                ? {
+                                    file_path:
+                                      turn === 1
+                                        ? writeFile
+                                        : writeFile + ".second",
+                                    content: writeContent,
+                                  }
+                                : { file_path: file },
+                            ),
+                            status: "completed",
+                          },
+                        ]
+                      : [
+                          {
+                            type: "message",
+                            id: "parent-answer-" + turn,
+                            role: "assistant",
+                            status: "completed",
+                            content: [
+                              {
+                                type: "output_text",
+                                text: askMode
+                                  ? "parent Ask done"
+                                  : planMode
+                                    ? "parent Plan done"
+                                    : turn === 2
+                                      ? writeMode
+                                        ? "parent Write done"
+                                        : "parent Read done"
+                                      : "parent continued",
+                              },
+                            ],
+                          },
+                        ];
           yield { type: "response_started" };
           if (output[0]?.type === "message")
             yield {
@@ -471,6 +617,7 @@ export async function acpRendezvousSdk(
         Date,
         modules: { ...placeholders, 38113: acpSdk },
       });
+      p.setDependency(p.modules[40348].AskService, asks);
       Object.assign(p.modules[35151], {
         SettingsManager: Symbol("SettingsManager"),
         CliSettingsProvider: placeholders[86480].CliSettingsProvider,
@@ -494,7 +641,10 @@ export async function acpRendezvousSdk(
       Object.assign(placeholders[30654], lifecycle.capability);
       Object.assign(placeholders[95449], lifecycle.getModule(95449));
       Object.assign(placeholders[54193], lifecycle.team);
-      Object.assign(p.modules[93039], f.modules[93039]);
+      const protocolErrors = p.modules[93039].ErrorUtils;
+      Object.assign(p.modules[93039], f.modules[93039], {
+        ErrorUtils: protocolErrors,
+      });
       p.setDependency(placeholders[71915].SessionManager, f.manager);
       p.setDependency(
         placeholders[71915].SessionRunStateMachine,
@@ -602,6 +752,95 @@ export async function acpRendezvousSdk(
         () => ({
           sessionUpdate: async (update: any) => updates.push(update),
           requestPermission: async (request: any) => {
+            if (askMode || planMode) {
+              const session = host!.getEntry(connectionId)!.session;
+              const item = session.interruptionSubject.value;
+              assert.equal(interruption.pending$.value.item, item);
+              assert.equal(interruption.findSessionByItem(item), session);
+              reviewedState = session.state;
+              reviewResumeIndex = resumedStates.length;
+              reviews.push({
+                options: request.options,
+                actualPending: true,
+                tool: request.toolCall._meta["codebuddy.ai/toolName"],
+              });
+              if (askMode) {
+                assert.equal(
+                  request.toolCall._meta["codebuddy.ai/toolName"],
+                  "AskUserQuestion",
+                );
+                assert.equal(asks.getCurrentAskItem(), item);
+                if (mode === "ask-cancel") {
+                  await checked(
+                    "cancel Ask",
+                    client.cancel({ sessionId: session.id }),
+                  );
+                  return { outcome: { outcome: "cancelled" } };
+                }
+                const resolved: any = await checked(
+                  "answer through ACP extension",
+                  client.extMethod("_codebuddy.ai/resolveInterruption", {
+                    sessionId: session.id,
+                    toolCallId: request.toolCall.toolCallId,
+                    decision: mode === "ask-skip" ? "deny" : "allow",
+                    ...(mode === "ask-answer"
+                      ? {
+                          answers: { q_0: ["owned human free text", "中文😀"] },
+                        }
+                      : {}),
+                  }),
+                );
+                assert.equal(resolved.resolved, true);
+                // The local extension already decided. Settle the borrowed RPC;
+                // the source's localDecided race, not this fallback, owns approval.
+                return { outcome: { outcome: "cancelled" } };
+              }
+              assert.equal(
+                request.toolCall._meta["codebuddy.ai/toolName"],
+                "DeferExecuteTool",
+              );
+              if (request.toolCall.rawInput.toolName === "EnterPlanMode") {
+                assert.equal(
+                  session.permissionModeSubject.value,
+                  PermissionMode.Default,
+                );
+                assert.equal(plans.getPlanFilePath(session), undefined);
+                return { outcome: { outcome: "selected", optionId: "allow" } };
+              }
+              assert.equal(request.toolCall.rawInput.toolName, "ExitPlanMode");
+              assert.equal(
+                session.permissionModeSubject.value,
+                PermissionMode.Plan,
+              );
+              assert.equal(
+                await plans.read(session),
+                "# Owned parent plan 中文😀\n",
+              );
+              if (mode === "plan-exit-reject") {
+                assert.ok(
+                  !request.options.some(
+                    (o: any) => o.optionId === "reject_and_exit_plan",
+                  ),
+                  "source only advertises the extra exit option for a direct ExitPlanMode call",
+                );
+                const resolved: any = await checked(
+                  "reject and exit through ACP extension",
+                  client.extMethod("_codebuddy.ai/resolveInterruption", {
+                    sessionId: session.id,
+                    toolCallId: request.toolCall.toolCallId,
+                    decision: "rejectAndExitPlan",
+                  }),
+                );
+                assert.equal(resolved.resolved, true);
+                return { outcome: { outcome: "cancelled" } };
+              }
+              return {
+                outcome: {
+                  outcome: "selected",
+                  optionId: mode === "plan-allow" ? "allow" : "reject",
+                },
+              };
+            }
             assert.equal(writeMode, true, "Read must not request approval");
             assert.equal(
               request.toolCall._meta["codebuddy.ai/toolName"],
@@ -612,6 +851,7 @@ export async function acpRendezvousSdk(
             await assert.rejects(io.access(writeFile));
             const session = host!.getEntry(connectionId)!.session;
             reviewedState = session.state;
+            reviewResumeIndex = resumedStates.length;
             assert.ok(reviewedState instanceof f.originalSdk.RunState);
             assert.equal(
               session.permissionModeSubject.value,
@@ -796,7 +1036,7 @@ export async function acpRendezvousSdk(
         "initialize",
         client.initialize({
           protocolVersion: 1,
-          clientCapabilities: {},
+          clientCapabilities: { _meta: { "codebuddy.ai": { question: true } } },
         }),
       );
       assert.equal(initialized.protocolVersion, 1);
@@ -828,11 +1068,13 @@ export async function acpRendezvousSdk(
       assert.equal(result.modes.currentModeId, "default");
       assert.equal(result.models.currentModelId, product.raw.models[0]!.id);
       const responses: any[] = [];
-      for (const text of writeMode
-        ? mode === "write-always"
-          ? ["write owned parent file", "write another owned parent file"]
-          : ["write owned parent file"]
-        : ["read parent file", "continue parent conversation"]) {
+      for (const text of askMode || planMode
+        ? ["owned parent interaction"]
+        : writeMode
+          ? mode === "write-always"
+            ? ["write owned parent file", "write another owned parent file"]
+            : ["write owned parent file"]
+          : ["read parent file", "continue parent conversation"]) {
         responses.push(
           await checked(
             "prompt",
@@ -848,16 +1090,34 @@ export async function acpRendezvousSdk(
         responses.every(
           (r) =>
             r.stopReason ===
-            (writeMode && !writeAllowed ? "cancelled" : "end_turn"),
+            ((writeMode && !writeAllowed) ||
+            mode === "ask-cancel" ||
+            (planMode && mode !== "plan-allow")
+              ? "cancelled"
+              : "end_turn"),
         ),
         JSON.stringify({ responses, errors, logs: p.logs.slice(-8) }),
       );
       assert.equal(
         modelRequests.length,
-        writeMode ? (mode === "write-always" ? 4 : writeAllowed ? 2 : 1) : 3,
+        askMode
+          ? mode === "ask-cancel"
+            ? 1
+            : 2
+          : planMode
+            ? mode === "plan-allow"
+              ? 4
+              : 3
+            : writeMode
+              ? mode === "write-always"
+                ? 4
+                : writeAllowed
+                  ? 2
+                  : 1
+              : 3,
       );
       assert.ok(modelRequests.every((r) => r.connectionId === connectionId));
-      if (!writeMode)
+      if (!approvalMode)
         assert.match(
           JSON.stringify(modelRequests.at(-1).input),
           /parent Read done/,
@@ -905,6 +1165,72 @@ export async function acpRendezvousSdk(
         assert.equal(interruption.itemToSessionMap.size, 0);
         assert.equal(session.interruptionSubject.value, undefined);
       }
+      let interactionResult: any;
+      if (askMode || planMode) {
+        assert.equal(reviews.length, planMode ? 2 : 1);
+        assert.equal(interruption.pending$.value, undefined);
+        assert.equal(interruption.interruptionQueues.size, 0);
+        assert.equal(interruption.itemToSessionMap.size, 0);
+        assert.equal(
+          resumedStates.slice(reviewResumeIndex).includes(reviewedState),
+          mode === "ask-answer" || mode === "ask-skip" || mode === "plan-allow",
+        );
+        if (askMode && mode !== "ask-cancel") {
+          const input = JSON.stringify(modelRequests.at(-1).input);
+          assert.match(
+            input,
+            mode === "ask-skip"
+              ? /chose not to answer/
+              : /Choose the parent approach.*owned human free text, 中文😀/,
+          );
+          assert.deepEqual(asks.getRoutingState().waitingDeferredKeys, []);
+          assert.deepEqual(asks.getRoutingState().earlyAnswerKeys, []);
+        }
+        if (askMode)
+          assert.equal(
+            executedTools.filter((name) => name === "AskUserQuestion").length,
+            mode === "ask-cancel" ? 0 : 1,
+          );
+        if (planMode) {
+          assert.equal(
+            session.usage.totalTokens,
+            modelRequests.length * 16,
+            "all owned model usage is retained, not normalized out of comparison",
+          );
+          assert.equal(
+            executedTools.filter((name) => name === "EnterPlanMode").length,
+            1,
+          );
+          assert.equal(
+            executedTools.filter((name) => name === "Write").length,
+            1,
+          );
+          assert.equal(
+            executedTools.filter((name) => name === "ExitPlanMode").length,
+            mode === "plan-allow" ? 1 : 0,
+          );
+          assert.equal(
+            session.permissionModeSubject.value,
+            mode === "plan-allow" || mode === "plan-exit-reject"
+              ? PermissionMode.Default
+              : PermissionMode.Plan,
+          );
+          assert.equal(
+            await plans.read(session),
+            "# Owned parent plan 中文😀\n",
+          );
+        }
+        interactionResult = {
+          reviews,
+          mode: session.permissionModeSubject.value,
+          answersConsumed: askMode && mode !== "ask-cancel",
+          planPreserved: planMode,
+          sameStateResumed: resumedStates
+            .slice(reviewResumeIndex)
+            .includes(reviewedState),
+          executedTools,
+        };
+      }
       assert.ok(
         modelRequests.every(
           (r) =>
@@ -916,10 +1242,14 @@ export async function acpRendezvousSdk(
         f.store.getSessionFilePath(session.id),
         "utf8",
       );
-      if (!writeMode) {
+      if (!approvalMode) {
         assert.match(disk, /owned native parent Read/);
         assert.match(disk, /parent continued/);
       } else if (writeAllowed) assert.match(disk, /parent Write done/);
+      if (askMode && mode !== "ask-cancel")
+        assert.match(disk, /parent Ask done/);
+      if (planMode && mode === "plan-allow")
+        assert.match(disk, /parent Plan done/);
       let switched: any;
       if (mode === "switch") {
         const next: any = await checked(
@@ -992,6 +1322,7 @@ export async function acpRendezvousSdk(
         restoredCurrent: result.models.currentModelId,
         sourceRenderCleaned: true,
         switched,
+        ...(interactionResult ? { interaction: interactionResult } : {}),
         ...(writeMode
           ? {
               approval: {
@@ -1032,6 +1363,16 @@ export async function acpRendezvousSdk(
       }
       p?.agent.urlSubjectSubscription?.unsubscribe();
       p?.close();
+      if (asks) {
+        for (const id of asks.getRoutingState().waitingDeferredKeys)
+          asks.rejectAsk(id);
+        asks.rejectAsk();
+        asks.cleanup();
+        asks.flushPendingWaitSpans("owned close");
+        asks.currentItem$.complete();
+      }
+      for (const timer of interactionTimers) clearTimeout(timer);
+      for (const sub of modelBarriers) sub.unsubscribe();
       await permissions?.waitForUpdates();
       await hooks?.close();
       await settings?.close();

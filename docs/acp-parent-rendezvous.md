@@ -43,6 +43,8 @@ ToolPermissionHost 的可选 factory 注入只用于明确替换实现边界，�
 
 ## 新增资源所有权桥
 
+后续[完整 Ask/Plan 服务批次](native-interaction-services.md)已替换 Ask span double 并接入原 AskService/PlanStorage、Defer 权限和 ExitPlan input processor；新增六组问答/计划真实 ACP 集成，包括扩展 RPC 回答、跳过、取消及计划批准/拒绝/退出。普通 Plan 默认进入和退出各审批一次，计划文件 Write 无额外审批；具体原行为和剩余边界见该文。
+
 `createAcpRendezvousHost` 与已有 `createAcpViewHost` 不同：前者由真实HTTP/MVC调用render，支持源新会话交接；后者借用一个已创建的 standalone session/审批lease。两者都不复制agent loop，不把新的桥称作原源码。
 
 ```ts
@@ -74,11 +76,11 @@ npm run smoke:acp-parent
 npm run verify:acp-parent -w @axonfire/harness -- /absolute/path/codebuddy.js
 ```
 
-27项专项：13个父原语场景、6个真实ACP SDK/Node HTTP/完整原View+native执行链+真实SDK集成（单会话/同连接切换/四种Write审批）、8个新增owner独立测试。第65组验证核对全部新增源码body/绑定/完整factory/Value，13组原片段差分，再用完整原HTTP、AgentService/utilities、Runner、auth、ACP Agent/View/lifecycle/services/registry、权限和审批类重复六组集成。既有已校验的native Manager/Store/ingress、设置/Hook及修改版ACP SDK仍共用，不声称重放整个原应用或所有第三方库。
+33项父链专项：13个父原语场景、12个真实ACP SDK/Node HTTP/完整原View+native执行链+真实SDK集成（单会话/同连接切换/四种Write审批/六种Ask和Plan场景）、8个owner独立测试。第65组验证核对新增源码body/绑定/完整factory/Value，13组原片段差分，再用完整原HTTP、AgentService/utilities、Runner、auth、ACP Agent/View/lifecycle/services/registry、权限、审批和Ask/Plan服务重复十二组集成。既有已校验的native Manager/Store/ingress、设置/Hook及修改版ACP SDK仍共用，不声称重放整个原应用或所有第三方库。完整交互服务另有第66组源码/行为验证。
 
-仅用自有临时工作/状态文件、随机127.0.0.1端口、额外随机capability和确定模型。原custom-token storage从显式owned配置产生账户，未预填auth Subject；JWT decoder为明确外部库double，非产品登录/验签。REST的底层Axios位置为有origin限制的owned fetch adapter；原factory/create/endpoint/内部header逻辑实际运行。Node JSON parser、no-team/task、Ask等待span观察与telemetry等外缘仍为明确测试适配器；设置、Hook和权限初始化已接原核心，但未配置 Auto classifier、外部 Hook callback 或生产账户。不靠bypassPermissions；四种Write有限场景不证明父链Ask/Plan/所有模式/所有取消竞态已经完成。
+仅用自有临时工作/状态文件、随机127.0.0.1端口、额外随机capability和确定模型。原custom-token storage从显式owned配置产生账户，未预填auth Subject；JWT decoder为明确外部库double，非产品登录/验签。REST的底层Axios位置为有origin限制的owned fetch adapter；原factory/create/endpoint/内部header逻辑实际运行。Node JSON parser、no-team/task与telemetry等外缘仍为明确测试适配器；设置、Hook、Ask/Plan和权限初始化已接原核心，但未配置 Auto classifier、外部 Hook callback 或生产账户。不靠bypassPermissions；这些有限场景不证明所有配置模式和取消竞态已经完成。
 
-OpenAI Docs仅核对[SDK运行与恢复边界](https://developers.openai.com/api/docs/guides/agents/running-agents)与[同一RunState审批恢复](https://developers.openai.com/api/docs/guides/agents/guardrails-approvals)，不替换原状态机或升级锁定SDK。完整默认公共装配器、生产认证/磁盘账户库、load/resume/fork的父端到端、父链Ask/Plan审批、真实gateway/REST/bootstrap、Desktop HistoryStore、daemon重启/回放等仍需继续。默认CLI/Web保持可用，但尚未切换成完整原生父启动入口。
+OpenAI Docs仅核对[SDK运行与恢复边界](https://developers.openai.com/api/docs/guides/agents/running-agents)与[同一RunState审批恢复](https://developers.openai.com/api/docs/guides/agents/guardrails-approvals)，不替换原状态机或升级锁定SDK。完整默认公共装配器、生产认证/磁盘账户库、load/resume/fork的父端到端、所有审批/配置前沿、真实gateway/REST/bootstrap、Desktop HistoryStore、daemon重启/回放等仍需继续。默认CLI/Web保持可用，但尚未切换成完整原生父启动入口。
 
 REA 6.7.0对新增owner和原父原语两份惰性源码的静态证据为`ev_df0d0239eaa1eae1e1d2dfb43036302bc6750bada187af4f6e6c9ca9ac5e8bed`：3864 AST nodes、2 parsed files、0 skipped / parse failures。750 semantic nodes / 每文件750、150 unknown / 每文件150、45秒限制下仍partial/truncated；没有执行bootstrap，不能以静态图证明整个运行时等价。
 

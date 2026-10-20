@@ -7,6 +7,7 @@ import { loadCapturedAgentRun } from "./helpers/captured-agent-run.js";
 import { loadCapturedNativeRunner } from "./helpers/captured-native-runner.js";
 import { loadCapturedAuthentication } from "./helpers/captured-authentication.js";
 import { loadCapturedToolPermission } from "./helpers/captured-tool-permission.js";
+import { loadCapturedInteractionServices } from "./helpers/captured-interaction-services.js";
 import { loadCapturedAcpProtocol } from "./helpers/captured-acp-protocol.js";
 import { loadCapturedAcpConnections } from "./helpers/captured-acp-connections.js";
 import { loadCapturedAcpServices } from "./helpers/captured-acp-services.js";
@@ -43,6 +44,7 @@ const reference = {
   interruption: loadCapturedInterruptionController(source),
   approvals: loadCapturedToolApprovalServices(source),
   permission: loadCapturedToolPermission(source),
+  interaction: loadCapturedInteractionServices(source).factory,
 };
 for (const mode of ACP_RENDEZVOUS_MODES)
   assert.deepEqual(

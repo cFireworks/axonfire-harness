@@ -106,7 +106,9 @@
     "verify:authentication": "node --import tsx scripts/verify-authentication-recovery.ts",
     "smoke:authentication": "node --test dist/test/authentication-runtime.test.js",
     "verify:acp-parent": "node --import tsx scripts/verify-acp-parent-recovery.ts",
-    "smoke:acp-parent": "node --test dist/test/acp-parent-runtime.test.js dist/test/acp-rendezvous-host.test.js"
+    "smoke:acp-parent": "node --test dist/test/acp-parent-runtime.test.js dist/test/acp-rendezvous-host.test.js",
+    "verify:interaction-services": "node --import tsx scripts/verify-interaction-services-recovery.ts",
+    "smoke:interaction-services": "node --test dist/test/interaction-services-runtime.test.js"
   },
   "dependencies": {
     "@openai/agents": "0.5.2",
