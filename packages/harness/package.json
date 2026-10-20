@@ -94,7 +94,9 @@
     "verify:acp-lifecycle": "node --import tsx scripts/verify-acp-lifecycle-recovery.ts",
     "smoke:acp-view": "node --test dist/test/acp-view-host-runtime.test.js dist/test/approval-owner-runtime.test.js",
     "verify:session-ingress": "node --import tsx scripts/verify-session-ingress-recovery.ts",
-    "smoke:session-ingress": "node --test dist/test/session-ingress-runtime.test.js"
+    "smoke:session-ingress": "node --test dist/test/session-ingress-runtime.test.js",
+    "verify:session-stack": "node --import tsx scripts/verify-session-stack-recovery.ts",
+    "smoke:session-stack": "node --test dist/test/session-stack-runtime.test.js"
   },
   "dependencies": {
     "@openai/agents": "0.5.2",

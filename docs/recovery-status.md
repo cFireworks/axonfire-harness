@@ -1005,3 +1005,21 @@ REA对完整native-session-ingress单文件的静态证据为`ev_ff9b11b7b4c1064
 剩余：完整原SessionManager/Store及其与HTTP Context/连接/Agent.setSession/View的rendezvous、实际认证storage/网关与默认启动入口、Ask/Plan/回放端到端、Desktop会话/HistoryStore、daemon自动重启回收、request-send telemetry/标题Hook、其余native与外部Docs引擎。原manager同ID合并/异ID完成旧subjects的语义已定位，不能用现有独立宿主多会话cache冒充。整体目标仍未完成。
 
 最终门槛：check/build、1310核心+11Web、1231项编译JS smoke、59组源码/行为校验、原配置字节及真实CLI/Web seed/reload启动均通过。暂存快照不带原应用/bundle/旧node_modules，重新npm ci/check/build后，在harness workspace执行全部1310项编译后核心测试及11项Web全部通过，配置与CLI/Web实际启动也通过。115 product prompts、6 JSON、22 Desktop资源（304358字节）和SDK依赖固定版本不变。发布审计693文件，在检查的凭据/运行文件规则内无发现，不是安全证明；既有17项依赖告警（10中危/7高危）保留。
+
+## 2026-10-21：完整原生 CLI SessionManager / SessionStore / 取消草稿
+
+固定 CLI SHA 不变。恢复完整 SessionManagerImpl（38成员）、SessionStoreImpl（28成员）、AbortedStreamDraftStore（21成员），含完整构造器和全部方法；另有createAbortableIterator、abort grace初始化、history limit函数/初始化，共7完整声明。完整惰性factory73571反向读行、95695持久化开关、89483 content-block sanitizer也恢复；没有拿独立宿主reverseLines替代。类体/声明/factory/模块绑定逐项AST校验，未执行原decorators/应用bootstrap，也不冒充整个71915或Desktop会话模块。
+
+保留原create不发布当前会话、HTTP Request scope fallback、相同ID旧对象/options/缺失meta合并/abort重置、不同ID完成10个旧subjects与进度/cron/task/result/timer回收。保留addHistory processor→发布→UserPromptSubmit→checkpoint→append顺序、已排队失败继承、Hook失败内存与磁盘差异、SessionStart WeakMap完成后仍缓存、BehaviorSubject重建consumer旧结果重放、cancel-nudge跳过、原gate/metadata/interceptor/telemetry分支。完整取消草稿在真实SDK取消中以incomplete/isPartialAborted落盘；不补新的idle/终止状态语义。
+
+Store保留当前/cwd/跨项目/subagents定位、逻辑ID/物理storeId、反向65536 chunk/history limit/损坏行跳过、birthtime fallback/sanitizer、listing/most-recent非用户过滤。保留save非空JSONL不覆盖、meta非空才写、空meta冷加载undefined、saveHistory重复追加、浅拷贝副作用、timestamp0被Store真值分支覆盖、usage/cache旧字段、真实image/tool-result blob转换。原writeLocks存previous.then(()=>gate)却在finally比较gate，正常操作后Map条目保留，gate仍释放且IO失败后可再append；已成对验证，未修复原业务行为。remove保留override maps，getAllAcrossProjects原Manager丢参数等也保留。
+
+第60组verify:session-stack核对3类87成员/7声明/3factory/模块绑定，做48组有限差分。50专项含2项真实固定SDK集成：已有还原AgentService/Runner/Read与完整原Manager/Store/Factory执行Read并写JSONL，以新建原Manager/ALS/订阅对同一owned存储冷恢复续聊；真实stream取消后完整DraftStore落盘partial文本。原样本完整Manager/Store/DraftStore再各跑一次，共2组成对SDK验证。比较确定回复/类型/副作用/用量等，不把随机IDs/所有metadata称为穷尽等价。
+
+已有AgentService需要ensureRunResultHandler，测试facade仅委托原handleRunResult，不加第二consumer、不改类体。集成初次失败定位到空meta冷加载与现有HistoryAgentRunInterceptor不兼容；成功用例显式seed非空owned meta并按原入口顺序save，保留空meta不补对象的独立测试。权限初始化、HTTP attributes、Hook/checkpoint/注册与telemetry等为明确doubles，模型/文件/存储均owned，不伪造产品账号。作用域LocalNoopTrace避免测试线上追踪，不改全局SDK处理器或依赖。OpenAI Docs核对[SDK运行/流式边界](https://developers.openai.com/api/docs/guides/agents/running-agents)，还原仍以锁定样本/SDK为准。
+
+REA对native-session-stack单文件的静态证据为`ev_c9c727f3e1ec3776f205ca6172ea46f94613cbaa9b591c6f03484dd8786432aa`，11064 AST nodes、1 parsed file、0 parse failures。semantic上限750节点/150 unknown、45秒，仍partial/truncated，不执行bootstrap，不把静态图当运行时整体证明。
+
+仓库分层/默认CLI/Web/已有ACP ViewHost不改；新smoke:session-stack纳入根smoke与CI，显式嵌入接口及边界见[原生会话栈](native-session-stack.md)。下一步仍需完整原AgentService/其前置interceptors、父HTTP Context→middleware→Agent.setSession/View rendezvous、真实AuthenticationManager/网关和默认启动切换；Desktop HistoryStore/daemon自动重启/Ask/Plan回放/telemetry与Docs等仍未完成。整体目标保持未完成，不能把完整CLI会话类等同于整个harness。
+
+最终门槛：check/build、1360核心+11Web、1281项编译JS smoke、60组源码/行为校验、原配置字节与真实CLI/Web seed/reload启动均通过。无原应用/bundle/旧node_modules的暂存快照重新npm ci/check/build，在harness workspace运行全部1360项编译后核心测试和11项Web通过，配置及CLI/Web实际启动通过。115 product prompts、6 JSON、22 Desktop资源（304358字节）和SDK固定版本未改。发布审计701文件，在所检查的凭据/运行文件规则内无发现，不是安全证明；既有17项依赖告警（10中危/7高危）保留。
