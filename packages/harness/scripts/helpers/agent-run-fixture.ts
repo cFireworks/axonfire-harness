@@ -30,6 +30,7 @@ export async function agentRunFixture(
 ) {
   const f = await sessionStackFixture(undefined, {
       httpModule: patch.httpModule,
+      permissions: patch.permissions,
     }),
     calls: any[] = [],
     scheduled: Array<() => Promise<any>> = [],

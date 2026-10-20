@@ -6,11 +6,15 @@ import { loadCapturedNativeHttp } from "./helpers/captured-native-http.js";
 import { loadCapturedAgentRun } from "./helpers/captured-agent-run.js";
 import { loadCapturedNativeRunner } from "./helpers/captured-native-runner.js";
 import { loadCapturedAuthentication } from "./helpers/captured-authentication.js";
+import { loadCapturedToolPermission } from "./helpers/captured-tool-permission.js";
 import { loadCapturedAcpProtocol } from "./helpers/captured-acp-protocol.js";
 import { loadCapturedAcpConnections } from "./helpers/captured-acp-connections.js";
 import { loadCapturedAcpServices } from "./helpers/captured-acp-services.js";
 import { loadCapturedAcpLifecycle } from "./helpers/captured-acp-lifecycle.js";
-import { loadCapturedInterruptionController } from "./helpers/captured-interruption-controller.js";
+import {
+  loadCapturedInterruptionController,
+  loadCapturedToolApprovalServices,
+} from "./helpers/captured-interruption-controller.js";
 import { ACP_PARENT_CASES } from "./helpers/acp-parent-scenarios.js";
 import {
   acpRendezvousSdk,
@@ -37,6 +41,8 @@ const reference = {
   lifecycle: loadCapturedAcpLifecycle(source).factory,
   services: loadCapturedAcpServices(source).factory,
   interruption: loadCapturedInterruptionController(source),
+  approvals: loadCapturedToolApprovalServices(source),
+  permission: loadCapturedToolPermission(source),
 };
 for (const mode of ACP_RENDEZVOUS_MODES)
   assert.deepEqual(

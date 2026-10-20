@@ -26,6 +26,21 @@
 
 同一ACP连接再次newSession时，原View**先setSession再检查activeRenderConnections**：新HTTP跳过重复循环而结束，旧HTTP/原iterator继续，下一prompt采用原Manager新current session。测试验证旧subjects完成、新历史不含旧Read内容、实际SDK上下文为新session。宿主仅观察源setSession更新关闭目标，不另造会话切换逻辑。
 
+## Native Write 审批装配
+
+同一父链现接入 `createNativeSettingsHost` 的原 SettingsManager/CLI providers、`createHookLifecycleHost` 的原 Session/Tool Hook managers 与执行 pipeline，以及完整 ToolPermissionService/PermissionUtils/CommandUtils/八策略、always/background 审批类。原 SessionManager.create 和 SessionMiddleWare 都实际初始化权限 context；SDK needsApproval 走原服务，不把工具统一设置成 true/false，不申请 standalone ViewHost 的审批 lease。
+
+确定模型请求写入自有临时文件，ACP Client 端作为明确的人类决定测试输入；原 AcpAgent.handleToolApproval 经真实 ACP requestPermission 接收 Allow/Reject/Always Allow，调用原 InterruptionService。四个场景验证：
+
+- 批准前文件不存在，真正的原 pending/queue 指向当前 native session；批准后才写入 UTF-8 内容、恢复**同一个 SDK RunState**并保存最终回复。
+- Reject 返回 cancelled，不执行写入，不伪造批准或模型继续；Cancel 在实际 permission RPC 待决时调用原 ACP cancel，也不写入。
+- Always Allow 走原缓存/applyUpdate；同一会话第二轮对另一个新文件执行 Write，原权限门返回无需审批，确实没有第二次 requestPermission。规则仅在 session，不生成项目永久授权。
+- 各场景结束后 pending$、interruption queue、item/session map 和 session interruption 清空；HTTP/iterator/任务监听与 owner 关闭仍通过既有回收屏障。
+
+ToolPermissionHost 的可选 factory 注入只用于明确替换实现边界，默认仍为原还原类。参考侧另外装载固定样本中的原权限服务、utils、命令安全类、八策略和 always/background 类，与完整原父链成对运行；不是仅用还原服务对照自身。设置/Hook 的还原类在两侧共用，已有独立源码验证。
+
+快速 ACP Reject 会在原 InterruptionService 的 200ms sleep 结束前拒绝 Deferred。参考加载器采用与还原宿主相同的被动 promise.catch 观察，避免 Node 提前报告 unhandled rejection；不替换 promise、resolve/reject、审批选择或原 32 成员控制器类体。该资源所有权桥不计为原业务源码的一部分。
+
 ## 新增资源所有权桥
 
 `createAcpRendezvousHost` 与已有 `createAcpViewHost` 不同：前者由真实HTTP/MVC调用render，支持源新会话交接；后者借用一个已创建的 standalone session/审批lease。两者都不复制agent loop，不把新的桥称作原源码。
@@ -59,10 +74,12 @@ npm run smoke:acp-parent
 npm run verify:acp-parent -w @axonfire/harness -- /absolute/path/codebuddy.js
 ```
 
-23项专项：13个父原语场景、2个真实ACP SDK/Node HTTP/完整原View+native执行链+真实SDK集成（单会话/同连接切换）、8个新增owner独立测试。第65组验证核对全部新增源码body/绑定/完整factory/Value，13组原片段差分，再用完整原HTTP、AgentService/utilities、Runner、auth、ACP Agent/View/lifecycle/services/registry及InterruptionService重复两组集成。既有已校验的native Manager/Store/ingress和修改版ACP SDK仍共用，不声称重放整个原应用或所有第三方库。
+27项专项：13个父原语场景、6个真实ACP SDK/Node HTTP/完整原View+native执行链+真实SDK集成（单会话/同连接切换/四种Write审批）、8个新增owner独立测试。第65组验证核对全部新增源码body/绑定/完整factory/Value，13组原片段差分，再用完整原HTTP、AgentService/utilities、Runner、auth、ACP Agent/View/lifecycle/services/registry、权限和审批类重复六组集成。既有已校验的native Manager/Store/ingress、设置/Hook及修改版ACP SDK仍共用，不声称重放整个原应用或所有第三方库。
 
-仅用自有临时工作/状态文件、随机127.0.0.1端口、额外随机capability和确定模型。原custom-token storage从显式owned配置产生账户，未预填auth Subject；JWT decoder为明确外部库double，非产品登录/验签。REST的底层Axios位置为有origin限制的owned fetch adapter；原factory/create/endpoint/内部header逻辑实际运行。Node JSON parser、Hook/设置、no-team/task、权限初始化/遥测等外缘为明确测试适配器，不算完整产品服务已接线；本批不靠bypassPermissions，也尚未证明新native父链的人工Write/Ask/Plan审批全路径。
+仅用自有临时工作/状态文件、随机127.0.0.1端口、额外随机capability和确定模型。原custom-token storage从显式owned配置产生账户，未预填auth Subject；JWT decoder为明确外部库double，非产品登录/验签。REST的底层Axios位置为有origin限制的owned fetch adapter；原factory/create/endpoint/内部header逻辑实际运行。Node JSON parser、no-team/task、Ask等待span观察与telemetry等外缘仍为明确测试适配器；设置、Hook和权限初始化已接原核心，但未配置 Auto classifier、外部 Hook callback 或生产账户。不靠bypassPermissions；四种Write有限场景不证明父链Ask/Plan/所有模式/所有取消竞态已经完成。
 
-OpenAI Docs仅核对[SDK运行与恢复边界](https://developers.openai.com/api/docs/guides/agents/running-agents)，不替换原状态机或升级锁定SDK。完整默认公共装配器、生产认证/磁盘账户库、load/resume/fork的父端到端、完整native审批、真实gateway/REST/bootstrap、Desktop HistoryStore、daemon重启/回放等仍需继续。默认CLI/Web保持可用，但尚未切换成完整原生父启动入口。
+OpenAI Docs仅核对[SDK运行与恢复边界](https://developers.openai.com/api/docs/guides/agents/running-agents)与[同一RunState审批恢复](https://developers.openai.com/api/docs/guides/agents/guardrails-approvals)，不替换原状态机或升级锁定SDK。完整默认公共装配器、生产认证/磁盘账户库、load/resume/fork的父端到端、父链Ask/Plan审批、真实gateway/REST/bootstrap、Desktop HistoryStore、daemon重启/回放等仍需继续。默认CLI/Web保持可用，但尚未切换成完整原生父启动入口。
 
 REA 6.7.0对新增owner和原父原语两份惰性源码的静态证据为`ev_df0d0239eaa1eae1e1d2dfb43036302bc6750bada187af4f6e6c9ca9ac5e8bed`：3864 AST nodes、2 parsed files、0 skipped / parse failures。750 semantic nodes / 每文件750、150 unknown / 每文件150、45秒限制下仍partial/truncated；没有执行bootstrap，不能以静态图证明整个运行时等价。
+
+本轮权限宿主与父链装配的两份惰性副本补充REA证据 `ev_cbae15d40f0a5bf82b76fd2c2661b44113fd42daab6646b739883cdb6f3ca919`：6327 AST nodes、2 parsed、0 skipped/parse failures。参数同上，仍 partial/truncated；静态有限覆盖不计为完整运行时等价证明。

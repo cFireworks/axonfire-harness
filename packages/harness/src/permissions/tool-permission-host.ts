@@ -5,6 +5,12 @@ import { createNativeCommandSafety } from "./native-command-safety.js";
 import { createNativePermissionUtils } from "./native-permission-utils.js";
 import { createNativeToolPermissionService } from "./native-tool-permission-service.js";
 import { createNativeToolPermissionStrategies } from "./native-tool-permission-strategies.js";
+export const nativeToolPermissionFactories = {
+  command: createNativeCommandSafety,
+  utils: createNativePermissionUtils,
+  service: createNativeToolPermissionService,
+  strategies: createNativeToolPermissionStrategies,
+};
 export type ToolPermissionHostOptions = {
   getWorkDir(): string;
   getHomeDir(): string;
@@ -30,7 +36,10 @@ export type ToolPermissionHostOptions = {
   ): void;
 };
 /** Owned standalone composition; never reads installed app settings or invokes a real classifier implicitly. */
-export function createToolPermissionHost(options: ToolPermissionHostOptions) {
+export function createToolPermissionHost(
+  options: ToolPermissionHostOptions,
+  sourceFactories = nativeToolPermissionFactories,
+) {
   const quiet = {
     debug(..._args: any[]) {},
     info(..._args: any[]) {},
@@ -45,8 +54,8 @@ export function createToolPermissionHost(options: ToolPermissionHostOptions) {
     platform: process.platform,
     fs,
   }).PathUtils;
-  const commands = createNativeCommandSafety(options.commandSafety);
-  const permissionUtils = createNativePermissionUtils({
+  const commands = sourceFactories.command(options.commandSafety ?? {});
+  const permissionUtils = sourceFactories.utils({
     pathUtils,
     getHomeDir: options.getHomeDir,
     isWindows: process.platform === "win32",
@@ -56,7 +65,7 @@ export function createToolPermissionHost(options: ToolPermissionHostOptions) {
     consoleManager: logger,
     commandParserService: options.commandParserService,
   });
-  const strategies = createNativeToolPermissionStrategies({
+  const strategies = sourceFactories.strategies({
     permissionUtils,
     pathUtils,
     commandUtils: commands.CommandUtils,
@@ -64,7 +73,7 @@ export function createToolPermissionHost(options: ToolPermissionHostOptions) {
     planStorageService: options.planStorageService,
     logger,
   });
-  const service = createNativeToolPermissionService(
+  const service = sourceFactories.service(
     {
       permissionUtils,
       commandUtils: commands.CommandUtils,

@@ -24,7 +24,10 @@ export function loadCapturedInterruptionController(source: string) {
     "4120898f1ded86ac545316721d216c827a325c2513a8fae4bcd8c8bbbf211afd"
   )
     throw Error("sample hash");
-  const primitive = `const ErrorUtil=(${source.slice(103409, 103590)});const eu={ErrorUtil};const CustomError=(${source.slice(66854, 67085)});const Deferred=(${source.slice(117049, 117147)});t5.CustomError=CustomError;t5.Deferred=Deferred;`;
+  // Same passive ownership bridge as the migrated controller. ACP can reject
+  // immediately while the unchanged source sleeps 200ms before awaiting it.
+  // Observe the original promise without replacing its identity or settlement.
+  const primitive = `const ErrorUtil=(${source.slice(103409, 103590)});const eu={ErrorUtil};const CustomError=(${source.slice(66854, 67085)});const Deferred=(${source.slice(117049, 117147)});t5.CustomError=CustomError;t5.Deferred=class extends Deferred{constructor(){super();this.promise.catch(()=>{})}};`;
   const errors = [
     "SessionAbortedError",
     "SessionCompactionAbortError",

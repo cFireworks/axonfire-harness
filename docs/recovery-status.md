@@ -1115,3 +1115,17 @@ REA 6.7.0对新增owner/父原语两份惰性源码的证据ev_df0d0239eaa1eae1e
 仓库分层/CLI/Web保持，smoke:acp-parent纳入根smoke/CI，详见[父交接与所有权](acp-parent-rendezvous.md)。新会话rendezvous与同连接切换已验证；完整默认公共装配器、生产认证/磁盘账户库、父load/resume/fork、native Write/Ask/Plan审批全链、真实gateway/REST/完整bootstrap、Desktop HistoryStore、daemon重启/回放、request-send/Docs等仍需推进，整体目标未完成。
 
 最终门槛：check/build、1553核心+11Web、1474项编译JS smoke、65组源码/行为验证、原配置字节和CLI/Web seed/reload实际启动均通过。不带原应用/bundle/旧node_modules的暂存快照重新npm ci/check/build成功后，在harness workspace执行全部1553项编译核心测试；11项Web、配置和实际启动均通过。115 product prompts、6 JSON、22 Desktop资源（304358字节）及SDK固定依赖不变。发布审计746文件，在所检查的凭据/运行文件规则内无发现，不是安全证明；既有17项依赖告警（10中危/7高危）保留。
+
+## 2026-10-21：Native 父链 Write 审批、同状态恢复与会话授权
+
+原ACP新会话→原HTTP/MVC/CLS→原View/render/setSession→原Manager/AgentService/Runner/InterruptionService链现装配原设置、Hook、ToolPermissionService/八策略和 always/background 类。Manager.create 与 middleware 都调用原权限初始化，不再仅记录fixture事件；真实 SDK needsApproval/执行 pipeline 走这些服务。普通CLI/Web仍走既有可用独立宿主，本批没有宣称默认产品bootstrap已经切换。
+
+新增四种父链Write集成：Allow批准前不写盘、批准后同一个RunState恢复并落盘；Reject不写盘且ACP cancelled；权限RPC待决时原ACP Cancel不写盘；Always Allow仅授予session规则，第二轮对新文件确实不再询问、项目设置未产生永久grant。结束检查原pending/queues/item-session映射、HTTP/iterator/owner监听回收。没有bypassPermissions、预填批准结果或手动完成事件。
+
+verify:acp-parent扩展为13组件差分+6组真实ACP/HTTP/SDK父链成对集成。参考侧新增替换固定样本中的完整原权限服务/utils/命令安全/八策略和always/background类，保持原InterruptionService32成员。两侧设置/Hook还原类仍共用，并由既有独立源码验证约束；不称全部应用/第三方库重放。原200ms sleep前可快速拒绝Deferred，因此参考加载器增加与迁移宿主相同的被动promise.catch观察；不改变promise identity/settlement、业务决策或控制器类体。
+
+REA对权限host和父装配两份自有惰性源码给出 `ev_cbae15d40f0a5bf82b76fd2c2661b44113fd42daab6646b739883cdb6f3ca919`：6327 AST nodes、2 parsed、0 skipped/parse failures；750 semantic/150unknown/45s限制下partial/truncated，不是运行时等价证明。仍只用owned临时文件、随机loopback与明确模型/外部适配器，无安装账户缓存或生产请求。
+
+剩余下一步：native父链AskUserQuestion/Plan审批与完整配置/模式前沿、load/resume/fork、可复用默认父装配和生产认证/REST。Write四种有限场景不代表这些路径、所有并发竞态或完整harness已100%完成。
+
+本轮门槛：check/build、1557核心+11Web、1478项编译JS smoke、65组源码/行为验证、原配置字节和CLI/Web seed/reload实际启动均通过。新的干净暂存检出不带原应用/bundle/旧node_modules，重新npm ci/check/build后，全部1557编译核心、11Web、配置校验和实际启动通过。SDK依赖、6 JSON/115 product prompts/22 Desktop资源（304358字节）不变；746文件发布审计在已检查规则内无发现，不是安全证明。npm ci仍报告既有17项依赖告警（10中危/7高危），本轮未为处理告警擅自升级样本依赖。

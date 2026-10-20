@@ -32,7 +32,17 @@ import { registerCoreFileTools } from "../../src/tools/core-file-tools.js";
 import { registerDeferredRuntimeTools } from "../../src/tools/deferred-runtime.js";
 import { DelegateToolManagerImpl } from "../../src/delegate/delegate-tool-manager.js";
 import { PermissionMode } from "../../src/permissions/permission.js";
-import { createNativeInterruptionService } from "../../src/permissions/native-interruption-service.js";
+import {
+  createNativeInterruptionService,
+  createNativeToolApprovalServices,
+} from "../../src/permissions/native-interruption-service.js";
+import {
+  createToolPermissionHost,
+  nativeToolPermissionFactories,
+} from "../../src/permissions/tool-permission-host.js";
+import { createNativeSettingsHost } from "../../src/config/native-settings-host.js";
+import { createHookLifecycleHost } from "../../src/hooks/hook-lifecycle-runtime.js";
+import { PlanStorageService } from "../../src/plans/plan-storage-service.js";
 import { agentRunFixture, agentRunFactories } from "./agent-run-fixture.js";
 import { nativeHttpFixture } from "./native-http-fixture.js";
 import { authenticationFixture } from "./authentication-fixture.js";
@@ -53,18 +63,29 @@ export const rendezvousFactories = {
   sdk: createCapturedAcpSdk,
   parent: createNativeAcpParentPrimitives,
   interruption: createNativeInterruptionService,
+  approvals: createNativeToolApprovalServices,
+  permission: nativeToolPermissionFactories,
 };
 
-export const ACP_RENDEZVOUS_MODES = ["single", "switch"] as const;
+export const ACP_RENDEZVOUS_MODES = [
+  "single",
+  "switch",
+  "write-allow",
+  "write-reject",
+  "write-cancel",
+  "write-always",
+] as const;
 export async function acpRendezvousSdk(
   factories = rendezvousFactories,
   mode: (typeof ACP_RENDEZVOUS_MODES)[number] = "single",
 ) {
   return withTrace(new LocalNoopTrace(), async () => {
+    let initializePermissions: ((session: any) => Promise<void>) | undefined;
     const h = nativeHttpFixture(factories.http),
       f = await agentRunFixture(factories.agentRun, {
         emptyMeta: true,
         httpModule: h.native.getModule(47005),
+        permissions: (session: any) => initializePermissions?.(session),
       });
     const auth = authenticationFixture(factories.authentication),
       authToken = "owned-explicit-parent-token";
@@ -90,6 +111,9 @@ export async function acpRendezvousSdk(
       p: ReturnType<typeof acpProtocolFixture> | undefined;
     let host: ReturnType<typeof createAcpRendezvousHost> | undefined,
       services: ReturnType<typeof createAcpServicesHost> | undefined;
+    let settings: ReturnType<typeof createNativeSettingsHost> | undefined,
+      hooks: ReturnType<typeof createHookLifecycleHost> | undefined,
+      permissions: ReturnType<typeof createToolPermissionHost> | undefined;
     let client: any, endpoint: any;
     const toAgent = new TransformStream(),
       toClient = new TransformStream();
@@ -98,7 +122,19 @@ export async function acpRendezvousSdk(
       httpRequests: any[] = [],
       restCalls: any[] = [],
       registration: any[] = [],
-      errors: any[] = [];
+      errors: any[] = [],
+      reviews: any[] = [],
+      decisions: any[] = [];
+    const resumedStates: any[] = [];
+    let reviewedState: any;
+    const sourceRun = f.service.run.bind(f.service);
+    f.service.run = (...args: any[]) => {
+      if (args[1] instanceof f.originalSdk.RunState)
+        resumedStates.push(args[1]);
+      return sourceRun(...args);
+    };
+    const writeMode = mode.startsWith("write-"),
+      writeAllowed = mode === "write-allow" || mode === "write-always";
     const transports = new Set<Promise<any>>();
     const interruptionSubscriptions = new Set<any>(),
       interruptionJobs = new Set<Promise<any>>();
@@ -142,11 +178,51 @@ export async function acpRendezvousSdk(
     }
     try {
       const file = join(f.cwd, "parent-owned.txt");
+      const writeFile = join(f.cwd, "parent-write.txt"),
+        writeContent = "owned native parent approved Write 中文😀\n";
       await io.writeFile(file, "owned native parent Read 中文😀\n");
       const product = await loadProductConfiguration(),
         prompts = new ProductPromptRenderer(product),
         tools = new ToolManager(product, prompts),
         mcp = new McpRegistry();
+      settings = createNativeSettingsHost({
+        stateDir: join(f.root, "settings"),
+        getWorkDir: () => f.cwd,
+        logger: f.logger,
+      });
+      await settings.start();
+      hooks = createHookLifecycleHost({
+        workDir: () => f.cwd,
+        getHomeDir: () => join(f.root, "settings"),
+        sessionStore: f.store,
+        settings: settings.manager,
+        env: {},
+        logger: f.logger,
+        getAgentService: () => f.service,
+      });
+      permissions = createToolPermissionHost(
+        {
+          getWorkDir: () => f.cwd,
+          getHomeDir: () => join(f.root, "settings"),
+          settingsManager: settings.manager,
+          sessionStore: f.store,
+          planStorageService: new PlanStorageService(join(f.root, "plans")),
+          sessionHookManager: hooks.sessionManager,
+          toolHookManager: hooks.toolManager,
+          logger: f.logger,
+          onSdkDecision(tool, context, input, callId, needsApproval) {
+            decisions.push({ name: tool.name, callId, needsApproval });
+          },
+        },
+        factories.permission,
+      );
+      tools.attachPermissionService(permissions);
+      tools.attachHookLifecycle(hooks.pipeline);
+      f.middleware.toolPermissionService = {
+        initializeContext: permissions.initializeContext,
+      };
+      initializePermissions = permissions.initializeContext;
+      f.manager.sessionHookManager = hooks.sessionManager;
       registerCoreFileTools(tools, { workDir: f.cwd });
       registerDeferredRuntimeTools(tools, mcp, { cwd: f.cwd });
       agents = new AgentManager(
@@ -169,14 +245,22 @@ export async function acpRendezvousSdk(
             sessionId: f.manager.getCurrent().id,
           });
           const output: any[] =
-            ++turn === 1
+            ++turn === 1 || (mode === "write-always" && turn === 3)
               ? [
                   {
                     type: "function_call",
-                    id: "parent-read",
-                    callId: "parent-read",
-                    name: "Read",
-                    arguments: JSON.stringify({ file_path: file }),
+                    id: writeMode ? "parent-write-" + turn : "parent-read",
+                    callId: writeMode ? "parent-write-" + turn : "parent-read",
+                    name: writeMode ? "Write" : "Read",
+                    arguments: JSON.stringify(
+                      writeMode
+                        ? {
+                            file_path:
+                              turn === 1 ? writeFile : writeFile + ".second",
+                            content: writeContent,
+                          }
+                        : { file_path: file },
+                    ),
                     status: "completed",
                   },
                 ]
@@ -190,7 +274,11 @@ export async function acpRendezvousSdk(
                       {
                         type: "output_text",
                         text:
-                          turn === 2 ? "parent Read done" : "parent continued",
+                          turn === 2
+                            ? writeMode
+                              ? "parent Write done"
+                              : "parent Read done"
+                            : "parent continued",
                       },
                     ],
                   },
@@ -302,14 +390,26 @@ export async function acpRendezvousSdk(
           logger: f.logger,
           stateMachine: f.manager.stateMachine,
           toolManager: tools,
-          sessionHookManager: {
-            ...f.manager.sessionHookManager,
-            executeStopHooks: async () => {
-              f.calls.push(["stopHook"]);
-            },
-          },
+          sessionHookManager: hooks.sessionManager,
+          consoleManager: f.logger,
         },
       );
+      const approvalServices = factories.approvals({
+        permissions: {
+          async applyUpdate(session: any, update: any) {
+            await permissions!.initializeContext(session);
+            return permissions!.service.applyUpdate(session, update);
+          },
+        },
+        commands: permissions.commands.CommandUtils,
+        getTasks: () => [],
+        toolManager: tools,
+        logger: f.logger,
+        inputItemUtils: f.modules[93039].InputItemUtils,
+      });
+      interruption.toolAlwaysApprovalService = approvalServices.always;
+      interruption.backgroundTaskToolApprovalService =
+        approvalServices.background;
       f.manager.interruptionService = interruption;
       const tasks = new EventEmitter(),
         teamTokens = {
@@ -414,13 +514,8 @@ export async function acpRendezvousSdk(
         p.p.protocol.DelegateToolManager,
         new DelegateToolManagerImpl(f.logger),
       );
-      p.setDependency(p.modules[35151].SettingsManager, {
-        get: async () => undefined,
-        list: async () => ({}),
-      });
-      p.setDependency(placeholders[86480].CliSettingsProvider, {
-        set: async () => {},
-      });
+      p.setDependency(p.modules[35151].SettingsManager, settings.manager);
+      p.setDependency(placeholders[86480].CliSettingsProvider, settings.cli);
       p.setDependency(
         placeholders[30654].HostCapabilityProvider,
         new lifecycle.capability.HostCapabilityProvider(),
@@ -506,8 +601,53 @@ export async function acpRendezvousSdk(
       client = new acpSdk.ClientSideConnection(
         () => ({
           sessionUpdate: async (update: any) => updates.push(update),
-          requestPermission: async () => {
-            throw Error("Unexpected approval in owned Read fixture");
+          requestPermission: async (request: any) => {
+            assert.equal(writeMode, true, "Read must not request approval");
+            assert.equal(
+              request.toolCall._meta["codebuddy.ai/toolName"],
+              "Write",
+            );
+            assert.equal(request.toolCall.toolCallId, "parent-write-1");
+            assert.equal(request.toolCall.rawInput.file_path, writeFile);
+            await assert.rejects(io.access(writeFile));
+            const session = host!.getEntry(connectionId)!.session;
+            reviewedState = session.state;
+            assert.ok(reviewedState instanceof f.originalSdk.RunState);
+            assert.equal(
+              session.permissionModeSubject.value,
+              PermissionMode.Default,
+            );
+            assert.equal(
+              interruption.pending$.value.item,
+              session.interruptionSubject.value,
+            );
+            assert.equal(
+              interruption.findSessionByItem(session.interruptionSubject.value),
+              session,
+            );
+            reviews.push({
+              options: request.options,
+              beforeWrite: false,
+              actualPending: true,
+            });
+            if (mode === "write-cancel")
+              await checked(
+                "cancel during approval",
+                client.cancel({ sessionId: session.id }),
+              );
+            return mode === "write-cancel"
+              ? { outcome: { outcome: "cancelled" } }
+              : {
+                  outcome: {
+                    outcome: "selected",
+                    optionId:
+                      mode === "write-always"
+                        ? "allow_always"
+                        : writeAllowed
+                          ? "allow"
+                          : "reject",
+                  },
+                };
           },
         }),
         { readable: toClient.readable, writable: toAgent.writable },
@@ -688,7 +828,11 @@ export async function acpRendezvousSdk(
       assert.equal(result.modes.currentModeId, "default");
       assert.equal(result.models.currentModelId, product.raw.models[0]!.id);
       const responses: any[] = [];
-      for (const text of ["read parent file", "continue parent conversation"]) {
+      for (const text of writeMode
+        ? mode === "write-always"
+          ? ["write owned parent file", "write another owned parent file"]
+          : ["write owned parent file"]
+        : ["read parent file", "continue parent conversation"]) {
         responses.push(
           await checked(
             "prompt",
@@ -701,15 +845,66 @@ export async function acpRendezvousSdk(
         await f.drain();
       }
       assert.ok(
-        responses.every((r) => r.stopReason === "end_turn"),
+        responses.every(
+          (r) =>
+            r.stopReason ===
+            (writeMode && !writeAllowed ? "cancelled" : "end_turn"),
+        ),
         JSON.stringify({ responses, errors, logs: p.logs.slice(-8) }),
       );
-      assert.equal(modelRequests.length, 3);
-      assert.ok(modelRequests.every((r) => r.connectionId === connectionId));
-      assert.match(
-        JSON.stringify(modelRequests.at(-1).input),
-        /parent Read done/,
+      assert.equal(
+        modelRequests.length,
+        writeMode ? (mode === "write-always" ? 4 : writeAllowed ? 2 : 1) : 3,
       );
+      assert.ok(modelRequests.every((r) => r.connectionId === connectionId));
+      if (!writeMode)
+        assert.match(
+          JSON.stringify(modelRequests.at(-1).input),
+          /parent Read done/,
+        );
+      if (writeMode) {
+        assert.equal(reviews.length, 1);
+        assert.ok(decisions.some((d) => d.name === "Write" && d.needsApproval));
+        if (writeAllowed)
+          assert.equal(await io.readFile(writeFile, "utf8"), writeContent);
+        else await assert.rejects(io.access(writeFile));
+        assert.equal(resumedStates.includes(reviewedState), writeAllowed);
+        if (mode === "write-always") {
+          await permissions.waitForUpdates();
+          assert.equal(
+            await io.readFile(writeFile + ".second", "utf8"),
+            writeContent,
+          );
+          assert.ok(
+            decisions.some(
+              (d) =>
+                d.name === "Write" &&
+                d.callId === "parent-write-3" &&
+                !d.needsApproval,
+            ),
+          );
+          assert.equal(
+            approvalServices.always.isApproved(session, {
+              rawItem: { name: "Write" },
+            }),
+            true,
+          );
+          assert.ok(
+            JSON.stringify(session.toolPermissionContext.allowRules).includes(
+              "Write",
+            ),
+          );
+          assert.equal(
+            await settings.manager.get("permissions", "project"),
+            undefined,
+            "ACP Always Allow is session-only, not a persisted project grant",
+          );
+        }
+        assert.equal(interruption.pending$.value, undefined);
+        assert.equal(interruption.interruptionQueues.size, 0);
+        assert.equal(interruption.itemToSessionMap.size, 0);
+        assert.equal(session.interruptionSubject.value, undefined);
+      }
       assert.ok(
         modelRequests.every(
           (r) =>
@@ -721,8 +916,10 @@ export async function acpRendezvousSdk(
         f.store.getSessionFilePath(session.id),
         "utf8",
       );
-      assert.match(disk, /owned native parent Read/);
-      assert.match(disk, /parent continued/);
+      if (!writeMode) {
+        assert.match(disk, /owned native parent Read/);
+        assert.match(disk, /parent continued/);
+      } else if (writeAllowed) assert.match(disk, /parent Write done/);
       let switched: any;
       if (mode === "switch") {
         const next: any = await checked(
@@ -795,9 +992,23 @@ export async function acpRendezvousSdk(
         restoredCurrent: result.models.currentModelId,
         sourceRenderCleaned: true,
         switched,
+        ...(writeMode
+          ? {
+              approval: {
+                reviews,
+                decisions,
+                wrote: writeAllowed,
+                sameStateResumed: writeAllowed,
+                sessionRuleReused: mode === "write-always",
+                queueCleared: true,
+              },
+            }
+          : {}),
       };
     } finally {
       await host?.close();
+      await Promise.allSettled([...interruptionJobs]);
+      for (const sub of interruptionSubscriptions) sub.unsubscribe();
       if (server) {
         server.closeAllConnections();
         await new Promise<void>((resolve) => server!.close(() => resolve()));
@@ -821,6 +1032,9 @@ export async function acpRendezvousSdk(
       }
       p?.agent.urlSubjectSubscription?.unsubscribe();
       p?.close();
+      await permissions?.waitForUpdates();
+      await hooks?.close();
+      await settings?.close();
       await auth.close();
       await h.close();
       await f.close();
