@@ -20,6 +20,8 @@ Web 使用单运行槽以避免用户在同一进程对多个会话并发修改�
 
 原认证管理器、外部链接/微信/custom-token provider、默认/custom-token storage、HTTP interceptor 和 userInfo resolver 现由 `auth/native-authentication` 提供完整 8 类94成员与15个协议/账户/取消/调度/枚举等 factory。真实 owned HTTP 完成原 provider→Manager→DefaultStorage 登录/刷新/登出；原 ACP newSession 实际借用完整 Manager，等 initialized 后拒绝匿名，不预填账户 Subject。默认 storage 只是内存，JWT decode 不是验签，完整 IDE/磁盘账户 storage/生产 REST 和父 bootstrap 尚未恢复，不自动替换默认 CLI/Web 认证。见[认证核心](native-authentication.md)。
 
+ACP父交接阶段恢复EndpointProvider/CliServerErrorHandler/CliRuntimeOptions/REST factory四个完整类，保持原CLI选项白名单与endpoint/server时序。新`createAcpRendezvousHost`把原View作为真实HTTP/MVC renderer，只有源render调用setSession；跟踪长HTTP/render与原iterator，不提前创建backend会话。真实ACP initialize/newSession→原HTTP ingress→原View→setSession→prompt→完整AgentService/Manager/Runner/InterruptionService→固定SDK Read/续轮通过，同连接再次newSession也验证原重复render分支和新历史隔离。完整native结果分派及原MessageQueue interceptor实际参与，不用旧waitFor记录double/手动完成事件。专用原Agent的方法/Deferred仅由外围观察与关闭时回收，既有已有会话ViewHost不变；生产认证/账户库、父load/resume/完整审批及默认bootstrap尚未切换。见[父交接与所有权](acp-parent-rendezvous.md)。
+
 结果分派默认使用完整原 `InterruptionService.waitFor`，与 SessionManager 的 stream/history/gate 消费者分开。默认/非默认 Agent、headless、错误收尾和 Stop 续跑由原方法驱动；主 prompt 不再补发 Stop。独立宿主仅增加历史刷盘与异步续跑发布 barrier。较早报告中将该剩余分派归为 SessionManager 的表述已在还原状态中纠正。
 
 完整InterruptionService（原构造器及32个成员）、ToolAlwaysApprovalService和BackgroundTaskToolApprovalService现已直接移植。`nativeApprovals: true`将原approve/reject、queue、handleInterruptions、SDK permission request/denial与callbacks接到同一结果所有权桥接；不修改原方法体的批准/拒绝/compaction/channel race分支。独立宿主额外跟踪原fire-and-forget run与早期Deferred拒绝，并等待sole stream consumer刷盘。CLI/Web的默认兼容控制器暂时保留，不能将开发者路径与默认路径混为一谈。

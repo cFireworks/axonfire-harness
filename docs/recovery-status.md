@@ -1095,3 +1095,23 @@ REA整文件TS和编译JS均因Maximum call stack size exceeded各跳过1文件�
 保持既有仓库分层与默认CLI/Web可启动路径，新增smoke:authentication进入根smoke/CI；接口与源差异见[认证核心](native-authentication.md)。本批恢复完整认证业务类，不等同真实IDE/磁盘凭据库/生产网关已接线，更不等同完整默认父runtime。下一步仍需Agent.setSession/AcpView新会话rendezvous、实际REST/账户存储和父资源所有权/完整bootstrap；Desktop HistoryStore、daemon重启、Ask/Plan回放、request-send与外部Docs等仍未完成，整体目标继续进行。
 
 最终门槛：check/build、1530核心+11Web、1451项编译JS smoke、64组源码/行为校验、原配置字节与CLI/Web seed/reload实际启动均通过。无原应用/bundle/旧node_modules的暂存快照重新npm ci/check/build，成功后在harness workspace运行全部1530项编译核心测试，再核对11项Web、配置及实际启动均通过。115 product prompts、6 JSON、22 Desktop资源（304358字节）和SDK固定版本不变。发布审计737文件，在所检查的凭据/运行文件规则内无发现，不是安全证明；既有17项依赖告警（10中危/7高危）保留。
+
+## 2026-10-21：原 ACP 新会话 HTTP/View rendezvous 与 native 结果闭环
+
+固定CLI SHA不变。新增完整EndpointProviderImpl（3成员）、CliServerErrorHandler（3）、CliRuntimeOptions（3）、DefaultRestOperationsFactory（1），共4主要类10成员；含完整pickDefinedCliSessionInitialOptions，共12完整业务声明/表达式、9个非DI import declarator，按原源码初始化顺序保留。3完整factory为43533 gateway/security tokens/header helper、45654 endpoint token、1562 REST tokens/ResponseEntityUtil，factory内部类不重复计数；原4个scope getter/CJS赋值及cell.client.config的Value注入独立核对，不执行decorators/整个bootstrap。
+
+保留Endpoint的Deferred首个resolve、地址/事件/10ms polling及第51次才reject的500ms文字、错误监听回收、Unix socket/listening无address错误和SERVER__HOST空fallback/IPv6不补括号。CliRuntimeOptions只保留原白名单，不透传cwd/print/inputFormat；raw全量deepEqual发事件、浅拷贝与in-place嵌套修改抑制也保留。REST factory直接传clientConfig引用给外部axios位置，不新增merge/default。CliServerErrorHandler原priority2/始终handle/500原message保持；withSecurityHeader只克隆并写固定x-codebuddy-request=1，不把它当认证。
+
+createAcpRendezvousHost为新增显式所有权桥，不是已有session的AcpViewHost变体。真实ACP initialize/newSession发内部HTTP，经原middleware/Controller/Manager/Store/MVC ViewResolver，只有原AcpView.render调用原Agent.setSession，完成usage注册/原Deferred，再启动原iterator。RPC返回时长HTTP仍开放；后续prompt由同一源循环进入完整原AgentService、5原interceptor（UserInput/MessageQueue/History/Telemetry/State）、Manager/Runner/Provider、完整原InterruptionService及固定SDK，完成Read/JSONL/续轮，无手动resolve/预填session/JSON测试view。
+
+组合测试先定位到旧fixture.waitFor只记调用、不能发布原ACP result；现改为实际32成员完整原InterruptionService原waitFor/Stop/agent_end/combine分派。Manager保持唯一SDK stream/history consumer，controller只被动订阅结果，不伪造完成事件；legacy queue final空run也经原MessageQueue interceptor跳过，不改deferred-dispatch开关躲路径。同连接第二次newSession保留原render先setSession后duplicate检查：第二HTTP结束、首HTTP/iterator继续；旧subjects完成，SDK上下文为新native session且新历史无旧Read。owner只观察原setSession更新关闭目标，不另写会话切换算法。
+
+owner拥有View.init/render/iterator、RPC/Deferred、异步回调/task监听/timers；构造失败清timer，source在finally之前失败也回收所观察监听。专用原Agent方法/字段只外围观察，不提前setSession、不resolve；close后新赋入的原Deferred也拒绝，结束恢复descriptor并禁止重复拥有同一Agent。关闭用原cancel、return iterator、拒绝未完prompt、等待自有任务，cancel失败仍继续回收并报告AggregateError，不forceIdle。借用auth/REST/backend等仍由父宿主停准入/收尾；默认listener/认证/审批owner未被偷偷替换。
+
+第65组verify:acp-parent对新增完整声明/类/绑定/原getter/factory/Value及顺序做AST核对，13组件有限差分、2组完整原父链/HTTP/真实SDK成对集成通过；另8项新owner独立测试，共23专项。参考侧替换原HTTP、AgentService/utilities、Runner、auth、ACP Agent/View/lifecycle/services/registry和完整InterruptionService；既有已校验native sessions/ingress及修改版ACP SDK共用，不称整个应用/所有第三方库重放。只用owned临时文件/随机loopback端口/额外capability/确定模型；custom-token原storage从显式owned配置产生账户，JWT decoder/低层REST/parser/设置/Hook/no-team/权限初始化/telemetry为明确外缘，不算生产登录/完整native审批证明，不靠bypassPermissions。
+
+REA 6.7.0对新增owner/父原语两份惰性源码的证据ev_df0d0239eaa1eae1e1d2dfb43036302bc6750bada187af4f6e6c9ca9ac5e8bed：3864 AST nodes、2parsed、0skipped/parse failures。750节点/每文件750、150unknown/每文件150、45秒下仍partial/truncated，未执行bootstrap，不用静态图替代整体等价证明。OpenAI Docs仅核对SDK运行/恢复边界，以固定样本/SDK为实现依据。
+
+仓库分层/CLI/Web保持，smoke:acp-parent纳入根smoke/CI，详见[父交接与所有权](acp-parent-rendezvous.md)。新会话rendezvous与同连接切换已验证；完整默认公共装配器、生产认证/磁盘账户库、父load/resume/fork、native Write/Ask/Plan审批全链、真实gateway/REST/完整bootstrap、Desktop HistoryStore、daemon重启/回放、request-send/Docs等仍需推进，整体目标未完成。
+
+最终门槛：check/build、1553核心+11Web、1474项编译JS smoke、65组源码/行为验证、原配置字节和CLI/Web seed/reload实际启动均通过。不带原应用/bundle/旧node_modules的暂存快照重新npm ci/check/build成功后，在harness workspace执行全部1553项编译核心测试；11项Web、配置和实际启动均通过。115 product prompts、6 JSON、22 Desktop资源（304358字节）及SDK固定依赖不变。发布审计746文件，在所检查的凭据/运行文件规则内无发现，不是安全证明；既有17项依赖告警（10中危/7高危）保留。

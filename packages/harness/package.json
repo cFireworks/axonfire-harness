@@ -104,7 +104,9 @@
     "verify:native-http": "node --import tsx scripts/verify-native-http-recovery.ts",
     "smoke:native-http": "node --test dist/test/native-http-runtime.test.js",
     "verify:authentication": "node --import tsx scripts/verify-authentication-recovery.ts",
-    "smoke:authentication": "node --test dist/test/authentication-runtime.test.js"
+    "smoke:authentication": "node --test dist/test/authentication-runtime.test.js",
+    "verify:acp-parent": "node --import tsx scripts/verify-acp-parent-recovery.ts",
+    "smoke:acp-parent": "node --test dist/test/acp-parent-runtime.test.js dist/test/acp-rendezvous-host.test.js"
   },
   "dependencies": {
     "@openai/agents": "0.5.2",

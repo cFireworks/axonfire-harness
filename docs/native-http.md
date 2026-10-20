@@ -85,4 +85,4 @@ REA 6.7.0 对 runtime/host 两份惰性源码的静态证据：`ev_8f8888af45c45
 
 OpenAI Docs 仅核对 [SDK 应用上下文和模型输入边界](https://developers.openai.com/api/docs/guides/agents/define-agents)；原逻辑和 SDK 版本仍以固定样本/依赖为准，不按现行文档重写。
 
-下一步仍是原 `Agent.setSession` / AcpView 新会话 rendezvous、父资源所有权、实际 AuthenticationManager/网关及完整默认启动切换。Desktop HistoryStore、daemon 重启、Ask/Plan 回放、request-send 服务和外部 Docs 引擎等仍未完成，不能据本阶段称整个 harness 已 100% 还原。
+后续[父交接阶段](acp-parent-rendezvous.md)已用真实原AcpView/setSession替代JSON测试view完成新会话、Read/续轮及同连接切换，并恢复认证业务类。仍需生产认证/账户库、父load/resume/完整native审批、完整公共装配器和默认启动切换；Desktop HistoryStore、daemon 重启、Ask/Plan 回放、request-send 服务和外部 Docs 引擎等未完成，不能据这些阶段称整个 harness 已100%还原。

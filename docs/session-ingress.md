@@ -51,4 +51,4 @@ npm run verify:session-ingress -w @axonfire/harness -- /absolute/path/codebuddy.
 
 源码验证对全部完整声明/类体、静态配置、自引用、模块绑定、route 和参数位置核对 AST；参考侧只执行经校验的原惰性声明。44 组有限行为差分覆盖以上主要分支；另 2 项测试运行完整原 ACP Agent，验证匿名认证以及初始化失败在 REST/new-session rendezvous 之前拒绝。认证初始化和会话服务在这些组件测试里是明确的 owned doubles，不是原产品账户实现；没有读取账户、发生产请求或伪造登录成功。
 
-本文件对应入口组件测试中的 SessionManager 仍是明确的 in-memory double，不冒充原实现。完整原 CLI Manager/Store 已另行恢复，见[原生会话栈](native-session-stack.md)。后续 HTTP 集成已实际组合完整原 ingress/AgentService/Manager/Store/Runner，支持真实 SDK Read 与全新 Manager 的空 meta 磁盘冷恢复，不预加载会话。但测试 JSON view 不是原 AcpView，Agent.setSession/View 新会话 handshake、真实认证/父 bootstrap 尚未接通，仍不能称完整默认父 runtime。默认 CLI/Web、已有 ACP ViewHost、115 product prompts/22 Desktop 文本/6 JSON、SDK 依赖均未改写。
+本文件对应入口组件测试中的 SessionManager 仍是明确的in-memory double，不冒充原实现。完整原CLI Manager/Store已另行恢复，见[原生会话栈](native-session-stack.md)。后续HTTP集成实际组合完整原ingress/AgentService/Manager/Store/Runner验证Read与空meta冷恢复；[父交接阶段](acp-parent-rendezvous.md)进一步以原AcpView.render/setSession完成真实ACP新会话/Read/续轮/同连接切换，不靠JSON测试view或预填session。生产认证/账户库、父load/resume/完整审批与默认bootstrap仍未完成，不能称完整默认父runtime。默认CLI/Web、已有ACP ViewHost、115 product prompts/22 Desktop文本/6 JSON和SDK依赖未改写。
