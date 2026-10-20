@@ -1077,3 +1077,21 @@ REA 6.7.0对runtime/host两份惰性源码的证据为`ev_8f8888af45c45262d005a3
 保持apps/cli、apps/web、packages/harness、docs、scripts分层；smoke:native-http纳入根smoke/CI，嵌入接口与源行为见[HTTP核心](native-http.md)。默认CLI/Web仍可独立启动，未切换为完整原生父HTTP runtime。下一步是原Agent.setSession/AcpView新会话rendezvous、父资源所有权、实际AuthenticationManager/网关与完整bootstrap；Desktop HistoryStore、daemon重启、Ask/Plan回放、request-send服务和外部Docs等未完成，整体目标仍进行中。
 
 最终门槛：check/build、1494核心+11Web、1415项编译JS smoke、63组源码/行为验证、原配置字节与真实CLI/Web seed/reload启动均通过。暂存快照不含原应用/bundle/旧node_modules，重新npm ci/check/build成功后，在harness workspace顺序执行全部1494项编译核心测试；11项Web、配置和CLI/Web实际启动也通过。115 product prompts、6 JSON、22 Desktop资源（304358字节）与SDK固定版本不变。发布审计729文件，在所检查的凭据/运行文件规则内无发现，不是安全证明；既有17项依赖告警（10中危/7高危）保留。
+
+## 2026-10-21：完整原 AuthenticationManager / provider / storage 核心
+
+固定 CLI SHA 不变。父新会话握手的原initializeSession明确先await auth.initialized、拒绝无当前账户，然后才发HTTP/等Agent.setSession；本阶段据此先恢复缺失前置依赖，不预填“已登录”Subject。新增native-authentication：完整AuthenticationManagerImpl（25成员）、ExternalLinkAuthenticationProvider（25）、UserInfoContextVariableResolver（3）、AuthenticationHttpInterceptor（4）、DefaultAuthenticationStorage（5）、CustomTokenAuthenticationProvider（6）、CustomTokenAuthenticationStorageImpl（12）、WxAuthenticationProvider（14），共8主要类94成员、44完整业务声明/表达式、3个非DI declarator；后者明确不是完整原多变量声明。原callback revision/enum/Set/helpers、导出与MIN_REFRESH_DELAY_MS静态赋值一并核对，不执行decorators/应用bootstrap。
+
+15完整惰性factory恢复协议tokens/headers/7错误类、账户快照/匹配、SubscriptionManager/DisposableComponent、原异步调度/取消/Event/Emitter/Disposable、AIError/NotFoundError、Deferred/CustomError/Prioritizeable/ErrorUtil、AuthenticationType与完整ProductFeature/FeatureToggle。模块51147/9151/17237仅为明确局部投影；factory内部类不重复计入94成员，既有ProductEnvService不重复移植。JWT仍为外部94959依赖，不复制库/SDK，不推断原依赖版本。
+
+保留storage token+JSON equality去重、anonymous不去重、环境切换→当前发布→刷新/sync及storageSessionRevision门控。登录/登出/切账户/刷新分别保留authOperation/loginAttempt/committedLogin revisions、原abort/过期结果丢弃和beforeStore/afterStore/marker检查；持久化tail失败可继续，clean=false时Subject可保留而loggedOut已为true。init失败只记录、不结束initialized Promise；DefaultStorage只存内存。refresh保留30秒cooldown、WorkBuddy缺allAccounts例外、uid/idp判断、原随机间隔/15秒最小timer/指数退避、Unauthorized不重试与dispose取消。
+
+保留custom-token env/ACC/spilled信号的priority门控，restore只读合并product token而非信号token；产品config单独有token也可能priority=0，store/clean为空，不称为磁盘持久化/撤销。JWT仅decode非验签，保留sub/nickname/iss/sso企业/domain与显式enterpriseId优先及原hex时限。ExternalLink保留300秒timeout/1秒polling、token/account错误code、account 401/403五次重试、license/IP/launch whitelist/version/loginSessionId/browser=false继续等分支。原HTTP auth header/skip/no-*、endpoint前缀/override/路径白名单保留，不把startsWith当安全origin校验。Wx仍需显式IDE require，其原tmpcode console.error也不删改。
+
+第64组verify:authentication对完整类体/声明/表达式/非DI declarator/导出/绑定和15factory做AST对照，34组有限组件差分、1组真实owned HTTP认证流程和1组原ACP auth gate成对通过，共36项专项。HTTP集成用完整原ExternalLink provider→Manager→DefaultStorage请求state/token/account/accounts、提交/刷新/登出；自有随机loopback端口与显式capability/REST/URL opener/Product/telemetry外缘，账户来自原provider响应链而非预填Subject，不是生产认证。原ACP newSession实际注入完整管理器，等待doInit后拒绝匿名、没有REST请求/会话Deferred；参考侧也替换完整原Agent/View/primitive。JWT decoder、IDE、spilled文件为明确doubles，不算外部库/原IDE已验证。
+
+REA整文件TS和编译JS均因Maximum call stack size exceeded各跳过1文件，证据分别ev_05883e955f07910d921b04e7dbb5854184c5d6d52d19e3deea1b78bf0ac20911、ev_18fc9afde042ca8a15eeb221ce97415ef7890ee2d254332554ce93f2835d3de4；不能用parse_failures=0声称成功。随后将最终编译文件的8scope/15完整factory作为23惰性单元静态分析，证据ev_db867704bd54dfe5e1efcdf5dcef4439ad343b1aba78286a1247ea79093c5754：19306 AST nodes、23parsed、0skipped/parse failures。750节点/每文件750、150unknown/每文件150、45秒下仍partial/truncated，不证明完整闭包/父bootstrap关系；完整公开文件另有AST/成对运行校验。OpenAI Docs仅核对SDK运行/恢复边界，以固定样本/SDK为依据。
+
+保持既有仓库分层与默认CLI/Web可启动路径，新增smoke:authentication进入根smoke/CI；接口与源差异见[认证核心](native-authentication.md)。本批恢复完整认证业务类，不等同真实IDE/磁盘凭据库/生产网关已接线，更不等同完整默认父runtime。下一步仍需Agent.setSession/AcpView新会话rendezvous、实际REST/账户存储和父资源所有权/完整bootstrap；Desktop HistoryStore、daemon重启、Ask/Plan回放、request-send与外部Docs等仍未完成，整体目标继续进行。
+
+最终门槛：check/build、1530核心+11Web、1451项编译JS smoke、64组源码/行为校验、原配置字节与CLI/Web seed/reload实际启动均通过。无原应用/bundle/旧node_modules的暂存快照重新npm ci/check/build，成功后在harness workspace运行全部1530项编译核心测试，再核对11项Web、配置及实际启动均通过。115 product prompts、6 JSON、22 Desktop资源（304358字节）和SDK固定版本不变。发布审计737文件，在所检查的凭据/运行文件规则内无发现，不是安全证明；既有17项依赖告警（10中危/7高危）保留。

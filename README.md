@@ -6,7 +6,7 @@
 
 原生 ACP [协议核心](docs/acp-protocol.md)、[标题/广播/usage 服务](docs/acp-services.md)与[连接/修改版协议 SDK](docs/acp-connections.md)已逐模块恢复。完整原生 [Agent/View 循环](docs/acp-view-host.md)可显式接入已有 SDK 会话，以单一审批归属完成真实 Write/拒绝/Defer、续轮、队列与关闭，不靠 bypassPermissions。
 
-内部会话入口见[入口说明](docs/session-ingress.md)；完整 CLI Manager/Store/取消草稿见[原生会话栈](docs/native-session-stack.md)；完整 AgentService、31 个本地 interceptor 及历史/消息/输入工具链见[原生执行链](docs/native-agent-run.md)。完整原 RunnerFactory/Provider/循环检测现已恢复，CLI/Web 的 Runner 决策已委托完整原类，见[Runner 创建链](docs/native-runner.md)。新增[原 HTTP/MVC/CLS 核心](docs/native-http.md)，自有真实 HTTP 已连接上述原类与 SDK，验证 Read、磁盘冷恢复及逐请求上下文隔离。原 AcpView 新会话 rendezvous、真实认证与完整默认父入口切换仍待恢复；新增 JSON 测试 view 不算原产品 View。OpenAI SDK 保留原依赖。
+内部会话入口见[入口说明](docs/session-ingress.md)；完整 CLI Manager/Store/取消草稿见[原生会话栈](docs/native-session-stack.md)；完整 AgentService、31 个本地 interceptor 及历史/消息/输入工具链见[原生执行链](docs/native-agent-run.md)。完整原 RunnerFactory/Provider/循环检测现已恢复，CLI/Web 的 Runner 决策已委托完整原类，见[Runner 创建链](docs/native-runner.md)。[原 HTTP/MVC/CLS 核心](docs/native-http.md)经真实 owned HTTP 连接上述原类与 SDK，验证 Read、磁盘冷恢复及逐请求上下文隔离。[原认证管理器/provider/存储核心](docs/native-authentication.md)现已恢复并验证 owned HTTP 登录/刷新/登出，但生产认证、原 AcpView 新会话 rendezvous 与完整默认父入口仍待接线；JSON 测试 view 不算原产品 View，模型 key 不算产品账户。OpenAI SDK 保留原依赖。
 
 ## 快速开始
 
