@@ -18,6 +18,8 @@ export interface NativeAcpPrimitiveRuntime {
   modules?: Record<number, any>;
   getModule?: (id: number) => any;
   Date?: DateConstructor | { new (value?: any): Date; now(): number };
+  setTimeout?: typeof globalThis.setTimeout;
+  clearTimeout?: typeof globalThis.clearTimeout;
 }
 export function createNativeAcpPrimitives(
   runtime: NativeAcpPrimitiveRuntime = {},
@@ -32,6 +34,8 @@ export function createNativeAcpPrimitives(
   getModule(id: number): any;
 } {
   const Date = runtime.Date ?? globalThis.Date;
+  const setTimeout = runtime.setTimeout ?? globalThis.setTimeout,
+    clearTimeout = runtime.clearTimeout ?? globalThis.clearTimeout;
   const missing = (id: number) =>
     new Proxy(
       {},

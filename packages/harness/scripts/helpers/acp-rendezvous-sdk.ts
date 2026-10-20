@@ -1095,6 +1095,7 @@ export async function acpRendezvousSdk(
         assert.equal(tasks.eventNames().length, 0);
         assert.equal(host!.asynchronousErrors.length, 0);
         assert.equal(f.errors.length, 0);
+        assert.deepEqual(p!.host.errors, []);
         assert.deepEqual(h.errors, []);
         assert.equal(h.pendingDispatchCount, 0);
         assert.equal(h.pendingTransportCount, 0);
@@ -1438,7 +1439,7 @@ export async function acpRendezvousSdk(
         await Promise.all([client.closed, endpoint.closed]);
       }
       p?.agent.urlSubjectSubscription?.unsubscribe();
-      p?.close();
+      await p?.close();
       if (asks) {
         for (const id of asks.getRoutingState().waitingDeferredKeys)
           asks.rejectAsk(id);

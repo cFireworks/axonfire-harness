@@ -230,7 +230,7 @@ export async function authenticationAcpGate(
       refusedBeforeREST: network === 0,
     };
   } finally {
-    p.close();
+    await p.close();
     await f.close();
   }
 }

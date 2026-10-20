@@ -17,7 +17,7 @@ const scenario = (
     try {
       return await run(h);
     } finally {
-      h.close();
+      await h.close();
     }
   },
 });

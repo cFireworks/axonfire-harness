@@ -2,6 +2,10 @@ import { createNativeAcpView } from "./native-acp-view.js";
 import { withTrace } from "@openai/agents-core";
 import { LocalNoopTrace } from "../runtime/local-trace.js";
 
+// An existing protocol-owner accessor is composable, but another rendezvous
+// lease on the same underlying Agent (even through a facade) is not.
+const rendezvousDeferredGetters = new WeakSet<() => unknown>();
+
 export interface AcpRendezvousHostOptions {
   runtime: any;
   /** Borrowed source ACP registry, not the SDK AgentManager. */
@@ -116,7 +120,12 @@ export function createAcpRendezvousHost(options: AcpRendezvousHostOptions) {
       agent,
       "sessionDeferred",
     );
-    if (descriptor && (!descriptor.configurable || !("value" in descriptor)))
+    if (
+      descriptor &&
+      (!descriptor.configurable ||
+        (descriptor.get && rendezvousDeferredGetters.has(descriptor.get)) ||
+        (!("value" in descriptor) && (!descriptor.get || !descriptor.set)))
+    )
       throw Error(
         "A dedicated source Agent with a writable sessionDeferred is required",
       );
@@ -135,22 +144,31 @@ export function createAcpRendezvousHost(options: AcpRendezvousHostOptions) {
         "A dedicated source Agent with an observable setSession is required",
       );
     let value = agent.sessionDeferred;
+    const getSessionDeferred = () => value;
     Object.defineProperty(agent, "sessionDeferred", {
       configurable: true,
       enumerable: descriptor?.enumerable ?? true,
-      get: () => value,
+      get: getSessionDeferred,
       set(next) {
+        descriptor?.set?.call(agent, next);
         value = next;
         if (next?.promise) void next.promise.catch(() => {});
         if (closed) next?.reject(closedError());
       },
     });
+    rendezvousDeferredGetters.add(getSessionDeferred);
     restoreAgents.add(() => {
       if (descriptor)
-        Object.defineProperty(agent, "sessionDeferred", {
-          ...descriptor,
-          value,
-        });
+        Object.defineProperty(
+          agent,
+          "sessionDeferred",
+          "value" in descriptor
+            ? {
+                ...descriptor,
+                value,
+              }
+            : descriptor,
+        );
       else if (value !== undefined)
         Object.defineProperty(agent, "sessionDeferred", {
           configurable: true,
@@ -159,6 +177,7 @@ export function createAcpRendezvousHost(options: AcpRendezvousHostOptions) {
           value,
         });
       else delete agent.sessionDeferred;
+      rendezvousDeferredGetters.delete(getSessionDeferred);
     });
     const observedSetSession = function (this: any, ...args: any[]) {
       const result = Reflect.apply(setSession, this, args);

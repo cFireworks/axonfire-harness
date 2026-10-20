@@ -143,7 +143,7 @@ export async function acpViewFixture(t: any, patch: any = {}) {
           await Promise.all([client.closed, endpoint.closed]);
         }
         f?.agent.urlSubjectSubscription?.unsubscribe();
-        f?.close();
+        await f?.close();
         await backend.close();
         await rm(dir, { recursive: true, force: true });
       }

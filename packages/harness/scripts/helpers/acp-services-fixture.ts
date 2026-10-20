@@ -111,10 +111,10 @@ export function acpServicesFixture(
     calls,
     reports,
     connections,
-    close() {
+    async close() {
       broadcast.dispose();
       usage.dispose();
-      h.close();
+      await h.close();
     },
   };
 }

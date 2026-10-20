@@ -1221,3 +1221,21 @@ REA最终证据 `ev_8c1bd7a8fc5c0c390563d5482ac9538b37dfc96a9edf4a2ab9559b862d63
 下一步继续完整默认native父配置/ACP/全部interceptor接线、可运行CLI入口和独立OS进程生命周期，再推进生产REST/账户磁盘库、跨cwd/全部模式、Desktop HistoryStore及其余并发/外围前沿。现有CLI/Web仍可启动，但尚未替换为完整原生默认bootstrap；整体目标继续进行中。
 
 最终门槛：check/build、1577项编译JS smoke、全部67组源码/行为验证、原配置字节校验及CLI/Web seed/reload实际启动通过。本轮代码从暂存区干净检出，重新npm ci/check/build后，全部1656编译核心+11Web、配置和实际启动再次通过，无原应用/bundle/旧node_modules依赖，并确认检出测试与最终代码逐字节相同。SDK及6 JSON/115 product prompts/22 Desktop资源（304358字节）不变；773文件发布审计在已检查规则内无发现，不是安全证明。既有17项依赖告警（10中危/7高危）保留，未为隐藏告警升级样本依赖。
+
+## 2026-10-21：公开原 ACP 协议组件装配与组合生命周期
+
+新增[公开协议组件宿主](native-acp-protocol-host.md) `createNativeAcpProtocolHost`，将原Agent/View/ToolInterceptor、完整primitives/input factories实例创建、View依赖注入和回收迁入src；acpProtocolFixture只保留clock/DI/协议/权限测试边界。组件、services/view、认证gate及完整父链/冷恢复均已改接并await实际close。原8类217成员/5完整factory、Prompt、配置与SDK未重写；父HTTP交接的View仍由已有rendezvous拥有，不新增第二个默认渲染循环。
+
+公开facade保持constructor/receiver/原Promise及方法name/length和稳定身份；overlay保留借入getter/晚绑定而不修改namespace。原forwarder的会话Subject只在同步安装窗口借subscribe descriptor观察，随即恢复；失败安装会回滚前序lease。关闭后外部新调用拒绝，但已接受原abort/event回调仍可在真实instance完成，不patch/替换/擅自abort调用者signal。Observer receiver与RxJS Subscriber特殊返回身份保留，不另消费SDK流或伪造idle/成功。
+
+追踪原session/tool/prompt Deferred，不新增prompt消费者；原iterator用原return回收，包括未开始的订阅。协议owner accessor与rendezvous组合，同时用getter归属拒绝同一底层Agent的双重接管（含不同facade），关闭恢复descriptor可再用。完整测试曾发现允许accessor带来的重复owner回归，现已修复，不放宽原单一交接约束。
+
+原终端Bash类体未改，仅factory外层加入显式timer hook，消除组件执行直接落到全局timer的缺口；保留ACK5000ms、默认终端120000ms和race成功后败选timer仍存在。关闭先使自有Deferred/iterator/父工作可结束，等待实际forwarding/ACK/回调与异步complete，再清未来timer/订阅/ALS；不提前删awaited timer造成死锁。借入transport/后台terminal必须由父owner实际结束并等原release，不把Command started当完成；原auth.initialized失败保持pending等边界不伪造成功。
+
+21项新增专项覆盖身份/DI/overlay、descriptor窗口与失败回滚、外部abort/不可配置signal方法、待决Deferred和组合/重复owner、iterator/ACK准确时间、URL/借入Subject、detached错误/异步complete/Subscriber身份、清理失败/关闭准入及原终端timeout/败选timer/明确后台收尾。原订阅每轮unsubscribe后即退休账本项，不将旧Subscriber/session闭包保留至连接关闭，并做连续三轮验证。终端为明确owned协议适配器，没有执行真实shell命令；真实SDK/父链继续保持原setSession/单consumer/审批和磁盘历史路径。
+
+REA最终证据 `ev_cee61bcad4e2ef0ab96bd12072a1c8fd935c6fd6c576edcfbe5e867895022c22`：9042 AST nodes、4 parsed、0 skipped/parse failures；750 semantic/每文件750、150unknown/每文件150、45秒限制下partial/truncated，不是整个运行时等价证明。只用owned文件、随机loopback和确定模型，无安装账户或生产请求。
+
+下一步继续实际Product/配置与ACP连接/全部interceptor的默认父图、CLI入口和独立OS进程/daemon恢复，再推进生产REST/账户库、跨cwd/全部模式、Desktop HistoryStore及其他外围/并发前沿。普通CLI/Web仍可运行，但完整原生默认bootstrap尚未切换，整体目标继续进行中。
+
+最终门槛：check/build、1598项编译JS smoke、全部67组源码/行为验证通过；最终订阅退休改动后已重新跑完全部67组，不仅复用此前结果。暂存代码干净检出重新npm ci/check/build后，全部1677编译核心+11Web、原配置校验与CLI/Web seed/reload实际启动通过；12个改动代码/manifest文件与最终检出逐字节一致，无原应用/bundle/旧node_modules依赖。SDK和6 JSON/115 product prompts/22 Desktop资源（304358字节）未变；776文件发布审计在已检查规则内无发现，不是安全证明。npm ci仍报告既有17项依赖告警（10中危/7高危），未升级样本依赖隐藏差异。

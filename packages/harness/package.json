@@ -86,7 +86,7 @@
     "verify:acp-input": "node --import tsx scripts/verify-acp-input-recovery.ts",
     "smoke:acp-input": "node --test dist/test/acp-input-runtime.test.js",
     "verify:acp-protocol": "node --import tsx scripts/verify-acp-protocol-recovery.ts",
-    "smoke:acp-protocol": "node --test dist/test/acp-protocol-runtime.test.js",
+    "smoke:acp-protocol": "node --test dist/test/acp-protocol-runtime.test.js dist/test/native-acp-protocol-host.test.js",
     "verify:acp-services": "node --import tsx scripts/verify-acp-services-recovery.ts",
     "smoke:acp-services": "node --test dist/test/acp-services-runtime.test.js",
     "verify:acp-connections": "node --import tsx scripts/verify-acp-connections-recovery.ts",

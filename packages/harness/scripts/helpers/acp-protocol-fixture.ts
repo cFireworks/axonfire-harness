@@ -6,10 +6,10 @@ import {
   StreamTimeoutError,
   EmptyStreamError,
 } from "../../src/models/model-transport.js";
-import { createNativeAcpAgent } from "../../src/protocol/native-acp-agent.js";
-import { createNativeAcpView } from "../../src/protocol/native-acp-view.js";
-import { createNativeAcpPrimitives } from "../../src/protocol/native-acp-primitives.js";
-import { createCapturedAcpModules } from "../../src/protocol/captured-acp-modules.js";
+import {
+  createNativeAcpProtocolHost,
+  nativeAcpProtocolFactories,
+} from "../../src/protocol/native-acp-protocol-host.js";
 import { HarnessSession } from "../../src/sessions/session.js";
 import { SessionRunStateMachine } from "../../src/sessions/run-state-machine.js";
 import { RunResultUtils } from "../../src/agents/run-result-utils.js";
@@ -20,11 +20,7 @@ import {
 } from "../../src/commands/command-message-utils.js";
 import { PermissionMode } from "../../src/permissions/permission.js";
 
-export const protocolFactories = {
-  agent: createNativeAcpAgent,
-  view: createNativeAcpView,
-  primitives: createNativeAcpPrimitives,
-};
+export const protocolFactories = nativeAcpProtocolFactories;
 export function acpProtocolFixture(
   factories = protocolFactories,
   seed: any = {},
@@ -87,7 +83,7 @@ export function acpProtocolFixture(
       },
     },
   };
-  const modules: Record<number, any> = {
+  let modules: Record<number, any> = {
     80699: common,
     92537: { Subject },
     54601: { randomUUID: () => "fixed-uuid" },
@@ -117,43 +113,23 @@ export function acpProtocolFixture(
     8046: { INTERRUPTED_BY_USER_MESSAGE: "Interrupted by user" },
     ...seed.modules,
   };
-  const base = createCapturedAcpModules({
-    Date: seed.Date ?? Clock,
-    modules,
-    os: { EOL: "\n" },
-    fs: {},
+  const host = createNativeAcpProtocolHost({
+    sourceFactories: factories,
+    viewDependencies: { logger, stateMachine, sessionManager },
+    beforeClose: seed.beforeClose,
+    runtime: {
+      Date: seed.Date ?? Clock,
+      setTimeout: seed.realTimers ? globalThis.setTimeout : timer,
+      clearTimeout: seed.realTimers
+        ? globalThis.clearTimeout
+        : (token: any) => timers.delete(token),
+      modules,
+      os: { EOL: "\n" },
+      fs: {},
+    },
   });
-  const primitiveModules = { ...modules };
-  delete primitiveModules[8046];
-  const p = factories.primitives({
-    Date: seed.Date ?? Clock,
-    modules: primitiveModules,
-    getModule: base.getModule,
-  });
-  Object.assign(modules[93039], {
-    TelemetryUtils: p.TelemetryUtils,
-    ErrorUtils: p.getModule(8046).ErrorUtils,
-  });
-  Object.assign(common, { Deferred: p.Deferred });
-  modules[22618] = p.protocol;
-  modules[54631] = p.trace;
-  modules[91364] = p.history;
-  modules[66545] = base.getModule(69466);
-  modules[12502] = { AcpUtils: base.AcpUtils };
-  const runtime = {
-    Date: seed.Date ?? Clock,
-    setTimeout: seed.realTimers ? globalThis.setTimeout : timer,
-    clearTimeout: seed.realTimers
-      ? globalThis.clearTimeout
-      : (token: any) => timers.delete(token),
-    modules,
-    getModule: base.getModule,
-  };
-  const n = factories.agent(runtime),
-    agent = new n.AcpAgentImpl(),
-    v = factories.view(runtime),
-    view = new v.AcpView(),
-    toolInterceptor = new p.AcpToolInterceptor();
+  const { base, p, runtime, n, agent, v, view, toolInterceptor } = host;
+  modules = host.modules;
   agent.connection = {
     sessionUpdate: async (update: any) => {
       updates.push(update);
@@ -197,9 +173,9 @@ export function acpProtocolFixture(
     setAsk: (...args: any[]) => decisions.push(["setAsk", ...args]),
   });
   di.set(modules[87422].CommandManager, { parseCommand: () => undefined });
-  Object.assign(view, { logger, stateMachine, sessionManager });
   return {
     createPrimitives: factories.primitives,
+    host,
     runtime,
     setDependency: (token: any, value: any) => di.set(token, value),
     agent,
@@ -231,18 +207,12 @@ export function acpProtocolFixture(
         }
       await settle();
     },
-    close() {
-      for (const cleanup of agent.activeForwardingCleanups.values()) cleanup();
-      for (const subject of [
-        agent.promptEvent,
-        agent.cancelEvent,
-        agent.modelChangeEvent,
-        agent.modeChangeEvent,
-        agent.configChangeEvent,
-        agent.displayModeEvent,
-      ])
-        subject.complete();
-      timers.clear();
+    async close() {
+      try {
+        await host.close();
+      } finally {
+        timers.clear();
+      }
     },
   };
 }

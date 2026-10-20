@@ -1,5 +1,7 @@
 # ACP 协议核心：完整声明与接线边界
 
+后续进展：[公开协议组件宿主](native-acp-protocol-host.md)已将原Agent/View/ToolInterceptor创建、core依赖装配和资源回收迁入src，原组件/父链/恢复验证已改接；这不等于普通CLI/Web已切到完整原生bootstrap。
+
 固定 WorkBuddy 5.3.14 CLI 样本 SHA-256：`4120898f1ded86ac545316721d216c827a325c2513a8fae4bcd8c8bbbf211afd`。公开 catalog 的范围是 UTF-16 offset，不是字节位置；不分发整个 bundle，不执行它的 bootstrap。
 
 本层已经恢复完整 `AcpAgentImpl`（95 成员）、`JsonStreamParser`（17）、`AcpView`（22）、`AcpTeamBridge`（21）、`DetachedMemberSseBridge`（13）、`AcpToolInterceptor`（28）、`TelemetryUtils`（9）和 `RequestError`（12）。合计 8 类、217 成员；另外 5 个完整惰性 factory 包含 Deferred、协议 DI tokens、W3C trace、历史 fork/用户 ID 查找及完整 ErrorUtils。业务函数、配置常量、内嵌文本均保留原声明，并对编译后的完整 AST 核对，不只截取几个方法比较。
