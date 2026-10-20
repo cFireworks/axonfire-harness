@@ -42,6 +42,9 @@ npm run cli -- --plugin-dir /absolute/path/to/plugin --cwd /absolute/path/to/pro
 # CLI / Web 共用原设置加载器，none 排除磁盘作用域但仍应用 CLI JSON：
 npm run cli -- -p "你好" --setting-sources none --settings '{"reasoningEffort":"high"}'
 # Web：npm start -- --setting-sources user,project,local --effort high
+# 可选：使用自己有权使用的可信资源根目录（包含 plugins/workbuddy-builtin）
+npm run cli -- --builtin-assets /absolute/path/to/resources --cwd /absolute/path/to/project
+# Web 同样支持：npm start -- --builtin-assets /absolute/path/to/resources
 ```
 
 Web 工具调用逐次审批，支持流式回复、历史恢复、取消、上下文压缩和 Agent 问答。会话默认保存在工作目录的 `.axonfire/`；CLI 兼容原 standalone 宿主的 `.workbuddy-harness/`。这些目录均被 Git 忽略。
@@ -74,11 +77,12 @@ npm test
 npm run smoke:runtime
 npm run smoke:launchers
 npm run verify:config
-# 可选：需要自行提供固定 SHA 的合法本地样本，不随仓库分发
+# 可选：需要固定 SHA 的 CLI bundle 与 Desktop main 目录，不随仓库分发
 npm run verify:recovery -- /absolute/path/to/codebuddy.js
+# main 不在原 app 布局时设置 WORKBUDDY_DESKTOP_MAIN=/absolute/path/main/index.js
 ```
 
-最新验证：923 项核心、11 项 Web、844 项编译后 smoke、46 组原样本差分通过；干净快照安装/编译/启动也已验证。原 ProductManager 默认驱动配置合并、动态 provider 与 Agent/命令刷新；原文件/模型 providers、企业策略、PluginManager 的本地插件加载与跨服务刷新现已接入。本地/Git/HTTP/ZIP 市场、配置持久化/修复、更新检查与文件锁已接入；真实 SDK 从远端 ZIP 安装到版本缓存并重启恢复 Agent/命令通过自有服务验证。CLI/Web 可直接执行 `/reload-plugins`，本地命令不发送给模型。独立 Git/npm/subdir 安装器、原插件选项存储与错误收集也已接入。原磁盘 SettingsManager、CLI 设置/作用域加载队列和 PluginPolicy 现为默认路径，支持插件启停/卸载持久化、JSONC 与 ConfigChange Hook；资源 seed、Cloud product 与完整产品 bootstrap 仍未完成。完整权限服务和原审批控制器通过 `nativePermissions`、`nativeApprovals` 显式使用；`sdkControl` 或 `nativeMcp` 默认启用这两条 native 路径及原生 MCP 宿主。CLI/Web 默认保留兼容审批宿主；权限/MCP 的局部内存设置适配仍有独立边界。配置中的 115 个原始 prompt 和固定哈希保持不变。详细边界见 [还原状态](docs/recovery-status.md)，配置与启动验证见 [使用说明](docs/getting-started.md)。
+最新验证数据见 [还原状态](docs/recovery-status.md)末尾。原 ProductManager 默认驱动配置合并、动态 provider 与 Agent/命令刷新；原文件/模型 providers、企业策略、PluginManager 的本地插件加载与跨服务刷新现已接入。本地/Git/HTTP/ZIP 市场、配置持久化/修复、更新检查与文件锁已接入；真实 SDK 从远端 ZIP 安装到版本缓存并重启恢复 Agent/命令通过自有服务验证。CLI/Web 可直接执行 `/reload-plugins`，本地命令不发送给模型。独立 Git/npm/subdir 安装器、原插件选项存储与错误收集也已接入。原磁盘 SettingsManager、CLI 设置/作用域加载队列和 PluginPolicy 现为默认路径，支持插件启停/卸载持久化、JSONC 与 ConfigChange Hook；内置资源物化、七级资源解析、PluginController/Validator 和 seed 元数据交接现已接入显式可信资源目录。资源包内的第三方程序不随仓库分发，Cloud product、完整 daemon/Electron bootstrap 与会话 addon 编排仍未完成。完整权限服务和原审批控制器通过 `nativePermissions`、`nativeApprovals` 显式使用；`sdkControl` 或 `nativeMcp` 默认启用这两条 native 路径及原生 MCP 宿主。CLI/Web 默认保留兼容审批宿主；权限/MCP 的局部内存设置适配仍有独立边界。配置中的 115 个原始 prompt 和固定哈希保持不变。详细边界见 [还原状态](docs/recovery-status.md)，配置与启动验证见 [使用说明](docs/getting-started.md)。
 
 本地工作台演示：
 

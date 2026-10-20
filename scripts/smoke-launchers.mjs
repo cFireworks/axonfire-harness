@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, access } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { ownedBuiltinAssets } from "../packages/harness/dist/scripts/helpers/builtin-seed-fixtures.js";
 
 const cwd = fileURLToPath(new URL("../", import.meta.url));
 const env = Object.fromEntries(
@@ -21,6 +22,7 @@ assert.match(help.stdout, /Usage: npm run cli/);
 console.log("PASS compiled CLI launcher help (no credentials)");
 
 const directory = await mkdtemp(join(tmpdir(), "axonfire-launcher-"));
+const seededAssets = await ownedBuiltinAssets(directory);
 const child = spawn(
   process.execPath,
   [
@@ -32,7 +34,9 @@ const child = spawn(
     "--cwd",
     directory,
     "--setting-sources",
-    "none",
+    "user,project,local",
+    "--builtin-assets",
+    seededAssets.assets,
     "--settings",
     '{"reasoningEffort":"low"}',
     "--effort",
@@ -78,8 +82,35 @@ try {
   assert.match(stream, /event: delta/);
   assert.match(stream, /event: done/);
   assert.doesNotMatch(stream, /event: error/);
+  await access(
+    join(
+      directory,
+      ".axonfire",
+      "demo",
+      "plugins",
+      "cache",
+      "workbuddy-builtin",
+      "seed-owned",
+      "1.0.0",
+      ".codebuddy-plugin",
+      "plugin.json",
+    ),
+  );
+  const reload = await fetch(`${url}/api/prompt`, {
+    method: "POST",
+    headers: {
+      Origin: url,
+      "Content-Type": "application/json",
+      "x-axonfire-csrf": status.csrf,
+    },
+    body: JSON.stringify({ prompt: "/reload-plugins" }),
+  });
+  assert.equal(reload.status, 200);
+  const reloaded = await reload.text();
+  assert.match(reloaded, /Enabled: 1/);
+  assert.doesNotMatch(reloaded, /event: error/);
   console.log(
-    "PASS Web launcher → real SDK → recovered harness → streamed offline answer",
+    "PASS Web launcher → real SDK → recovered harness → streamed offline answer; owned builtin seed and native reload",
   );
 } finally {
   child.kill("SIGTERM");

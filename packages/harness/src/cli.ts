@@ -26,6 +26,7 @@ Usage: npm run cli -- [options]
   --memory-extraction          Enable recovered background memory extraction
   --prompt-vars-file <file>    Version-1 primitive variables; cannot override built-ins
   --plugin-dir <directory>     Load an explicit trusted local plugin (repeatable)
+  --builtin-assets <root>      Trusted root containing plugins/workbuddy-builtin
   --settings <json-or-file>    Original CLI settings provider (JSONC supported)
   --setting-sources <list>     user,project,local or none; CLI settings still apply
   --effort <level>             minimal, low, medium, high, xhigh, max
@@ -49,7 +50,7 @@ export async function main(args = process.argv.slice(2)): Promise<void> {
     print: { type: "string", short: "p" }, help: { type: "boolean", short: "h" },
     cwd: { type: "string" }, "state-dir": { type: "string" }, model: { type: "string" }, "fallback-model": { type: "string" }, "base-url": { type: "string" }, "web-endpoint": { type: "string" }, "media-endpoint": { type: "string" },
     resume: { type: "string" }, "max-turns": { type: "string" }, "permission-mode": { type: "string" },
-    "allow-tools": { type: "string" }, "memory-extraction": { type: "boolean" }, "prompt-vars-file": { type: "string" }, "plugin-dir": { type: "string", multiple: true },
+    "allow-tools": { type: "string" }, "memory-extraction": { type: "boolean" }, "prompt-vars-file": { type: "string" }, "plugin-dir": { type: "string", multiple: true }, "builtin-assets":{type:"string"},
     "team-backend": { type: "string" }, serve: { type: "boolean" }, "teammate-mode": { type: "boolean" },
     settings:{type:"string"},"setting-sources":{type:"string"},effort:{type:"string"},
     "team-name": { type: "string" }, "agent-name": { type: "string" }, "agent-type": { type: "string" }, "agent-color": { type: "string" },
@@ -61,12 +62,14 @@ export async function main(args = process.argv.slice(2)): Promise<void> {
   const baseURL = values["base-url"] ?? process.env.CODEBUDDY_BASE_URL ?? process.env.OPENAI_BASE_URL;
   const model = values.model ?? process.env.CODEBUDDY_MODEL;
   const fallbackModel=values["fallback-model"];
+  const nativePlugins=values['plugin-dir']||values['builtin-assets']?{...(values['plugin-dir']?{directories:values['plugin-dir']}:{}),...(values['builtin-assets']?{builtinSeed:{assetsRoot:resolve(values['builtin-assets'])}}:{})}:undefined;
   const webEndpoint = values["web-endpoint"], webAccessToken = process.env.WORKBUDDY_HARNESS_WEB_ACCESS_TOKEN;
   const mediaEndpoint = values["media-endpoint"], mediaAccessToken = process.env.WORKBUDDY_HARNESS_MEDIA_ACCESS_TOKEN;
   if (mediaEndpoint && !["http:", "https:"].includes(new URL(mediaEndpoint).protocol)) throw new Error("--media-endpoint must use HTTP or HTTPS");
   if (webEndpoint && !["http:", "https:"].includes(new URL(webEndpoint).protocol)) throw new Error("--web-endpoint must use HTTP or HTTPS");
   if (values["teammate-mode"]) {
     await runStandaloneTeammate(args, { workDir: resolve(values.cwd ?? process.cwd()),
+      ...(nativePlugins?{nativePlugins}:{}),
       nativeSettings:{cliOptions:{...(values.settings!==undefined?{settings:values.settings}:{}),...(values["setting-sources"]!==undefined?{settingSources:values["setting-sources"]}:{}),...(values.effort!==undefined?{effort:values.effort}:{})}},
       ...(mediaEndpoint || mediaAccessToken ? { mediaTools: { ...(mediaEndpoint ? { endpoint: mediaEndpoint } : {}), ...(mediaAccessToken ? { accessToken: mediaAccessToken } : {}) } } : {}),
       ...(webEndpoint || webAccessToken ? { webTools: { ...(webEndpoint ? { endpoint: webEndpoint } : {}), ...(webAccessToken ? { accessToken: webAccessToken } : {}) } } : {}),
@@ -88,7 +91,7 @@ export async function main(args = process.argv.slice(2)): Promise<void> {
   const runtime = await createHarness({
     workDir: resolve(values.cwd ?? process.cwd()),
     nativeSettings:{cliOptions:{...(values.settings!==undefined?{settings:values.settings}:{}),...(values["setting-sources"]!==undefined?{settingSources:values["setting-sources"]}:{}),...(values.effort!==undefined?{effort:values.effort}:{})}},
-    ...(values["plugin-dir"] ? { nativePlugins: { directories: values["plugin-dir"] } } : {}),
+    ...(nativePlugins?{nativePlugins}:{}),
     ...(mediaEndpoint || mediaAccessToken ? { mediaTools: { ...(mediaEndpoint ? { endpoint: mediaEndpoint } : {}), ...(mediaAccessToken ? { accessToken: mediaAccessToken } : {}) } } : {}),
     ...(values["state-dir"] ? { stateDir: resolve(values["state-dir"]) } : {}),
     ...(apiKey ? { apiKey } : {}), ...(baseURL ? { baseURL } : {}), ...(model ? { model } : {}),

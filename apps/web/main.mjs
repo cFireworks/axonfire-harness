@@ -10,6 +10,7 @@ export async function main(args) {
       port: { type: "string" },
       cwd: { type: "string" },
       "plugin-dir": { type: "string", multiple: true },
+      "builtin-assets": { type: "string" },
       settings: { type: "string" },
       "setting-sources": { type: "string" },
       effort: { type: "string" },
@@ -18,7 +19,7 @@ export async function main(args) {
   });
   if (values.help) {
     console.log(
-      "axonfire web [--demo] [--port 3080] [--cwd /path] [--plugin-dir /trusted/plugin] [--settings JSON-or-file] [--setting-sources user,project,local|none] [--effort level]\nLocal-only Web host. Explicit plugins and settings may contain executable Hooks. Model credentials stay in server environment / .env.",
+      "axonfire web [--demo] [--port 3080] [--cwd /path] [--plugin-dir /trusted/plugin] [--builtin-assets /trusted/resources] [--settings JSON-or-file] [--setting-sources user,project,local|none] [--effort level]\nLocal-only Web host. Explicit plugins, assets and settings may contain executable Hooks. Model credentials stay in server environment / .env.",
     );
     return;
   }
@@ -43,8 +44,21 @@ export async function main(args) {
         ...(values.effort !== undefined ? { effort: values.effort } : {}),
       },
     },
-    ...(values["plugin-dir"]
-      ? { nativePlugins: { directories: values["plugin-dir"] } }
+    ...(values["plugin-dir"] || values["builtin-assets"]
+      ? {
+          nativePlugins: {
+            ...(values["plugin-dir"]
+              ? { directories: values["plugin-dir"] }
+              : {}),
+            ...(values["builtin-assets"]
+              ? {
+                  builtinSeed: {
+                    assetsRoot: resolve(values["builtin-assets"]),
+                  },
+                }
+              : {}),
+          },
+        }
       : {}),
     stateDir: resolve(
       process.env.AXONFIRE_STATE_DIR ??

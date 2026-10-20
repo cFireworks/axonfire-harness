@@ -25,6 +25,11 @@ import {
   type NativeSettingsHostOptions,
 } from "../config/native-settings-host.js";
 import { createNativePluginPolicy } from "./native-plugin-policy.js";
+import { createNativePluginControllerHost } from "./native-plugin-controller-host.js";
+import {
+  createNativeBuiltinSeedHost,
+  type NativeBuiltinSeedOptions,
+} from "./native-builtin-seed-host.js";
 
 export type NativePluginHostOptions = {
   directories?: readonly string[];
@@ -33,6 +38,8 @@ export type NativePluginHostOptions = {
   pluginManager?: any;
   /** Explicit standalone profile; the installed product's remote markets are not enabled implicitly. */
   builtInMarketplaces?: Record<string, any>;
+  builtinSeed?: NativeBuiltinSeedOptions;
+  controllerRuntime?: Record<string, any>;
   marketplaceRuntime?: Record<string, any>;
   /** Custom installers, product policy and full persistent Settings remain injectable. */
   dependencies?: Record<string, any>;
@@ -425,7 +432,8 @@ export function createNativePluginHost(options: {
         return value?.then ? observe(value) : value;
       };
     }
-  const classes = createNativePluginRuntime(runtime);
+  // The original output-style import is fs/promises; loaders above use node:fs.
+  const classes = createNativePluginRuntime({ ...runtime, fs: fs.promises });
   const outputStyles = Object.assign(new classes.OutputStyleManagerImpl(), {
     logger,
     productManager,
@@ -460,6 +468,32 @@ export function createNativePluginHost(options: {
       ? Promise.reject(Error("Plugin host is closed"))
       : observe(nativeRefresh(...args));
   let bootstrapped = false;
+  const controllerHost = createNativePluginControllerHost({
+    pluginManager,
+    refresh,
+    fsExtra,
+    logger,
+    ...(options.plugins?.dependencies?.pluginValidator
+      ? { pluginValidator: options.plugins.dependencies.pluginValidator }
+      : {}),
+    ...(options.plugins?.dependencies?.pluginConsoleManager
+      ? { consoleManager: options.plugins.dependencies.pluginConsoleManager }
+      : {}),
+    ...(options.plugins?.controllerRuntime
+      ? { runtime: options.plugins.controllerRuntime }
+      : {}),
+  });
+  const { controller, controllerClasses, pluginValidator, validatorClasses } =
+    controllerHost;
+  const builtinSeedHost = createNativeBuiltinSeedHost({
+    stateDir: options.stateDir,
+    getProductFeatures: () =>
+      productManager.getCurrentConfiguration()?.productFeatures,
+    controller,
+    refresh,
+    logger,
+    configuration: options.plugins?.builtinSeed,
+  });
   if (!options.plugins?.settings)
     ownSubscription(
       ownedSettings.onDidChange(() => {
@@ -484,6 +518,12 @@ export function createNativePluginHost(options: {
     settingsManager: ownedSettings,
     pluginPolicyService,
     policyClasses,
+    controller,
+    controllerHost,
+    controllerClasses,
+    pluginValidator,
+    validatorClasses,
+    builtinSeedHost,
     optionSettings,
     errorCollector,
     marketplaceIO,
@@ -552,11 +592,14 @@ export function createNativePluginHost(options: {
       }
       await refresh.refresh("startup");
       bootstrapped = true;
+      if (options.plugins?.builtinSeed) await builtinSeedHost.seed();
     },
     waitForRefreshSettled: () => refresh.waitForRefreshSettled(),
     async close() {
       closed = true;
       const marketplaceClosing = marketplaceIO.close();
+      const builtinSeedClosing = builtinSeedHost.close();
+      const controllerClosing = controllerHost.close();
       for (const s of subscriptions) {
         s.dispose?.();
         s.unsubscribe?.();
@@ -569,6 +612,8 @@ export function createNativePluginHost(options: {
         immediates.delete(h);
         fn();
       }
+      await builtinSeedClosing;
+      await controllerClosing;
       while (pending.size) await Promise.allSettled([...pending]);
       await marketplaceClosing;
       await optionSettings.close();
@@ -585,7 +630,12 @@ export function createNativePluginHost(options: {
         errorCollector.onDidChangeEmitter.dispose();
     },
     get pendingCount() {
-      return pending.size;
+      return (
+        pending.size +
+        controllerHost.pendingCount +
+        builtinSeedHost.pendingCount +
+        settingsHost.pendingCount
+      );
     },
     get ownedHandleCount() {
       return (
@@ -593,7 +643,8 @@ export function createNativePluginHost(options: {
         immediates.size +
         subscriptions.size +
         marketplaceIO.ownedHandleCount +
-        settingsHost.ownedHandleCount
+        settingsHost.ownedHandleCount +
+        controllerHost.ownedHandleCount
       );
     },
     get closed() {

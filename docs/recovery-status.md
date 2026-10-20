@@ -17,9 +17,10 @@
 | ---: | ----------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |    1 | OpenAI Agents SDK | 完成                         | 精确锁定 `@openai/agents* 0.5.2`、`openai 6.25.0`；SDK 不重写                                                                                                                                                                                                                         |
 |    2 | Product config    | 100% 字节保留                | default/cloudhosted/internal/ioa/selfhosted/sandbox 六份原始 JSON；SHA 验证                                                                                                                                                                                                           |
-|    2 | ProductManager / providers | 原manager、merger及文件/模型provider默认接入 | 首批19类/112处AST/743次比较；文件/模型15类及helper为118处AST/263次比较。插件刷新队列与原SettingsManager/PluginPolicy现默认接入；Cloud product、资源seed/环境服务仍待补，不等于完整产品bootstrap |
+|    2 | ProductManager / providers | 原manager、merger及文件/模型provider默认接入 | 首批19类/112处AST/743次比较；文件/模型15类及helper为118处AST/263次比较。插件刷新队列与原SettingsManager/PluginPolicy现默认接入，seed物化/交接已接显式资源根；Cloud product、资源打包/会话addon和环境服务仍待补，不等于完整产品bootstrap |
 |    2 | PluginManager / loaders / refresh | 完整核心类、市场、安装器和设置/策略主路径默认接入 | 首批14完整类含PluginManager194成员与七loader/事务/reload/style：294处AST/472次比较；市场/锁15类+19helper：129处AST/584次比较；Git/npm/subdir/Options/ErrorCollector5类：45处AST/120次比较。原PluginPolicy与Settings/CLI服务已默认连接，支持磁盘启停/卸载/重启及实时产品策略；资源seed/MCPB与完整产品控制器仍待补 |
 |    2 | Settings / PluginPolicy | 6完整类与原常量默认接入 | SettingsManager/Controller/ValidateMiddleWare、CliSettings/SettingSourcesProvider、PluginPolicy，另3个helper共66处完整AST、9个pure factory与94次有限行为比较；JSONC/作用域/缓存/损坏拒写/锁/Hook/CLI队列和策略事件保留。权限/MCP局部内存适配、完整路由bootstrap未据此宣称恢复 |
+|    2 | Builtin seed / plugin controller | 原物化与metadata交接链已接入 | 43个Desktop seed/复制函数、5个资源解析函数/7级候选、完整PluginController23方法及Validator/Error类：78处AST、12初始化表达式、113次有限比较。显式资源根启动接原manager事务/刷新；第三方二进制不分发，完整Electron/daemon/session-addon未据此标为恢复 |
 |    2 | Prompt registry   | 100% 内容保留                | 115 模板、284,899 Unicode code point；Nunjucks `autoescape:false`、编译缓存、失败回退                                                                                                                                                                                                 |
 |    2 | Tool registry | 47个不同名称均有handler | 原48条声明含一条重复Agent。新增WeChatReply/WeComReply与bridge，默认CLI声明不变；WeCom连接沿原逻辑补入已构造Agent内存tools。47/47只是名称覆盖，已有工具的客户端/宿主分支、动态缓存/插件等仍待补；不是整体100% |
 |    2 | AgentManager | 完整原类移植，68个非constructor方法结构对照 | eager构建/ready与models屏障、pending/force重建/指纹、CLI/handoff/asTool、模型继承/related/env、插件replace/volatile expert/settings优先级、MCP首轮等待/原生defer/权限门槛已恢复；74个原YAML模块factory逐字保留。独立host明确适配DI/Deferred/Emitter，不等于完整ProductManager/插件loader/工具索引热刷新服务 |
@@ -724,3 +725,27 @@ CLI服务保留初始化Deferred、串行loadChain、来源顺序/去重与无�
 REA对惰性module35151派生证据`ev_0619b7b365f46fa0637acb8a6655910fbebbc870b97fda1fc0d1a40f855ac7ea`；750节点/每文件750节点、150 unknown与45秒上限，semantic graph为partial/truncated，不等于完整应用覆盖。115 Prompt、六份JSON、memory policy摘要、SDK/OpenAI版本和依赖锁均未修改。
 
 最新门槛：923核心、11Web宿主、844编译JS smoke（821既有+23设置）、46组样本差分、check/build/config与实际CLI/Web启动全部通过。全新暂存快照无原应用/bundle/旧node_modules，npm ci/check/build、136项编译后插件/市场/设置/兼容审批测试、11项Web测试和CLI/Web实际启动均通过。发布审计567个文件未发现所检查的凭据/运行文件；此扫描不是安全证明，原17项audit风险未强制升级。下一批推进资源seed/Cloud product/其余产品bootstrap及权限/MCP专用settings消费者，整体目标保持未完成。
+
+## 内置资源seed、资源解析与PluginController批次
+
+Desktop样本`main/index.js` SHA-256为`ec41f11bec48bc4fcb81477a8695083161047db303504b03f2ef87dbf6d27935`；`main/workbuddy-product-config.js`为`3a3e001bb227550087d735d07e470a9d06ac8d29141ea1764e0eb48c6e467251`。移植前者safe-copy-dir、builtin-plugin-marketplace-materializer和seed-builtin-plugins三个完整相关函数集合（43个函数），后者完整bundled-assets解析（5个函数及7候选initializer）。位置表由`native-builtin-seed.ts`/`native-bundled-assets.ts`导出，均为各自文件UTF-16索引。另移植固定CLI SHA的PluginController `9763415..9773771`（23方法）、ManifestValidationError `9839074..9839229`及PluginValidatorImpl `9839237..9844910`（6方法），不执行Electron或CLI原bootstrap。
+
+`verify:builtin-seed`核对78处完整成员/函数AST、12处原常量/初始化表达式（包括两个validator正则和完整候选数组），并执行113次原函数/原类与port的有限输出/调用/文件树比较。validator仍是原弱字段检查，不升级为另一套严格schema；依赖semver沿原wrapper。controller保留parsePluginId的split边界、未知scope回user、dry-run/TTY确认、原打印文案、ManifestValidationError身份，以及metadata未提交就抛错、metadata已提交而投影失败返回冻结结果的区别。
+
+物化保留source/cache两树、清单metadata.workbuddySeed/revision/sourceRoots、平台筛选、首项去重、旧两段cache布局恢复、symlink修复/拒绝、canonical路径检查、staging/backup交换与回滚、snapshot有效性验证、orphan marker清理。无版本fallback沿原appVersion+BUILD_COMMIT；有效同版本snapshot不因body更新被重写，新增版本不覆盖旧版本。原safeCopy逐文件read probe/copy，跳过symlink/特殊条目并记录失败，不调用fs.cpSync。source copy不完整会throw；snapshot部分复制则丢弃staging并返回false；原writeJsonAtomic在rename失败时可遗留固定.tmp，均未为测试而修饰成统一事务。
+
+默认候选只考虑builtin-plugin类目，mode/template/skill/mcp-app不全局盖章。IntentRecommend非精确true走all；否则TencentPptxBuiltinDefaultEnabled精确false可使defaults集合为空/none；默认白名单与原字符串保留。已有enabledPlugins键不覆盖，不机器生成false。资源不存在/无支持平台时原函数返回空seed结果，而非偷偷发送available=false删除已有注册。
+
+物化不写CLI元数据，原PluginController把metadataRequest交给原builtin-seed刷新队列与PluginManager已有锁定注册/默认值/installed事务。失败按原tracker回滚新鲜USER基线中的相关ID及市场记录，不回滚已物化文件，也不假称回滚已发布到所有消费者的运行时副作用。用户损坏JSON继续拒写并保留原字节。原FileLock发布窗口竞态及拿锁失败降级仍在；同步物化本身没有新增跨进程强锁，不宣称强一致。
+
+CLI/Web新增`--builtin-assets`，嵌入为`nativePlugins.builtinSeed`及`pluginHost.builtinSeedHost.seed()`；没有显式资源根不探测安装应用。原7级资源解析允许parent/../../候选，resourcesPath仅显式注入，不能把assetsRoot当硬读取沙箱。Node同步FS桥仅允许state/plugins内写，独立宿主串行持有seed/metadata Promise并等待初始投影；Controller host拥有console/readline并关闭自己的确认问题。这里不复刻Electron原15秒提示的后台RPC交接、daemon会话池再刷新或session-addon编排。独立CLI的isWorkBuddyDesktop依然false，不能为凑覆盖硬编码为Desktop；桌面专用mode/template全snapshot注册/会话选择尚需对应bootstrap。
+
+新增29项专项含真实自有文件物化/两版本cache/旧布局恢复、copy/probe与rename注入失败、双restore失败backup保留、symlink/marker/canonical路径、默认开关/白名单/平台、JSON遗留tmp、原validator/controller/TTY与关闭、metadata回滚/损坏拒写及7级资源候选。真实SDK消费seeded Agent/命令、两次启动恢复、保留显式false、升级registry/旧snapshot orphan marker；CLI实际子进程及Web launcher使用owned资源，Web再执行原reload检查Enabled:1。模型为fake，没有调用生产服务或读取账户。
+
+另在拥有权明确的临时state中，对固定样本实际资源进行原函数/port纯物化和哈希比较：清单SHA为`88dd94749e2bd98e6464e2f3d23c8d8c4d37b7beb06d24b7b193328c567a5412`，均成功产出metadataRequest，1193个物化文件条目一致。没有import/执行其Hook、MCP、Shell或原生程序；测试后的自有副本已删除。资源包内附带支付CLI、vendor压缩包和其他第三方二进制，不随本仓库分发。此比较不证明第三方程序可在所有平台或真实账户中运行，资源prompt/程序的分发与完整Addon链仍须独立处理。
+
+端到端升级暴露并修复两个旧宿主绑定缺口：native path helper会返回macOS /private/var真实路径，原owned插件FS仅认/var词法根导致orphan标记失败；现在接受同一配置state的canonical根并仍拒绝根删除/外部/悬空symlink写入。OutputStyleManager原import为fs/promises，旧host却传入回调版fs；现分离loader的fs与style的fs/promises，真实workspace样式加载回归通过。均未改原方法体/字符串。
+
+REA对惰性Desktop函数片段生成`ev_6a384acd64576685eca56eab8e395268fc3931c3b7fd69d73e5e793bb91c5a37`，750节点/每文件750节点、150unknown、45秒；semantic graph为partial/truncated。六份JSON、115 Prompt、memory policy摘要、SDK/OpenAI版本和依赖锁均未变。
+
+最新门槛：952核心、11Web、873编译JS smoke（821既有+23设置+29seed）、47组样本差分、check/build/config与实际CLI/Web启动全部通过。无原应用/bundle/旧node_modules的全新暂存快照通过npm ci/check/build、165项编译后插件/市场/设置/审批/seed测试、11项Web测试及实际seed/reload启动；不借助本机已安装资源即可编译和运行owned演示。发布审计578文件未发现所检查的凭据/运行文件，非安全证明；既有17项audit风险未强制升级。下一批继续Cloud product、资源prompt/会话Addon编排、权限/MCP专用settings消费者及剩余产品bootstrap；整体目标未完成。

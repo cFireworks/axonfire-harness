@@ -3,33 +3,54 @@ import * as path from "node:path";
 /** Node filesystem bridge, not the original fs-extra package. Writes are owned-state only. */
 export function createOwnedPluginFilesystem(stateDir: string) {
   const root = path.resolve(stateDir);
+  function isInside(base: string, target: string) {
+    const rel = path.relative(base, target);
+    return (
+      !!rel &&
+      rel !== ".." &&
+      !rel.startsWith(".." + path.sep) &&
+      !path.isAbsolute(rel)
+    );
+  }
+  function entryExists(target: string) {
+    try {
+      fs.lstatSync(target);
+      return true;
+    } catch (error: any) {
+      if (error.code === "ENOENT") return false;
+      throw error;
+    }
+  }
+  function isStateRoot(target: string) {
+    const full = path.resolve(target);
+    return (
+      full === root || (fs.existsSync(root) && full === fs.realpathSync(root))
+    );
+  }
   function assertWrite(target: string) {
     const full = path.resolve(target),
-      rel = path.relative(root, full);
+      realRoot = fs.existsSync(root) ? fs.realpathSync(root) : undefined;
     if (
-      !rel ||
-      rel === ".." ||
-      rel.startsWith(".." + path.sep) ||
-      path.isAbsolute(rel)
+      isStateRoot(full) ||
+      !(isInside(root, full) || (realRoot && isInside(realRoot, full)))
     )
       throw Error("Plugin write is outside owned state");
     let ancestor = path.dirname(full);
-    while (!fs.existsSync(ancestor)) {
+    while (!entryExists(ancestor)) {
       const next = path.dirname(ancestor);
       if (next === ancestor) break;
       ancestor = next;
     }
     const real = fs.realpathSync(ancestor);
-    if (fs.existsSync(root)) {
-      const realRoot = fs.realpathSync(root),
-        realRel = path.relative(realRoot, real);
+    if (realRoot) {
+      const realRel = path.relative(realRoot, real);
       if (
         realRel === ".." ||
         realRel.startsWith(".." + path.sep) ||
         path.isAbsolute(realRel)
       )
         throw Error("Plugin write traverses an external symlink");
-      if (fs.existsSync(full)) {
+      if (entryExists(full)) {
         const targetRel = path.relative(realRoot, fs.realpathSync(full));
         if (
           targetRel === ".." ||
@@ -73,12 +94,12 @@ export function createOwnedPluginFilesystem(stateDir: string) {
       );
     },
     async ensureDir(target: string) {
-      if (path.resolve(target) === root)
+      if (isStateRoot(target))
         return fs.promises.mkdir(root, { recursive: true });
       return fs.promises.mkdir(assertWrite(target), { recursive: true });
     },
     async mkdirp(target: string) {
-      if (path.resolve(target) === root)
+      if (isStateRoot(target))
         return fs.promises.mkdir(root, { recursive: true });
       return fs.promises.mkdir(assertWrite(target), { recursive: true });
     },

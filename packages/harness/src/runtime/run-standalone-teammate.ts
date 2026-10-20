@@ -8,7 +8,7 @@ class LocalNoopTrace extends NoopTrace { override clone(): LocalNoopTrace { retu
 
 /** Standalone startup adapter for recovered TeammateRunner. Native startup,
  * Gateway, approval UI and signal teardown are NOT claimed recovered here. */
-export async function runStandaloneTeammate(args: string[], options: Pick<HarnessOptions, "workDir" | "stateDir" | "apiKey" | "baseURL" | "model" | "logger" | "webTools" | "mediaTools" | "nativeSettings">): Promise<void> {
+export async function runStandaloneTeammate(args: string[], options: Pick<HarnessOptions, "workDir" | "stateDir" | "apiKey" | "baseURL" | "model" | "logger" | "webTools" | "mediaTools" | "nativeSettings" | "nativePlugins">): Promise<void> {
   const team = getArgValue("--team-name", args), member = getArgValue("--agent-name", args);
   if (!team || !member) throw new Error("Teammate mode requires --team-name and --agent-name");
   // Host validates path components before passing native filename composition.

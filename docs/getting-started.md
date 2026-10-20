@@ -12,7 +12,7 @@ Web 的 `--cwd` 指定工具工作目录：`npm start -- --cwd /absolute/path/to
 
 核心测试与 Web 宿主测试不使用本机真实模型账户，差分验证则需要固定样本 SHA-256 `4120898f1ded86ac545316721d216c827a325c2513a8fae4bcd8c8bbbf211afd`。不包含样本的普通 checkout 仍可安装、编译、离线演示和运行回归测试。
 
-历史报告中的根级 `src/`、`config/`、`test/`、`scripts/verify-*.ts` 现位于 `packages/harness/`。原逐项 `verify:*` 命令加 `-w @axonfire/harness`；推荐直接使用根级 `npm run verify:recovery -- /absolute/path/to/codebuddy.js` 执行全套差分。
+历史报告中的根级 `src/`、`config/`、`test/`、`scripts/verify-*.ts` 现位于 `packages/harness/`。原逐项 `verify:*` 命令加 `-w @axonfire/harness`；推荐直接使用根级 `npm run verify:recovery -- /absolute/path/to/codebuddy.js` 执行全套差分。内置资源组还需要同一固定样本的Desktop main目录（index.js、workbuddy-product-config.js、common.js）；不在原app布局时设置`WORKBUDDY_DESKTOP_MAIN=/absolute/path/main/index.js`。这只用于差分验证，普通安装/编译/启动不需要原应用。
 
 ## 本批验收（2026-10-20）
 
@@ -46,7 +46,7 @@ Web 的 `--cwd` 指定工具工作目录：`npm start -- --cwd /absolute/path/to
 
 ## 原生 MCP（嵌入 API）
 
-最新门槛为899核心 + 11宿主、821编译smoke、45组样本差分。完整原MCP类群、ProductManager、文件/模型providers及企业模型策略已接入。插件loader、active snapshot提交和完整刷新事务、本地/Git/HTTP/ZIP市场与市场存储/文件锁/更新检查现已接入。Git/npm/subdir安装器与原OptionsStorage/ErrorCollector现也默认接入；资源seed、完整策略与完整Settings服务仍待补。
+最新门槛见[还原状态](recovery-status.md)末尾。完整原MCP类群、ProductManager、文件/模型providers及企业模型策略已接入。插件loader、active snapshot提交和完整刷新事务、本地/Git/HTTP/ZIP市场与市场存储/文件锁/更新检查现已接入。Git/npm/subdir安装器、原OptionsStorage/ErrorCollector、SettingsManager和PluginPolicy现默认接入；内置seed/controller/validator已接显式资源根。权限/MCP专用的局部内存settings消费者、Cloud product及完整产品bootstrap仍待补，不能因核心设置类恢复而宣称所有持久化接线完成。
 
 普通嵌入调用可在已有模型配置上添加：
 
@@ -141,7 +141,24 @@ CLI：`npm run cli -- --plugin-dir /absolute/plugin --cwd /absolute/project`；W
 
 `plugins/my-plugin`仍采用上面的插件结构。默认可在`<state>/settings.json`配置`extraKnownMarketplaces`和`enabledPlugins`（见下方设置说明），无需注入存储。兼容的显式`nativePlugins.settings`作用域视图仍可用：在`get('extraKnownMarketplaces', 'user')`返回`{"my-market":{"source":{"source":"directory","url":"/absolute/market"}}}`，在`get('enabledPlugins', 'user')`返回`{"my-plugin@my-market":true}`，其他scope返回`undefined`，并提供`clearCache()`。原ConfigManager的对象source读取的是`url`而不是`path`，此处刻意保持原行为。显式只读视图不能承担修改启用状态；若覆盖默认服务，须自行提供需要的`update/set/list`接口。
 
-`await harness.pluginManager.addMarketplace('/absolute/market')`也可添加可信目录；保存到`<state>/plugins/known_marketplaces.json`，重启后原manager恢复该记录。添加市场不等于批准/启用其全部插件。`pluginHost.marketplaceStorage`暴露原保存/移除API；修改后使用原刷新事务更新消费者。`/plugin`完整产品控制器/Web市场管理界面尚未恢复，当前CLI/Web仍可用更直接的`--plugin-dir`。
+`await harness.pluginManager.addMarketplace('/absolute/market')`也可添加可信目录；保存到`<state>/plugins/known_marketplaces.json`，重启后原manager恢复该记录。添加市场不等于批准/启用其全部插件。`pluginHost.marketplaceStorage`暴露原保存/移除API；修改后使用原刷新事务更新消费者。原PluginController与Validator现暴露于嵌入接口，但完整`/internal/plugin`路由bootstrap和Web市场管理界面尚未恢复，当前CLI/Web仍可用更直接的`--plugin-dir`。
+
+### 内置资源物化与注册
+
+```sh
+npm run cli -- --builtin-assets /absolute/path/to/trusted/resources --cwd /your/project
+npm start -- --builtin-assets /absolute/path/to/trusted/resources
+```
+
+可信资源根目录应包含`plugins/workbuddy-builtin`及其原市场清单/插件文件。默认不探测安装应用目录；没有显式参数时不执行物化。资源包中的原生二进制、vendor压缩包和第三方MCP程序不随本仓库分发，插件自身的服务/依赖/平台要求也不会被harness自动补齐。演示模型离线不等于显式插件的Hook被禁用，只加载你有权使用并信任的完整资源。
+
+原资源解析器保留7级候选：显式Electron-style resourcesPath下的app.asar.unpacked/resources、app.asar.unpacked，然后root、root/../resources、root/resources、root/../..、root/../../resources。嵌入可经`nativePlugins.builtinSeed: { assetsRoot, appVersion?, resourcesPath?, platform? }`指定；resourcesPath只接受显式值，不读取已安装产品。原候选会查看父级目录，assetsRoot不是硬读取沙箱。写入桥限制到本次state/plugins；不修改资源源目录。
+
+物化使用原两树布局：`<state>/plugins/marketplaces/workbuddy-builtin`为可替换source，`<state>/plugins/cache/workbuddy-builtin/<plugin>/<version>`为不可变snapshot。同版本有效snapshot不会因文件body变动而重拷贝；版本升级另建snapshot，不覆盖旧版本。无版本时使用原`5.3.14+825709d464` fallback（appVersion可注入）。逐文件复制跳过symlink并记录probe/copy失败；未改成fs.cpSync，也不能当作恶意资源的沙箱。
+
+物化代码不写settings/known_marketplaces/installed registry。它产出原metadataRequest，由同一个原PluginController→PluginRuntimeRefreshService→PluginManager在原锁下提交注册/默认值/installed记录。模式沿实际ProductManager.productFeatures：IntentRecommend非精确true时all；否则按TencentPptxBuiltinDefaultEnabled的精确false门槛选择defaults或none。默认启用仅考虑category=builtin-plugin，all也不全局启用mode/template/skill/mcp-app；已有false/其他值不覆盖。注册失败回滚metadata，不删除已物化资源；原锁竞态和降级边界仍在。
+
+`harness.pluginHost.builtinSeedHost.seed()`可重新物化并交接，返回`{materialization, metadata}`，controller返回的runtimeProjectionSucceeded=false代表metadata已提交但投影失败，并非原子回滚所有服务。`pluginHost.controller`保留原23个方法，`pluginHost.pluginValidator`提供原manifest校验。控制台/文件/TTY readline与Promise所有权由宿主适配；关闭会取消自己的确认问题并等待已接受任务。独立启动等待初始seed完成，不冒充Electron原15秒提示的后台RPC交接、daemon会话池刷新或完整session-addon路径。
 
 跨进程锁位于`<state>/tmp/*.lock/lock.json`，只做PID的signal=0存活探测。市场存储拿锁失败时原逻辑会警告并降级为进程内锁；损坏JSON会先移动到`.broken-<timestamp>`，后续写入重建。原瞬时rename错误最多初次加5次重试。只加载可信市场：本地源路径检查为原词法边界，不能把它当作symlink隔离/插件沙箱。默认内置市场profile为空，不自动联网安装样本中的官方市场。
 
