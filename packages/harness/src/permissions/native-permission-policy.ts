@@ -18,6 +18,27 @@ export const SettingsScope = {
   PROJECT_LOCAL: "project-local",
   CLI: "cli",
 } as const;
+export type ToolPermissionRuleSource =
+  | "policySettings"
+  | "flagSettings"
+  | "userSettings"
+  | "projectSettings"
+  | "localSettings"
+  | "cliArg"
+  | "command"
+  | "session"
+  | "sandbox";
+export type ToolPermissionContext = {
+  additionalWorkingDirectories: Map<
+    string,
+    { path: string; source: ToolPermissionRuleSource }
+  >;
+  allowRules: Record<ToolPermissionRuleSource, string[]>;
+  denyRules: Record<ToolPermissionRuleSource, string[]>;
+  askRules: Record<ToolPermissionRuleSource, string[]>;
+  isBypassPermissionsModeAvailable: boolean;
+  shouldAvoidPermissionPrompts: boolean;
+};
 const eY =
   "IMPORTANT: You *may* attempt to accomplish this action using other tools that might naturally be used to accomplish this goal. But you *should not* attempt to work around this denial in malicious ways. You should only try to work around this restriction in reasonable ways that do not attempt to bypass the intent behind this denial. If you believe this capability is essential to complete the user's request, STOP and explain to the user what you were trying to do and why you need this permission. Let the user decide how to proceed.";
 export function buildPermissionDeniedMessage(eA: any, el: any): any {

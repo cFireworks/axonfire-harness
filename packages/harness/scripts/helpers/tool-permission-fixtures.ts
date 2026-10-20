@@ -31,7 +31,7 @@ export function toolPermissionFixture(
         ]),
     ]),
   );
-  const settingsManager = {
+  const settingsManager = spec.settingsManager ?? {
     async get(key: string, scope?: string) {
       events.push(["get", key, scope]);
       return (

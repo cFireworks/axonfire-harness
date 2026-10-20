@@ -46,7 +46,7 @@ Web 的 `--cwd` 指定工具工作目录：`npm start -- --cwd /absolute/path/to
 
 ## 原生 MCP（嵌入 API）
 
-最新门槛见[还原状态](recovery-status.md)末尾。完整原MCP类群、ProductManager、文件/模型providers及企业模型策略已接入。插件loader、active snapshot提交和完整刷新事务、本地/Git/HTTP/ZIP市场与市场存储/文件锁/更新检查现已接入。Git/npm/subdir安装器、原OptionsStorage/ErrorCollector、SettingsManager和PluginPolicy现默认接入；内置seed/controller/validator已接显式资源根。权限/MCP专用的局部内存settings消费者、Cloud product及完整产品bootstrap仍待补，不能因核心设置类恢复而宣称所有持久化接线完成。
+最新门槛见[还原状态](recovery-status.md)末尾。完整原MCP类群、ProductManager、文件/模型providers及企业模型策略已接入。插件loader、active snapshot提交和完整刷新事务、本地/Git/HTTP/ZIP市场与市场存储/文件锁/更新检查现已接入。Git/npm/subdir安装器、原OptionsStorage/ErrorCollector、SettingsManager和PluginPolicy现默认接入；内置seed/controller/validator已接显式资源根。权限/MCP/SDK设置消费者和Cloud product核心现已接入；真实账户/环境、资源PromptService与完整产品bootstrap仍待补，不能据此宣称所有产品链路完成。
 
 普通嵌入调用可在已有模型配置上添加：
 
@@ -109,7 +109,7 @@ await harness.agents.waitForRebuildSettled(0);
 
 同步后的prompt/Agent/tool描述索引与命令表会刷新。SDK控制通道的initialize现可应用systemPrompt、appendSystemPrompt和自定义agents（每项须有description/prompt），仍按原字段，不把自定义Agents SDK接口冒充原JSONL协议。MCP prompt在连接后通过原provider转成命令，原renderer负责引号参数、角色/资源文本和剩余参数；必要时调用全量sync等待发现，不把volatile sync误当成刷新全部MCP prompt。
 
-`productRuntime.providers` 可附加显式provider（priority > 0，provide({force,current})；按需声明volatile）。默认接入原Client/Env/CLI options/SDK initialize/Plugins/MCP prompt/default provider、CustomAgents/CustomCommands、Models/CustomModels、Agent model解析/可用过滤/企业策略与Craft-to-cli同步，以及已有Skill provider和明确标记的宿主命令/skill选项适配器。Cloud product、完整环境/插件加载与原子跨服务刷新仍待补。插件组件来源默认沿用显式agentManager.plugins，移除插件后重放volatile快照不会残留其Agent instructions或命令。
+`productRuntime.providers` 可附加显式provider（priority > 0，provide({force,current})；按需声明volatile）。默认接入原Client/Env/CLI options/SDK initialize/Plugins/MCP prompt/default provider、CustomAgents/CustomCommands、Models/CustomModels、Agent model解析/可用过滤/企业策略与Craft-to-cli同步，以及已有Skill provider和明确标记的宿主命令/skill选项适配器。Cloud product核心、插件加载及原刷新事务已接入；完整账户/环境与其余bootstrap仍待补。插件组件来源优先使用显式agentManager.plugins，否则使用原PluginManager，移除插件后重放volatile快照不会残留其Agent instructions或命令。
 
 ### 本地 Agent、命令与模型文件
 
@@ -265,6 +265,36 @@ const productRuntime = {
 
 原`cloud_product_config_cache`默认落在本宿主的MemoryLocalStorage，方法名readDiskCache并不代表默认已持久化。需要跨重启时明确注入`cloud.localStorage`或`productRuntime.storage`的get/set协议；磁盘记录无过期检查，最多20条。Cloud缓存内容属于账户配置，不应提交到Git。
 
+### 权限与 MCP 的原设置消费者
+
+默认`harness.permissions.service.settingsManager`、MCP projection的permissions manager以及SDK initialize使用同一`harness.settingsManager`，不再把持久规则放在独立Map。新公开Session在SessionStart前运行原initializeContext，权限上下文由原createDefaultToolPermissionContext创建，含九类规则来源、allow/deny/ask、additionalWorkingDirectories Map及两个原flag。
+
+```js
+const session = await harness.openSession();
+await harness.permissions.service.applyUpdate(session, {
+  type: 'addRules',
+  behavior: 'deny',
+  rules: [{ toolName: 'Write' }],
+  destination: 'userSettings',
+});
+// userSettings → <state>/settings.json
+// projectSettings → <cwd>/.codebuddy/settings.json
+// localSettings → <cwd>/.codebuddy/settings.local.json
+// session / cliArg 只改变内存上下文，不持久化
+```
+
+上述是原权限核心接口，不表示普通CLI/Web已经默认切换native审批：实际native判断需`nativePermissions:true`，完整审批控制器用`nativeApprovals:true`；sdkControl/nativeMcp默认开启它们。standalone guard仍是另一道边界，原policy allow不自动代表用户同意执行。已有会话的context不是设置事件的自动实时镜像；当前会话applyUpdate即时生效，新会话重新初始化，磁盘外改还受原60秒cache及watch失效影响。
+
+`--setting-sources none`只过滤SettingsManager.list()的合并视图。原权限初始化显式get四个scope，MCP批准列表显式list PROJECT_LOCAL与CLI，均不会因none而自动跳过磁盘。这不是禁止所有读盘/落盘或Hook的进程隔离选项。外层`options.settings`是只读视图，不会被猜测成四份native scope；需要替换权限来源时显式提供`permissionHost.settingsManager`完整get/set协议，需要替换MCP批准来源时提供`nativeMcp.projection.settings`的list/set协议。
+
+项目MCP服务可通过`harness.nativeMcp.projection.manager.allow(['name'])`批准、`deny(['name'])`拒绝。原实现写PROJECT_LOCAL的enabledMcpjsonServers/disabledMcpjsonServers，重启后仍有效；CLI字段浅覆盖local，显式CLI拒绝不会被local approve/approveAll撤销。USER中的同名字段不是该权限类的查询来源。这也不是MCP配置里的disabledMcpServers transport开关，两种协议不合并。filesystemScopes依然默认不扫描，显式配置的项目来源及写入动作沿原路径处理，不自动连接安装应用服务器。
+
+SDK initialize的enterpriseEndpoint设置现在按原set默认USER落盘；环境adapter若随后失败，前一次写入仍可能保留。set_model走原CLI provider.set，仅当前进程有效、不写USER也不发SettingsManager.onDidChange；需要持久模型配置请显式调用SettingsManager。自定义JSONL can_use_tool响应只识别原allowed/reason/interrupt/updatedInput，不凭空支持updatedPermissions持久化。
+
+原行为并非事务：applyUpdate先改内存再保存，写失败不回滚；损坏JSON时SettingsManager.set可以按原逻辑无写入返回，不能把Promise resolve当作已落盘。MCP批准/拒绝是两个独立set，第二次失败会保留第一次写入。跨进程锁仍有原发布竞态/拿锁失败降级，独立state根不等于全机器统一事务锁；项目scope文件本身仍由同一项目共享。
+
+关闭会等待已接受的权限更新、always-approve后台保存及MCP批准写入后再关闭共享SettingsHost，并排空ConfigChange Hook；新写入或过期async上下文不能在关闭后重新创建文件。调用方借用的settings adapter不会由projection擅自close，忽略取消的外部Promise仍须自行settle。直接使用独立createNativeMcpProjectionHost而未传settings时，会创建原SettingsHost，USER根为getHomeDir()；可用settingsConfiguration配置CLI来源。动态cwd应提供cwdService.onDidChangeCwd，与getWorkDir保持一致；关闭释放借用observable的订阅。
+
 ### 原生磁盘与 CLI 设置
 
 默认按USER→PROJECT→PROJECT_LOCAL→CLI合并，路径分别为`<state>/settings.json`、`<cwd>/.codebuddy/settings.json`、`<cwd>/.codebuddy/settings.local.json`；不读取`~/.codebuddy`或安装应用设置。支持JSONC注释/尾逗号，USER叠加原DEFAULT_SETTINGS，写入剔除默认差值并保留注释。数组按原Set并集，hooks/permissions/memory/sandbox递归合并，其他对象后项覆盖。原USER磁盘sandbox读入是浅覆盖默认值，不擅自改为深覆盖。
@@ -276,8 +306,8 @@ npm start -- --settings /absolute/path/to/trusted-settings.jsonc --effort high
 
 `--setting-sources user,project,local`可调整顺序；`none`只排除磁盘scope，CLI仍应用。`--settings`识别JSON对象字符串或相对cwd文件；`--effort`只接受minimal/low/medium/high/xhigh/max。它们在CLI和Web启动器均可用。文件可含自动执行Hook，只加载可信设置，none不是OS沙箱。原logger可能记录CLI设置对象，不要在设置JSON中放账户密钥；模型密钥仍用环境变量。
 
-嵌入接口：`harness.settingsManager`为完整服务，提供get/list/set/add/remove/update/clearCache；`harness.settingsHost`拥有CLI队列和关闭屏障。`nativeSettings.cliOptions`可提供`settings/settingSources/model/effort`。显式`options.settings`仍是全局只读覆盖；显式`nativePlugins.settings`仅覆盖插件作用域视图，两者不是同一接口。仅使用旧`agentManager.plugins`且不启用nativePlugins时保留旧只读路径，不自动创建此设置宿主。
+嵌入接口：`harness.settingsManager`为完整服务，提供get/list/set/add/remove/update/clearCache；`harness.settingsHost`拥有CLI队列和关闭屏障。`nativeSettings.cliOptions`可提供`settings/settingSources/model/effort`。显式`options.settings`仍覆盖外层Agent/模型/Hook等只读视图，不合成native分scope数据；显式`nativePlugins.settings`仅覆盖插件作用域视图，两者不是同一接口。仅使用旧`agentManager.plugins`且不启用nativePlugins时也会创建独立原SettingsHost，保留外部插件来源但不再回退局部内存设置。
 
 可调用`await harness.pluginManager.disablePlugins(['name'],'market')`、`enablePlugins`、`uninstallPlugins`，默认写原enabledPlugins配置。写入后自动排队原settings-change刷新；需要立即等待消费者完成时调用`await harness.pluginRuntimeRefresh.waitForRefreshSettled()`，或显式reload。原PluginPolicy从ProductManager的builtInMarketPluginsMerge读取并监听更新；canRemove/canSwitchoff/canEdit只认精确false，版本/说明单独变化不触发策略事件，市场阻断检查按原实现恒false。
 
-损坏JSON重试后会标记scope并拒写，绝不自动修复/备份覆盖；手动修复后需clearCache并成功读取，单独clearCache不会移除损坏标志。缓存60秒，CLI scope不可经SettingsManager修改。文件锁复用原协议及其发布竞态/拿锁失败继续执行的边界，不能视为跨进程强事务；权限/MCP局部内存适配尚未全部切换为该服务。
+损坏JSON重试后会标记scope并拒写，绝不自动修复/备份覆盖；手动修复后需clearCache并成功读取，单独clearCache不会移除损坏标志。缓存60秒，CLI scope不可经SettingsManager修改。文件锁复用原协议及其发布竞态/拿锁失败继续执行的边界，不能视为跨进程强事务；权限/MCP/SDK消费者现已接回该服务；分 scope 显式查询不应用setting-sources合并过滤，详见本页权限/MCP一节。

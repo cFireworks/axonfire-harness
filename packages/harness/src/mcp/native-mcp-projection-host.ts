@@ -2,6 +2,10 @@ import { BehaviorSubject } from "rxjs";
 import { createNativeMcpManagerRuntime } from "./native-mcp-manager-runtime.js";
 import { McpScope } from "./native-mcp-manager-constants.js";
 import type { createNativeMcpHost } from "./native-mcp-host.js";
+import {
+  createNativeSettingsHost,
+  type NativeSettingsHostOptions,
+} from "../config/native-settings-host.js";
 
 export type NativeMcpProjectionOptions = {
   serverHost: ReturnType<typeof createNativeMcpHost>;
@@ -17,6 +21,8 @@ export type NativeMcpProjectionOptions = {
     list(scope: string): Promise<any>;
     set(key: string, value: any, scope: string): Promise<any>;
   };
+  settingsConfiguration?: NativeSettingsHostOptions;
+  cwdService?: { onDidChangeCwd: any };
   runtime?: Record<string, any>;
   dependencies?: Record<string, any>;
   logger?: any;
@@ -38,15 +44,18 @@ export async function createNativeMcpProjectionHost(
       (...args: any[]) => options.logger?.[name]?.(...args),
     ]),
   );
-  const localSettings = new Map<string, Record<string, any>>();
-  const settings = options.settings ?? {
-    async list(scope: string) {
-      return { ...localSettings.get(scope) };
-    },
-    async set(key: string, value: any, scope: string) {
-      localSettings.set(scope, { ...localSettings.get(scope), [key]: value });
-    },
-  };
+  const settingsHost = options.settings
+    ? undefined
+    : createNativeSettingsHost({
+        stateDir: options.getHomeDir(),
+        getWorkDir: options.getWorkDir,
+        logger,
+        ...(options.cwdService ? { cwdService: options.cwdService } : {}),
+        ...(options.settingsConfiguration
+          ? { configuration: options.settingsConfiguration }
+          : {}),
+      });
+  const settings = options.settings ?? settingsHost!.manager;
   function ownSubject(subject: any) {
     return new Proxy(subject, {
       get(target, key) {
@@ -191,18 +200,40 @@ export async function createNativeMcpProjectionHost(
       onDidChange: ownSubject(new BehaviorSubject(undefined)),
     },
     cwdService: {
-      onDidChangeCwd: ownSubject(new BehaviorSubject(options.getWorkDir())),
+      onDidChangeCwd: ownSubject(
+        options.cwdService?.onDidChangeCwd ??
+          new BehaviorSubject(options.getWorkDir()),
+      ),
     },
   });
   Object.assign(cliInitializer, { mcpManager: manager });
   Object.assign(dependencies, { configManager: config, cliInitializer });
   // Transport creation must read the same effective configuration as projection.
   serverHost.transport.mcpConfigManager = config;
-  await config.set(McpScope.DYNAMIC, options.scopes?.[McpScope.DYNAMIC] ?? {});
-  for (const [scope, value] of Object.entries(options.scopes ?? {}))
-    if (scope !== McpScope.DYNAMIC) await config.set(scope, value);
-  manager.initialize();
-  ready.watchArgvAndCwdForMcpInit();
+  for (const name of Object.getOwnPropertyNames(
+    Object.getPrototypeOf(permissions),
+  )) {
+    if (name === "constructor") continue;
+    const native = permissions[name].bind(permissions);
+    permissions[name] = (...args: any[]) =>
+      closed
+        ? Promise.reject(Error("MCP projection is closed"))
+        : observe(native(...args));
+  }
+  try {
+    await settingsHost?.start();
+    await config.set(
+      McpScope.DYNAMIC,
+      options.scopes?.[McpScope.DYNAMIC] ?? {},
+    );
+    for (const [scope, value] of Object.entries(options.scopes ?? {}))
+      if (scope !== McpScope.DYNAMIC) await config.set(scope, value);
+    manager.initialize();
+    ready.watchArgvAndCwdForMcpInit();
+  } catch (error) {
+    await closeProjection();
+    throw error;
+  }
   const nativeConnect = manager.connectProjectedSlot.bind(manager);
   manager.connectProjectedSlot = (slot: any) =>
     closed ? Promise.resolve() : observe(nativeConnect(slot));
@@ -218,6 +249,8 @@ export async function createNativeMcpProjectionHost(
     envExpand,
     models,
     permissions,
+    settings,
+    settingsHost,
     toggle,
     connections,
     ready,
@@ -247,26 +280,7 @@ export async function createNativeMcpProjectionHost(
     async drain() {
       await drain();
     },
-    close() {
-      if (closing) return closing;
-      closed = true;
-      for (const [handle, finish] of immediates) {
-        cancelImmediate(handle);
-        finish();
-      }
-      immediates.clear();
-      for (const sub of subscriptions) sub.unsubscribe();
-      subscriptions.clear();
-      closing = (async () => {
-        await drain();
-        for (const slot of manager.runtimeSlots.values())
-          options.toolSearchService.removeToolsByServer(slot.model.name);
-        manager.runtimeSlots.clear();
-        manager.connectedServersCache.splice(0);
-        manager.allServersCache = [];
-      })();
-      return closing;
-    },
+    close: closeProjection,
     get closed() {
       return closed;
     },
@@ -274,6 +288,30 @@ export async function createNativeMcpProjectionHost(
       return subscriptions.size;
     },
   };
+  function closeProjection() {
+    if (closing) return closing;
+    closed = true;
+    for (const [handle, finish] of immediates) {
+      cancelImmediate(handle);
+      finish();
+    }
+    immediates.clear();
+    for (const sub of subscriptions) sub.unsubscribe();
+    subscriptions.clear();
+    closing = (async () => {
+      try {
+        await drain();
+        for (const slot of manager.runtimeSlots.values())
+          options.toolSearchService.removeToolsByServer(slot.model.name);
+        manager.runtimeSlots.clear();
+        manager.connectedServersCache.splice(0);
+        manager.allServersCache = [];
+      } finally {
+        await settingsHost?.close();
+      }
+    })();
+    return closing;
+  }
   async function drain() {
     for (;;) {
       const reconcile = manager.reconcileTail,

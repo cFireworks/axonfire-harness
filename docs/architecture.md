@@ -12,7 +12,7 @@ Web 使用单运行槽以避免用户在同一进程对多个会话并发修改�
 
 完整InterruptionService（原构造器及32个成员）、ToolAlwaysApprovalService和BackgroundTaskToolApprovalService现已直接移植。`nativeApprovals: true`将原approve/reject、queue、handleInterruptions、SDK permission request/denial与callbacks接到同一结果所有权桥接；不修改原方法体的批准/拒绝/compaction/channel race分支。独立宿主额外跟踪原fire-and-forget run与早期Deferred拒绝，并等待sole stream consumer刷盘。CLI/Web的默认兼容控制器暂时保留，不能将开发者路径与默认路径混为一谈。
 
-完整 ToolPermissionService、PermissionUtils、CommandUtils、八个策略和两个审批缓存入口通过 `nativePermissions: true` 显式连接真实 SDK；`harness.permissions` 提供完整核心对象，可与 `nativeApprovals` 组合。独立执行 guard 与原分类器有明确边界，Hook allow不会自动撤销该guard；显式注入的SDK人工权限客户端allowed与本地人工approve一样登记guard授权，拒绝从不登记。宿主内存 settings adapter 和未配置的 Auto classifier 也不等于原产品持久化/模型服务。审批暂停应从相同RunState恢复，参考 [OpenAI Docs](https://developers.openai.com/api/docs/guides/agents/guardrails-approvals)；SDK0.5.2的实际回调次数以本地测试为准。
+完整 ToolPermissionService、PermissionUtils、CommandUtils、八个策略和两个审批缓存入口通过 `nativePermissions: true` 显式连接真实 SDK；`harness.permissions` 提供完整核心对象，可与 `nativeApprovals` 组合。独立执行 guard 与原分类器有明确边界，Hook allow不会自动撤销该guard；显式注入的SDK人工权限客户端allowed与本地人工approve一样登记guard授权，拒绝从不登记。权限服务现在直接使用原分 scope SettingsManager；未配置的 Auto classifier 仍不等于原模型服务。审批暂停应从相同RunState恢复，参考 [OpenAI Docs](https://developers.openai.com/api/docs/guides/agents/guardrails-approvals)；SDK0.5.2的实际回调次数以本地测试为准。
 
 SDK控制协议现由原StdoutWriter、Permission/Hooks/McpMessage/Elicitation客户端、ControlSignalHandler和初始化/模式/模型handler组成，所有I/O在工厂闭包显式注入。提供 `sdkControl` 时自动连接原Hook调用与权限控制器，默认启用两条native权限路径；`receive/receiveLine`消费控制响应，输出按JSONL保留原前缀分发和stdout背压行为。独立宿主拥有定时器/drain监听/拒绝Promise的清理，不添加原请求中不存在的默认permission timeout，不关闭外部stream。
 
@@ -26,13 +26,13 @@ SDK控制协议现由原StdoutWriter、Permission/Hooks/McpMessage/Elicitation�
 
 顶层McpManager现以完整原类驱动scope合并、revision队列、runtime generation、拒绝/删除eviction、tools/list_changed重索引及settle等待；配置、连接、模型、批准/toggle和ready服务也为原类。McpRegistry在原生模式下仅转发同一live cache和manager API，不再自建连接发布条件。源码要求active且当前代次索引已提交才可见；不能把“TCP已连上”当作工具已准备好。native projection拒绝手工register外部实例绕过配置。
 
-新增projection host只拥有外部依赖、scope来源和异步关闭屏障；延迟工作、inflight连接与旧实例dispose全部被跟踪，原方法体不重写。文件配置路径默认重定向到owned state，filesystem读取需显式选择；项目级配置批准默认使用内存settings adapter，外部可注入持久化实现。原插件组件来自显式getActivePlugins，同AgentManager可共用来源，但不冒充产品插件加载器/自动事件服务。
+新增projection host只拥有外部依赖、scope来源和异步关闭屏障；延迟工作、inflight连接与旧实例dispose全部被跟踪，原方法体不重写。文件配置路径默认重定向到owned state，filesystem读取需显式选择；项目级配置批准默认使用完整原SettingsManager，独立projection创建自有SettingsHost，root共享harness.settingsManager；外部仍可显式注入adapter。原插件组件来自显式getActivePlugins，同AgentManager可共用来源，但不冒充产品插件加载器/自动事件服务。
 
 显式nativeMcp现在与sdkControl一样默认启用nativePermissions/nativeApprovals，保证DeferExecuteTool→MCP也经过原分类/暂停/恢复。真实SDK测试覆盖项目批准前无握手、批准后索引→ToolSearch→DeferExecute→HTTP调用，以及工具拒绝时无底层调用；普通CLI/Web默认仍未切换原生入口。
 
 原ProductManager、五种merge strategy及DefaultProductMerger、Client/Env/CLI options/SDK initialize/Plugins/MCP prompt/default providers、GzipUtils/MemoryLocalStorage和MCP prompt renderer已逐类移植。稳定与volatile配置分离，原provider优先级、同优先级反序、原finally同步队列/失败语义和480秒proxy过期/2秒节流不重写。压缩包的匿名provider constructor.name仍保持缩写，不能因可读类名命中原字符串prefetch名单而改变样本调度。
 
-ConfigWatch/McpWatch原类驱动缓存失效、CWD重绑与状态变化后的sync，独立host只负责自有FS/环境/缓存/定时器和发布关闭屏障。默认不加载原账户、远端产品配置或安装缓存。新快照同步更新同一个ProductConfiguration视图，ToolManager清描述缓存，CommandManager刷新，AgentManager监听原onDidChange重建；SDK初始化等待该重建。原插件完整刷新事务、Cloud product provider和SettingsManager磁盘服务不因该链路可运行就算完成。SDK instructions的职责参考[OpenAI Docs](https://developers.openai.com/api/docs/guides/agents/define-agents)，实际调用与生命周期仍按锁定0.5.2及真实SDK回归。
+ConfigWatch/McpWatch原类驱动缓存失效、CWD重绑与状态变化后的sync，独立host只负责自有FS/环境/缓存/定时器和发布关闭屏障。默认不加载原账户、远端产品配置或安装缓存。新快照同步更新同一个ProductConfiguration视图，ToolManager清描述缓存，CommandManager刷新，AgentManager监听原onDidChange重建；SDK初始化等待该重建。原插件刷新事务、Cloud product核心和SettingsManager磁盘服务已在后续批次独立还原验证；完整账户/环境与其余bootstrap仍未完成。SDK instructions的职责参考[OpenAI Docs](https://developers.openai.com/api/docs/guides/agents/define-agents)，实际调用与生命周期仍按锁定0.5.2及真实SDK回归。
 
 CustomAgents/CustomCommands、Models/CustomModels、AgentModelResolver、AvailableModelsFilter、企业custom-model filter及Craft-to-cli同步现默认加入同一个ProductManager。原DirectoryScan、颜色、加载时变量与plugin变量完整方法，以及原模型能力目录/类型/策略常量的纯factory一并保留；目录数据不当作新SDK实现。SDK自定义model/provider边界参考[OpenAI Docs](https://developers.openai.com/api/docs/guides/agents/models)，实际API版本仍锁定0.5.2。
 
@@ -56,7 +56,7 @@ ZIP的19个完整原helper保留下载/HEAD重定向与60/30秒超时、ETag/Las
 
 原OptionsStorage处理敏感/非敏感拆分、跨存储迁移、缓存与替换；敏感值原样明文写入本次state的credentials.json，首次创建0600，不使用系统Keychain，也不保证加严既有文件mode。非敏感默认使用完整原SettingsManager的USER/pluginConfigs（state/settings.json）；旧plugins/plugin-options.json窄adapter仅保留兼容与缺失项迁移，源文件保留。显式`nativePlugins.settings`或`nativePlugins.dependencies.pluginOptionSettings`可替换该依赖。原ErrorCollector的100条上限、timestamp排序和plugin/source匹配（并非pluginName/marketplaceName）保持不变。
 
-设置宿主只适配三个scope路径/写入边界、CLI options事件来源及资源所有权；6个原类和deepDiffDefaults/normalizeReasoningEffort/getSettingsFilePath的方法体由独立AST核对。CLI和Web共用原设置加载器，原SettingsController/ValidateMiddleWare可由嵌入接口调用，但不冒充完整/internal/config路由bootstrap。原SettingsChange事件由独立桥同步排队原插件refresh，ConfigChange Hook仍为原fire-and-forget，宿主持有完成/关闭屏障。权限/MCP专用内存settings仍有明确独立边界，完整设置类不等于所有消费者均已100%接线。
+设置宿主只适配三个scope路径/写入边界、CLI options事件来源及资源所有权；6个原类和deepDiffDefaults/normalizeReasoningEffort/getSettingsFilePath的方法体由独立AST核对。CLI和Web共用原设置加载器，原SettingsController/ValidateMiddleWare可由嵌入接口调用，但不冒充完整/internal/config路由bootstrap。原SettingsChange事件由独立桥同步排队原插件refresh，ConfigChange Hook仍为原fire-and-forget，宿主持有完成/关闭屏障。权限/MCP/SDK设置消费者现已共享原manager/CLI provider；这仍不等于所有产品bootstrap消费者和真实环境/账户服务已100%接线。
 
 新宿主只拥有路径、数据/平台adapter、订阅/定时器/immediate及所有原方法返回Promise的追踪，关闭时先拒绝新刷新，释放MCP/LSP I/O，再等待事务和旧任务，最后关闭ProductManager。Node fs桥写入限于owned state；signal=0只读存活检查保留，不允许通过该接口发送终止信号。原source的方法体与字符串不替换成宿主逻辑。原reload/builtin-seed的LSP刷新故意后台执行，host额外持有关闭屏障；默认显式LSP config由宿主补回，属于standalone配置兼容而非原方法变更。
 

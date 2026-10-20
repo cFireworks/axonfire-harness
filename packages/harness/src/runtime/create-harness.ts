@@ -1,7 +1,7 @@
 import { NoopTrace, withTrace, type AgentInputItem, type ModelProvider } from "@openai/agents-core";
 import { mkdir } from "node:fs/promises";
 import { createChannelHost, type ChannelHostOptions } from "../channels/channel-host.js";
-import type { NativeSettingsHostOptions } from "../config/native-settings-host.js";
+import { createNativeSettingsHost, type NativeSettingsHostOptions } from "../config/native-settings-host.js";
 import { ChannelManagerImpl } from "../channels/channel-manager.js";
 import { ChannelPermissionAdapterImpl } from "../channels/channel-permission-adapter.js";
 import { noopChannelLogger } from "../channels/channel-runtime.js";
@@ -278,7 +278,7 @@ export async function createHarness(options: HarnessOptions) {
   const sdkControl = options.sdkControl ? createSdkControlHost(options.sdkControl) : undefined;
   const nativeApprovals = options.nativeApprovals ?? (!!sdkControl || !!options.nativeMcp), nativePermissions = options.nativePermissions ?? (!!sdkControl || !!options.nativeMcp);
   const sdkPermissionClient = options.approvalController?.sdkPermissionClient ?? sdkControl?.permission;
-  const sdkSettings = new Map<string, any>();
+  const sdkCliOverrides = new Set<string>();
   let pluginSettings: any;
   const product = await loadProductConfiguration();
   let productRuntime: ReturnType<typeof createNativeProductHost> | undefined;
@@ -288,7 +288,7 @@ export async function createHarness(options: HarnessOptions) {
     async list() { return {...await pluginSettings?.list(),...await options.settings?.list?.()}; },
     clearCache(scope?:string) { pluginSettings?.clearCache(scope); (options.settings as any)?.clearCache?.(scope); },
     async get<T>(key: string): Promise<T | undefined> {
-      if (sdkSettings.has(key)) return sdkSettings.get(key);
+      if (sdkCliOverrides.has(key)) return (await settingsHost.cli.getSettings())[key];
       if(key==='model'&&options.model!==undefined)return options.model as T;
       const provided=await options.settings?.get<T>(key);
       const value:any=provided!==undefined?provided:await pluginSettings?.get(key);
@@ -314,7 +314,13 @@ export async function createHarness(options: HarnessOptions) {
   });
   // Legacy nativePlugins.settings may implement only the scoped plugin view.
   // The global harness settings facade always uses the complete native service.
-  pluginSettings=pluginHost?.settingsHost.manager;
+  const fallbackSettingsHost = pluginHost ? undefined : createNativeSettingsHost({
+    stateDir,getWorkDir,cwdService,
+    logger:{warn:(...args:any[])=>options.logger?.warn(args.map(String).join(' '))},
+    configuration:{...options.nativeSettings,cliOptions:{...(options.model?{model:options.model}:{}),...options.nativeSettings?.cliOptions}},
+  });
+  const settingsHost = pluginHost?.settingsHost ?? fallbackSettingsHost!;
+  pluginSettings=settingsHost.manager;
   const pluginSource = options.agentManager?.plugins ?? pluginHost?.pluginManager;
   const stateMachine = new SessionRunStateMachine();
   const messageQueue = new MessageQueueManager();
@@ -462,16 +468,12 @@ export async function createHarness(options: HarnessOptions) {
     hookInputProcessorProvider:{sortSync:()=>[imageToolHookInputProcessor,...options.hooks?.hookInputProcessorProvider?.sortSync()??[]].sort((a,b)=>(a.priority??500)-(b.priority??500))},
   });
   tools.attachHookLifecycle(nativeHooks.pipeline);
-  const permissionSettings = new Map<string, any>();
   const permissions = createToolPermissionHost({
     getWorkDir, getHomeDir: () => stateDir, sessionStore: store, planStorageService: plans,
     sessionHookManager: nativeHooks.sessionManager, toolHookManager: nativeHooks.toolManager,
-    settingsManager: {
-      async get(key: string, scope?: string) { const id = `${scope ?? ''}\0${key}`; return permissionSettings.has(id) ? permissionSettings.get(id) : settings.get(key); },
-      async set(key: string, value: any, scope?: string) { permissionSettings.set(`${scope ?? ''}\0${key}`, value); },
-    },
     logger: { warn: (...args: any[]) => options.logger?.warn(args.map(String).join(' ')) },
     ...options.permissionHost,
+    settingsManager: options.permissionHost?.settingsManager ?? pluginSettings,
   });
   if (nativePermissions) { tools.attachPermissionService(permissions); deferredRuntime.deferExecute.attachPermissionAdapter(permissions); }
   const skillPaths = options.skillPaths ?? { get project() { return resolve(getWorkDir(), ".codebuddy/skills"); }, user: resolve(stateDir, "skills"), connector: resolve(stateDir, "connector-skills") };
@@ -525,11 +527,13 @@ export async function createHarness(options: HarnessOptions) {
   }) : undefined;
   const nativeMcpProjection = nativeMcp ? await createNativeMcpProjectionHost({
     serverHost: nativeMcp, getWorkDir, getHomeDir: () => resolve(stateDir, "mcp"),
+    cwdService,
     toolSearchService: deferredRuntime.search,
     deferToolConfigService: agents.standaloneHost.runtime.dependencies.deferToolConfigService,
     ...(pluginSource ? { plugins: pluginSource } : {}),
     logger: nativeMcp.runtime.logger,
     ...options.nativeMcp?.projection,
+    settings: options.nativeMcp?.projection?.settings ?? pluginSettings,
   }) : undefined;
   if (nativeMcp && nativeMcpProjection) {
     nativeMcp.attachProjection(nativeMcpProjection);
@@ -839,10 +843,11 @@ export async function createHarness(options: HarnessOptions) {
     });
     commandManager.registerExecutor(pluginHost.executor as any);
   }
+  fallbackSettingsHost?.attach({hookManager:nativeHooks!.manager});
   const sdkHandlers = sdkControl ? attachHarnessSdkControl(sdkControl, {
     sessions, agents, commands: commandManager, product, plans,
-    settings: { get: (key: string) => settings.get(key), async set(key: string, value: any) { sdkSettings.set(key, value); } },
-    cliSettings: { async set(key: string, value: any) { sdkSettings.set(key, value); } },
+    settings: pluginSettings,
+    cliSettings: { async set(key: string, value: any) { await settingsHost.cli.set(key,value); sdkCliOverrides.add(key); } },
     logger: { warn: (...args: any[]) => options.logger?.warn(args.map(String).join(' ')) },
     initializeDependencies: {
       productManager: productRuntime.facade,
@@ -874,6 +879,7 @@ export async function createHarness(options: HarnessOptions) {
       if (config.outputFormat ?? options.outputFormat) session.options.outputFormat = config.outputFormat ?? options.outputFormat;
       const restored = session.meta.standalonePermissionMode as PermissionMode | undefined;
       session.permissionModeSubject.next(config.permissionMode ?? sessions.getOverridePermissionMode(session.id) ?? restored ?? PermissionMode.Default);
+      await permissions.initializeContext(session);
       await sessions.emitSessionStart(session, id ? "resume" : "startup");
       watchQueue(session);
       cronScheduler.start(session);
@@ -971,8 +977,10 @@ export async function createHarness(options: HarnessOptions) {
     closed = true;
     for (const session of active.keys()) session.abortController.abort();
     sdkControl?.close();
-    const pluginClosing = pluginHost?.close();
-    await nativeMcp?.close();
+    const mcpClosing = nativeMcp?.close();
+    const settingsConsumersSettled=Promise.allSettled([mcpClosing,interruptions.waitForPermissionWrites(),permissions.waitForUpdates()]);
+    const pluginClosing = pluginHost?.close(settingsConsumersSettled);
+    await mcpClosing;
     channelHost.close(); channelClients?.close(); channelApprovalTargets.clear();
     sessionQueueSubscription.unsubscribe(); teamLeadPoller.stopTeamLeadPoller(); teamMailbox.stopAll(); shutdownCoordinator.cancelAll("harness closed");
     for (const session of opened) session.teamCancelled = true;
@@ -1028,6 +1036,8 @@ export async function createHarness(options: HarnessOptions) {
     await agents.close();
     await memoryRules.close();
     await autoMemory.close();
+    await settingsConsumersSettled;
+    await fallbackSettingsHost?.close();
     await nativeHooks!.close();
     // Native auxiliary services create sessions outside openSession(). Release
     // this manager's remaining owned observers/timers at host teardown as well.
@@ -1044,6 +1054,7 @@ export async function createHarness(options: HarnessOptions) {
     logger:options.sessionLifecycle?.logger??{info:(...args)=>options.logger?.info?.(args.map(String).join(' ')),debug(){},warn:(...args)=>options.logger?.warn(args.map(String).join(' ')),error:(...args)=>options.logger?.warn(args.map(String).join(' '))},
   }));
   try{
+    await settingsHost.start();
     await productRuntime.start();
     await agents.start(); await agents.getDefault();
     await pluginHost?.start();
@@ -1055,7 +1066,7 @@ export async function createHarness(options: HarnessOptions) {
   channelClients?.initializeConfigured();
   channelHost.start();
   return { product, agents, agentFactory, tools, mcp, sessions, store, service, stateMachine, interruptions, compactor, memory, memoryRules, autoMemory, hooks:nativeHooks, permissions, shell, taskManager, taskStorage, taskTools, agentTool, taskOutputTools, plans, planTools, asks, askTool, promptContext, createWorkflowSubagentSpawner, createWorkflowRuntime, workflowTool, backgroundTaskNotifier, recordingStore, recordReplayProvider: provider, webFetchTool, webSearchTool, webRuntime,
-    sdkControl, sdkHandlers, nativeMcp, connectNativeMcp, productRuntime, productManager: productRuntime.facade, settingsHost:pluginHost?.settingsHost,settingsManager:pluginSettings,pluginHost, pluginManager: pluginSource, pluginRuntimeRefresh: pluginHost?.refresh, channelHost, channelClients, channelManager, channelPermissionAdapter, wechatReplyTool, wecomReplyTool,
+    sdkControl, sdkHandlers, nativeMcp, connectNativeMcp, productRuntime, productManager: productRuntime.facade, settingsHost,settingsManager:pluginSettings,pluginHost, pluginManager: pluginSource, pluginRuntimeRefresh: pluginHost?.refresh, channelHost, channelClients, channelManager, channelPermissionAdapter, wechatReplyTool, wecomReplyTool,
     delegateToolManager, delegateToolsChangedHandler, delegateTool,
     lspManager, lspTool,
     mediaRuntime, imageService, videoService, imageGenTool, imageEditTool, videoGenTool, imageToolHookInputProcessor,

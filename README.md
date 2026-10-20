@@ -83,7 +83,7 @@ npm run verify:recovery -- /absolute/path/to/codebuddy.js
 # 会话Addon额外样本可用 WORKBUDDY_DESKTOP_INITIALIZE、WORKBUDDY_MODE_COORDINATOR 指定
 ```
 
-最新验证数据见 [还原状态](docs/recovery-status.md)末尾。原 ProductManager 默认驱动配置合并、动态 provider 与 Agent/命令刷新；原文件/模型 providers、企业策略、PluginManager 的本地插件加载与跨服务刷新现已接入。本地/Git/HTTP/ZIP 市场、配置持久化/修复、更新检查与文件锁已接入；真实 SDK 从远端 ZIP 安装到版本缓存并重启恢复 Agent/命令通过自有服务验证。CLI/Web 可直接执行 `/reload-plugins`，本地命令不发送给模型。独立 Git/npm/subdir 安装器、原插件选项存储与错误收集也已接入。原磁盘 SettingsManager、CLI 设置/作用域加载队列和 PluginPolicy 现为默认路径，支持插件启停/卸载持久化、JSONC 与 ConfigChange Hook；内置资源物化、七级资源解析、PluginController/Validator 和 seed 元数据交接现已接入显式可信资源目录。资源包内的第三方程序不随仓库分发，Cloud product 的账户门槛、用户缓存、退避重试及配置合并现已默认接入，HTTP/认证仍需显式 adapter，不读取原应用账户。会话 Addon/mode 核心及每会话独立后端现有嵌入接口；完整 daemon/Electron bootstrap、自动模式重启和资源Prompt服务仍未完成。完整权限服务和原审批控制器通过 `nativePermissions`、`nativeApprovals` 显式使用；`sdkControl` 或 `nativeMcp` 默认启用这两条 native 路径及原生 MCP 宿主。CLI/Web 默认保留兼容审批宿主；权限/MCP 的局部内存设置适配仍有独立边界。配置中的 115 个原始 prompt 和固定哈希保持不变。详细边界见 [还原状态](docs/recovery-status.md)，配置与启动验证见 [使用说明](docs/getting-started.md)。
+最新验证数据见 [还原状态](docs/recovery-status.md)末尾。原 ProductManager 默认驱动配置合并、动态 provider 与 Agent/命令刷新；原文件/模型 providers、企业策略、PluginManager 的本地插件加载与跨服务刷新现已接入。本地/Git/HTTP/ZIP 市场、配置持久化/修复、更新检查与文件锁已接入；真实 SDK 从远端 ZIP 安装到版本缓存并重启恢复 Agent/命令通过自有服务验证。CLI/Web 可直接执行 `/reload-plugins`，本地命令不发送给模型。独立 Git/npm/subdir 安装器、原插件选项存储与错误收集也已接入。原磁盘 SettingsManager、CLI 设置/作用域加载队列和 PluginPolicy 现为默认路径，支持插件启停/卸载持久化、JSONC 与 ConfigChange Hook；内置资源物化、七级资源解析、PluginController/Validator 和 seed 元数据交接现已接入显式可信资源目录。资源包内的第三方程序不随仓库分发，Cloud product 的账户门槛、用户缓存、退避重试及配置合并现已默认接入，HTTP/认证仍需显式 adapter，不读取原应用账户。会话 Addon/mode 核心及每会话独立后端现有嵌入接口；完整 daemon/Electron bootstrap、自动模式重启和资源Prompt服务仍未完成。完整权限服务和原审批控制器通过 `nativePermissions`、`nativeApprovals` 显式使用；`sdkControl` 或 `nativeMcp` 默认启用这两条 native 路径及原生 MCP 宿主。权限/MCP/SDK 设置消费者现已按原 scope 接回 SettingsManager；权限规则与 MCP 批准可重启恢复，SDK 模型选择仍为进程内 CLI 状态；CLI/Web 默认仍保留兼容审批宿主，真实 Auto classifier 与完整鉴权/环境链仍待接入。配置中的 115 个原始 prompt 和固定哈希保持不变。详细边界见 [还原状态](docs/recovery-status.md)，配置与启动验证见 [使用说明](docs/getting-started.md)。
 
 本地工作台演示：
 
@@ -93,7 +93,7 @@ npm run verify:recovery -- /absolute/path/to/codebuddy.js
 
 这是有本地文件 / Shell 能力的开发工具，**审批不是操作系统沙箱**。只在可信工作目录运行；不要审批不了解的命令。Web 固定监听 `127.0.0.1`，检查 Host、Origin 和 CSRF token，不提供公网部署、多用户认证或远程访问。不要直接通过反向代理暴露。
 
-只加载可信插件和设置：插件或作用域配置可以包含自动执行的 Hook；Hook 命令不等同于逐次模型工具审批。默认不扫描已安装 WorkBuddy 的插件或账号；默认内置市场为空，仅根据你显式配置的市场/启用标志/策略安装插件。`--setting-sources none` 排除磁盘设置，不是操作系统沙箱，也不排除显式 CLI 设置/插件。
+只加载可信插件和设置：插件或作用域配置可以包含自动执行的 Hook；Hook 命令不等同于逐次模型工具审批。默认不扫描已安装 WorkBuddy 的插件或账号；默认内置市场为空，仅根据你显式配置的市场/启用标志/策略安装插件。`--setting-sources none` 排除合并视图中的磁盘 scope，但原权限/MCP显式分 scope 查询仍可能读取磁盘；它不是禁止所有读写的沙箱，也不排除显式 CLI 设置/插件。
 
 仓库不包含安装包、完整原始 bundle、个人凭据和运行记录。配置/还原片段来自分析样本；不能据此认定其全部拥有可重新授权的开源许可证。仅在你有权使用的范围内研究、验证和使用，保留依赖自身的许可证与通知。
 

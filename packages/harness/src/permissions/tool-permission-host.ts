@@ -92,6 +92,17 @@ export function createToolPermissionHost(options: ToolPermissionHostOptions) {
     },
   );
   const initialized = new WeakMap<object, Promise<void>>();
+  const pendingUpdates = new Set<Promise<any>>();
+  const applyUpdate = service.applyUpdate.bind(service);
+  service.applyUpdate = (...args: Parameters<typeof applyUpdate>) => {
+    const job = applyUpdate(...args);
+    pendingUpdates.add(job);
+    void job.then(
+      () => pendingUpdates.delete(job),
+      () => pendingUpdates.delete(job),
+    );
+    return job;
+  };
   async function initializeContext(session: any) {
     let ready = initialized.get(session);
     if (!ready) {
@@ -112,6 +123,12 @@ export function createToolPermissionHost(options: ToolPermissionHostOptions) {
     commands,
     pathUtils,
     initializeContext,
+    async waitForUpdates() {
+      while (pendingUpdates.size) await Promise.allSettled([...pendingUpdates]);
+    },
+    get pendingUpdateCount() {
+      return pendingUpdates.size;
+    },
     async needsApproval(
       tool: any,
       context: any,

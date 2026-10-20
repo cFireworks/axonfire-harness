@@ -6,11 +6,14 @@ import type {
 } from "@openai/agents-core";
 import { BehaviorSubject, Subject } from "rxjs";
 import { PermissionMode } from "../permissions/permission.js";
+import { createNativePermissionUtils } from "../permissions/native-permission-utils.js";
+import type { ToolPermissionContext } from "../permissions/native-permission-policy.js";
 import type { ToolDeferOverlayValue } from "../tools/tool-defer-overlay.js";
 import type { ProductBackgroundTask } from "../tools/background-task-registry.js";
 
 import type { SessionRunState, SessionRunStatus } from "./run-state-types.js";
 export { SessionRunStatus } from "./run-state-types.js";
+const NativePermissionDefaults = createNativePermissionUtils({});
 
 export type SessionOptions = {
   model?: string;
@@ -95,11 +98,7 @@ export class HarnessSession {
   readonly runStateSubject = new BehaviorSubject<SessionRunState>({ status: "idle" });
   get runState(): SessionRunState { return this.runStateSubject.value; }
   set runState(value: SessionRunState) { const next = value ?? { status: "idle" as const }, previous = this.runStateSubject.value; if (previous !== next && (previous.status !== next.status || previous.lastTransition?.at !== next.lastTransition?.at)) this.runStateSubject.next(next); }
-  toolPermissionContext: {
-    allowRules: { session: string[]; project: string[]; user: string[] };
-  } = {
-    allowRules: { session: [], project: [], user: [] },
-  };
+  toolPermissionContext: ToolPermissionContext = NativePermissionDefaults.createDefaultToolPermissionContext();
   permissionDenials?: Array<{
     tool_name: string;
     tool_use_id: string;

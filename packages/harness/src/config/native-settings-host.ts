@@ -1,10 +1,13 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { BehaviorSubject } from "rxjs";
+import { AsyncLocalStorage } from "node:async_hooks";
 import { createNativeSettingsManager } from "./native-settings-manager.js";
 import { createNativeCliSettings } from "./native-cli-settings.js";
 import { createCapturedSettingsConstants } from "../vendor/captured-settings-constants.js";
 import { createOwnedSettingsFilesystem } from "./owned-settings-filesystem.js";
+import { FileLockService } from "../tasks/file-lock-service.js";
+import { createOwnedPluginFilesystem } from "../plugins/owned-plugin-filesystem.js";
 export type NativeSettingsHostOptions = {
   cliOptions?: Record<string, any>;
   dependencies?: Record<string, any>;
@@ -14,8 +17,9 @@ export type NativeSettingsHostOptions = {
 export function createNativeSettingsHost(options: {
   stateDir: string;
   getWorkDir(): string;
-  fileLockService: any;
+  fileLockService?: any;
   logger: any;
+  cwdService?: { onDidChangeCwd: { subscribe(callback: () => void): any } };
   configuration?: NativeSettingsHostOptions;
 }) {
   let closed = false,
@@ -26,6 +30,23 @@ export function createNativeSettingsHost(options: {
     timers = new Set<any>();
   const changes = new BehaviorSubject<any>(undefined),
     constants: any = createCapturedSettingsConstants();
+  const operations = new AsyncLocalStorage<{
+    pending: number;
+    active: boolean;
+  }>();
+  const ownedFs = options.fileLockService
+    ? undefined
+    : createOwnedPluginFilesystem(options.stateDir);
+  const lockDirectory = path.join(options.stateDir, "tmp");
+  const lock = ownedFs
+    ? new FileLockService(lockDirectory, { fs: ownedFs })
+    : undefined;
+  const fileLockService = options.fileLockService ?? {
+    async acquireFileLock(name: string, configuration: any) {
+      await ownedFs!.ensureDir(lockDirectory);
+      return lock!.acquireFileLock(name, configuration);
+    },
+  };
   function own<T>(p: Promise<T>) {
     pending.add(p);
     void p.then(
@@ -48,8 +69,34 @@ export function createNativeSettingsHost(options: {
         continue;
       const native = service[name].bind(service);
       service[name] = (...args: any[]) => {
-        const value = native(...args);
-        return value?.then ? own(value) : value;
+        const parent = operations.getStore();
+        if (closed && !parent?.active) {
+          const error = Error("Settings host is closed");
+          if (native.constructor.name === "AsyncFunction")
+            return own(Promise.reject(error));
+          throw error;
+        }
+        const operation = parent?.active
+          ? parent
+          : { pending: 0, active: true };
+        operation.pending++;
+        const finish = () => {
+          if (--operation.pending === 0) operation.active = false;
+        };
+        let value;
+        try {
+          value = operations.run(operation, () => native(...args));
+        } catch (error) {
+          finish();
+          throw error;
+        }
+        if (value?.then) {
+          const job = own(value);
+          void job.then(finish, finish);
+          return job;
+        }
+        finish();
+        return value;
       };
     }
     return service;
@@ -112,7 +159,7 @@ export function createNativeSettingsHost(options: {
   const manager = instrument(
     Object.assign(new classes.SettingsManagerImpl(), {
       logger,
-      fileLockService: options.fileLockService,
+      fileLockService,
       cliSettingsProvider: cli,
       cliSettingSourcesProvider: sources,
     }),
@@ -130,6 +177,10 @@ export function createNativeSettingsHost(options: {
   }
   sources.init();
   cli.init();
+  if (options.cwdService?.onDidChangeCwd)
+    subscriptions.add(
+      options.cwdService.onDidChangeCwd.subscribe(() => manager.clearCache()),
+    );
   return {
     manager,
     sources,
@@ -168,6 +219,7 @@ export function createNativeSettingsHost(options: {
       timers.clear();
       sources.onDidChangeEmitter.dispose();
       manager.onDidChangeEmitter.dispose();
+      operations.disable();
     },
     get ownedHandleCount() {
       return timers.size + subscriptions.size;

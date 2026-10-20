@@ -74,7 +74,9 @@
     "verify:cloud-product": "node --import tsx scripts/verify-cloud-product-recovery.ts",
     "smoke:cloud-product": "node --test dist/test/cloud-product-runtime.test.js",
     "verify:session-addons": "node --import tsx scripts/verify-session-addons-recovery.ts",
-    "smoke:session-addons": "node --test dist/test/session-addons-runtime.test.js"
+    "smoke:session-addons": "node --test dist/test/session-addons-runtime.test.js",
+    "verify:settings-consumers": "node --import tsx scripts/verify-settings-consumers-recovery.ts",
+    "smoke:settings-consumers": "node --test dist/test/settings-consumers-runtime.test.js"
   },
   "dependencies": {
     "@openai/agents": "0.5.2",

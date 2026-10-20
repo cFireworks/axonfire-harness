@@ -252,6 +252,7 @@ export class InterruptionService {
     Set<Promise<void>>
   >();
   private readonly nativeTimers = new Set<ReturnType<typeof setTimeout>>();
+  private readonly nativeApprovalWrites = new Set<Promise<any>>();
 
   constructor(
     private readonly stateMachine: SessionRunStateMachine,
@@ -309,6 +310,28 @@ export class InterruptionService {
             logger,
           })
         : undefined;
+      if (approvalServices) {
+        const approve = approvalServices.always.approve.bind(
+          approvalServices.always,
+        );
+        approvalServices.always.approve = (
+          ...args: Parameters<typeof approve>
+        ) => {
+          const job = approve(...args);
+          this.nativeApprovalWrites.add(job);
+          void job.then(
+            () => this.nativeApprovalWrites.delete(job),
+            (error: any) => {
+              this.nativeApprovalWrites.delete(job);
+              logger.error?.(
+                "Native always-approval persistence failed",
+                error,
+              );
+            },
+          );
+          return job;
+        };
+      }
       const createDispatcher = controller
         ? createNativeInterruptionService
         : createNativeInterruptionResultDispatcher;
@@ -800,6 +823,13 @@ export class InterruptionService {
       }
       this.nativeContinuations.delete(result);
     }
+  }
+  async waitForPermissionWrites(): Promise<void> {
+    while (this.nativeApprovalWrites.size)
+      await Promise.allSettled([...this.nativeApprovalWrites]);
+  }
+  get pendingPermissionWriteCount() {
+    return this.nativeApprovalWrites.size;
   }
 
   disposeSession(session: HarnessSession): void {

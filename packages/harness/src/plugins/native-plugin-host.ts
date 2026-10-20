@@ -595,7 +595,7 @@ export function createNativePluginHost(options: {
       if (options.plugins?.builtinSeed) await builtinSeedHost.seed();
     },
     waitForRefreshSettled: () => refresh.waitForRefreshSettled(),
-    async close() {
+    async close(settingsConsumersSettled?: Promise<unknown>) {
       closed = true;
       const marketplaceClosing = marketplaceIO.close();
       const builtinSeedClosing = builtinSeedHost.close();
@@ -617,6 +617,7 @@ export function createNativePluginHost(options: {
       while (pending.size) await Promise.allSettled([...pending]);
       await marketplaceClosing;
       await optionSettings.close();
+      await Promise.allSettled([settingsConsumersSettled]);
       await settingsHost.close();
       await pluginManager.builtInMarketplaceRefreshPromise;
       await refresh.waitForRefreshSettled();

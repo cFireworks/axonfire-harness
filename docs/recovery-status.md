@@ -19,7 +19,7 @@
 |    2 | Product config    | 100% 字节保留                | default/cloudhosted/internal/ioa/selfhosted/sandbox 六份原始 JSON；SHA 验证                                                                                                                                                                                                           |
 |    2 | ProductManager / providers | 原manager、merger及文件/模型provider默认接入 | 首批19类/112处AST/743次比较；文件/模型15类及helper为118处AST/263次比较。插件刷新队列与原SettingsManager/PluginPolicy现默认接入，seed物化/交接已接显式资源根；Cloud四类22成员/8常量/38次比较现已默认接入，认证/REST为显式边界；Addon核心与独立后端已恢复（见后文）；完整资源Prompt服务、daemon动态会话编排和环境服务仍待补，不等于完整产品bootstrap |
 |    2 | PluginManager / loaders / refresh | 完整核心类、市场、安装器和设置/策略主路径默认接入 | 首批14完整类含PluginManager194成员与七loader/事务/reload/style：294处AST/472次比较；市场/锁15类+19helper：129处AST/584次比较；Git/npm/subdir/Options/ErrorCollector5类：45处AST/120次比较。原PluginPolicy与Settings/CLI服务已默认连接，支持磁盘启停/卸载/重启及实时产品策略；资源seed/MCPB与完整产品控制器仍待补 |
-|    2 | Settings / PluginPolicy | 6完整类与原常量默认接入 | SettingsManager/Controller/ValidateMiddleWare、CliSettings/SettingSourcesProvider、PluginPolicy，另3个helper共66处完整AST、9个pure factory与94次有限行为比较；JSONC/作用域/缓存/损坏拒写/锁/Hook/CLI队列和策略事件保留。权限/MCP局部内存适配、完整路由bootstrap未据此宣称恢复 |
+|    2 | Settings / PluginPolicy | 6完整类与原常量默认接入 | SettingsManager/Controller/ValidateMiddleWare、CliSettings/SettingSourcesProvider、PluginPolicy，另3个helper共66处完整AST、9个pure factory与94次有限行为比较；JSONC/作用域/缓存/损坏拒写/锁/Hook/CLI队列和策略事件保留。权限/MCP/SDK消费者已补原分scope读写和关闭屏障（另105成员/154组联合复验）；完整路由/环境bootstrap仍未据此宣称恢复 |
 |    2 | Builtin seed / plugin controller | 原物化与metadata交接链已接入 | 43个Desktop seed/复制函数、5个资源解析函数/7级候选、完整PluginController23方法及Validator/Error类：78处AST、12初始化表达式、113次有限比较。显式资源根启动接原manager事务/刷新；第三方二进制不分发，完整Electron/daemon/session-addon未据此标为恢复 |
 |    2 | Prompt registry   | 100% 内容保留                | 115 模板、284,899 Unicode code point；Nunjucks `autoescape:false`、编译缓存、失败回退                                                                                                                                                                                                 |
 |    2 | Tool registry | 47个不同名称均有handler | 原48条声明含一条重复Agent。新增WeChatReply/WeComReply与bridge，默认CLI声明不变；WeCom连接沿原逻辑补入已构造Agent内存tools。47/47只是名称覆盖，已有工具的客户端/宿主分支、动态缓存/插件等仍待补；不是整体100% |
@@ -793,3 +793,27 @@ REA对93函数及相关类/初始化项的惰性派生片段分析，证据`ev_6
 本批编译后全量运行暴露旧fs.watch测试的不确定性：测试名为rename但用writeFile创建文件，change分支的3秒fake clock未推进。首次改真实rename及防抖驱动后，全量通过但干净快照仍超时，说明不能将其仅归因于防抖。现fixture在5秒内用真实rename探针等待实际OS投递进入原hotReload，再检查配置/关闭；记录投递event/filename以便无事件时诊断，不假设watch返回即完成OS就绪。防抖只推进测试自己的clock，不直接调用原performHotReload制造成功；原watcher与确定性时序测试均不改变。
 
 最新门槛：992核心、11Web、913编译JS smoke（821既有+23设置+29seed+22Cloud+18Addon）、49组样本源码差分、check/build/config及实际CLI/Web启动全部通过。最终不含原应用/bundle/旧node_modules的全新暂存快照重新npm ci/check/build，264项编译后Addon/Cloud/产品/插件/市场/设置/审批/seed及11项Web测试、CLI/Web实际seed/reload启动均通过；修正后的真实OS watcher测试另独立连续5次通过。早前失败快照和修复原因如上，不以某次重试绿灯掩盖旧fixture问题。发布审计592文件未发现所检查的凭据/运行文件，不是安全证明；既有17项audit告警保持不变。后续优先完整权限/MCP settings消费者、资源PromptService及daemon会话动态配置/自动重启、环境与鉴权链；整体目标仍未完成。
+
+## 原 SettingsManager 的权限、MCP 与 SDK 消费者批次
+
+本批不是把若干存储Map写成JSON兼容层，而是让已恢复的原类直接共享同一个完整SettingsManager和原CLI provider。固定CLI SHA仍为`4120898f1ded86ac545316721d216c827a325c2513a8fae4bcd8c8bbbf211afd`。原SettingsManagerImpl `11202361..11209123`、CliSettingsProvider `11193064..11196069`、ToolPermissionService `11948949..11968077`、PermissionUtils `13340331..13350579`、McpPermissionsManager `9277575..9279382`、InitializeHandler `7811554..7814144`、SetModelHandler `7825195..7826336`均保持原完整方法体。本批联合复验7类105成员，而非宣称又新移植105个方法；所有索引为固定样本UTF-16。
+
+移除root的permissionSettings Map，权限服务现在直接注入harness.settingsManager，MCP permissions和SDK initialize也指向该实例。仅使用外部只读agentManager.plugins时也创建原SettingsHost，不再因没有PluginHost而缺失scope存储、CLI队列、ConfigChange和cwd cache失效。独立MCP projection未传settings时创建自己的原SettingsHost，USER根为显式getHomeDir；传入borrowed adapter则原样使用且不擅自close。filesystemScopes仍默认不扫描原应用或外部服务器。
+
+补正公开Session的权限上下文接口和初值：调用原PermissionUtils.createDefaultToolPermissionContext生成九来源allow/deny/ask（policySettings、flagSettings、userSettings、projectSettings、localSettings、cliArg、command、session、sandbox）、独立目录Map及两个flag，替代旧三字段近似结构。源样本SessionManager.create/SessionMiddleware有initializeContext调用（调用点约10963387、11000932）；独立host现在在公开openSession完成options之后、SessionStart之前调用同一原方法，辅助会话仍有工具首次初始化。未据此声称整个原SessionFactory/Middleware均已移植。
+
+保留实际scope语义：userSettings/projectSettings/localSettings分别写USER/PROJECT/PROJECT_LOCAL；session/cliArg不持久化。原get/list显式scope不应用setting-sources合并过滤；故none的合并视图可只含CLI，但权限初始化仍读取四scope，MCP仍读取local+CLI。原PROJECT/LOCAL allow是否成为可信allow仍由directoryTrustService决定，不能借此次接线自动提升项目可信度。只读options.settings不是四个native scope，显式permissionHost.settingsManager/projection.settings仍有优先级。
+
+MCP批准/拒绝沿原两个set写enabledMcpjsonServers/disabledMcpjsonServers，approveAll写enableAllProjectMcpServers；local与CLI采用浅字段覆盖，CLI显式拒绝不会被local批准撤销，USER同名字段不是该类来源。它们不等于McpConfigStore的disabledMcpServers transport开关。共享cwd事件清理原settings cache，独立宿主可显式传入cwdService；关闭释放借用observable的订阅。
+
+SDK initialize原switchEnvironmentIfNeeded先set enterpriseEndpoint（默认USER）再switch环境，现前一步真实落盘，即使后一步adapter失败也保留原部分写入。真实ProductEnv/Auth链仍待恢复，不自动请求生产账户。SDK set_model现在调用原CLI provider.set，仍不写USER、不触发SettingsManager.onDidChange，独立facade仅记录哪些CLI键来自SDK并读取真实provider值，不再另存一份模型数据。自定义can_use_tool响应并不支持updatedPermissions；原解析只返回allowed/reason/interrupt/updatedInput，没有添加看似兼容的额外持久化协议。
+
+错误边界不改写：applyUpdate先更新内存再persist，I/O失败不回滚；损坏scope可按原set无写入返回，不能把Promise resolve解释为保存成功。MCP两个set不是事务，第二个失败保留第一个；always-approve原缓存与持久化顺序仍在。原文件锁发布竞态、拿锁失败继续执行也不修饰为强事务；独立state根并非全机器唯一锁域，项目scope文件由项目共享。
+
+独立所有权桥持有权限update及原fire-and-forget always-approve Promise，MCP权限调用也纳入projection drain。PluginHost停止新刷新后等待消费者settle，再关闭共享SettingsHost；依赖失败不被当作仍在运行。设置方法外层以AsyncLocalStorage的活动操作计数允许旧写入/ConfigChange读写收敛，完成后旧async上下文失效，close拒绝新事务并释放订阅/重试timer。该层不是原业务方法，也不是OS沙箱；外部adapter忽略取消时仍需自行settle，未宣称所有平台/所有teardown错误均已穷举。
+
+新增第50组`verify:settings-consumers`：7完整类105成员AST再核对，154组原类/port联合场景使用完整原SettingsManager实际自有临时文件，连接权限更新/MCP批准/SDK CLI与endpoint方法，对照磁盘字节、scope视图、context/模式、CLI状态、Hook数据和错误。29专项另覆盖真实SDK重启deny、实际owned MCP连接批准/拒绝/重启、CLI优先级、corrupt/外部symlink拒写、关闭时两次set/always-approve、过期async token、borrowed adapter、真实ConfigChange命令Hook及fallback宿主cwd。不是全并发/账户/服务端/所有CLI消费者100%。
+
+REA对上述七个惰性完整类再次分析，证据`ev_e4d6aa312fc274bf8969d8201a0188d3758131be352c407b76d1ad7cea83aceb`；750节点/每文件750节点、150unknown、45秒，semantic graph为partial/truncated。未执行原bootstrap，SDK/OpenAI锁定版本、依赖锁、六份JSON、115 Prompt与memory policy摘要均未改。
+
+本批最终门槛：1021核心、11Web、942编译JS smoke（821既有+23设置+29seed+22Cloud+18Addon+29消费者）、50组样本源码差分及check/build/config、CLI/Web实际启动全部通过。新的暂存快照不含原应用/bundle/旧node_modules，重新npm ci/check/build，314项编译后设置消费者/Addon/Cloud/产品/插件/市场/设置/权限/seed/SDK控制专项、11项Web测试及实际CLI/Web seed/reload启动全部通过。发布审计594文件，在所检查的凭据/运行文件规则内无发现，不是安全证明；既有17项audit风险（10中危/7高危）未强制升级。后续继续资源PromptService、daemon会话动态配置/自动重启、client-settings endpoint与完整环境/鉴权/启动链；原消费者接线已恢复不等于整个harness全部100%完成。
