@@ -72,7 +72,7 @@ npm run verify:config
 npm run verify:recovery -- /absolute/path/to/codebuddy.js
 ```
 
-最新验证：693 项核心测试、10 项 Web 宿主测试、615 项编译后 smoke、38 组原样本差分通过。完整权限服务和原审批控制器分别通过 `nativePermissions`、`nativeApprovals` 显式使用；提供 `sdkControl` 可使用已恢复的 JSONL 权限 / Hook / MCP 消息 / elicitation 客户端，并默认启用这两条 native 路径。CLI/Web 默认保留兼容审批宿主。配置中的 115 个原始 prompt 和固定哈希保持不变。详细边界见 [还原状态](docs/recovery-status.md)，安装与启动验证见 [使用说明](docs/getting-started.md)。
+最新验证：723 项核心测试、10 项 Web 宿主测试、645 项编译后 smoke、39 组原样本差分通过。完整权限服务和原审批控制器分别通过 `nativePermissions`、`nativeApprovals` 显式使用；提供 `sdkControl` 可使用已恢复的 JSONL 权限 / Hook / MCP 消息 / elicitation 客户端，并默认启用这两条 native 路径及原生 MCP 宿主。`nativeMcp` 也可单独配置 stdio / HTTP / SSE 服务，SDK MCP 通过 initialize 注册。CLI/Web 默认保留兼容审批宿主。配置中的 115 个原始 prompt 和固定哈希保持不变。详细边界见 [还原状态](docs/recovery-status.md)，安装与启动验证见 [使用说明](docs/getting-started.md)。
 
 本地工作台演示：
 
@@ -84,7 +84,7 @@ npm run verify:recovery -- /absolute/path/to/codebuddy.js
 
 仓库不包含安装包、完整原始 bundle、个人凭据和运行记录。配置/还原片段来自分析样本；不能据此认定其全部拥有可重新授权的开源许可证。仅在你有权使用的范围内研究、验证和使用，保留依赖自身的许可证与通知。
 
-锁定旧依赖当前仍有 **15 项 npm audit 告警**，尚未做可能改变还原行为的强制升级。
+锁定旧依赖当前仍有 **16 项 npm audit 告警**，尚未做可能改变还原行为的强制升级。原生 MCP 独立依赖按样本固定为 `@modelcontextprotocol/sdk 1.24.3`，不替换 OpenAI SDK 自身的传递依赖。
 
 - [启动说明与故障排查](docs/getting-started.md)
 - [核心还原详细说明（历史命令以新目录为准）](docs/reconstruction.md)

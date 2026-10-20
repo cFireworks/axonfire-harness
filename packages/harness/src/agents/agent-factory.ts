@@ -12,6 +12,8 @@ export function isStateMachineBypassPurpose(purpose: string | undefined): boolea
 
 /** Native Agent lifecycle wiring (7063971..7065964), not Runner hooks. */
 export class AgentFactory {
+  private nativeMcpApprovalResolver?: (name: string) => any;
+  attachNativeMcpApprovalResolver(resolver: (name: string) => any): void { this.nativeMcpApprovalResolver = resolver; }
   constructor(
     readonly stateMachine: SessionRunStateMachine,
     readonly toolArgumentRewriteService: { process(arguments_: string): string } = new ToolArgumentRewriteService(),
@@ -19,6 +21,19 @@ export class AgentFactory {
   ) {}
   async create(options: AgentOptions<HarnessSession>): Promise<Agent<HarnessSession>> {
     const agent = new Agent<HarnessSession>(options), bypass = STATE_MACHINE_BYPASS_AGENTS.has(agent.name);
+    // The captured SDK 0.5.2 bundle forwards mcpTool.needsApproval; npm 0.5.2 does not.
+    // Bridge only that descriptor field, retaining the installed SDK converter and cache.
+    if (this.nativeMcpApprovalResolver) {
+      const getMcpTools = agent.getMcpTools.bind(agent);
+      agent.getMcpTools = async (context) => {
+        const tools = await getMcpTools(context);
+        for (const tool of tools) if (tool.type === "function") {
+          const needsApproval = this.nativeMcpApprovalResolver?.(tool.name);
+          if (typeof needsApproval === "function") tool.needsApproval = needsApproval;
+        }
+        return tools;
+      };
+    }
     const drives = (session: HarnessSession) => !bypass && !isStateMachineBypassPurpose(session.agentPurpose);
     agent.on("agent_start", (context) => {
       const session = context.context;

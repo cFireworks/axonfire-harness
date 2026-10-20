@@ -33,7 +33,7 @@
 |    5 | Core file tools   | 主路径高覆盖                 | 三个原始 Zod schema、1-based paging、2000 行/字符限制、256KB/100MB 限制、binary/Notebook/image、行号格式、读后写和外部修改保护、CRLF/BOM、唯一/全量替换已实现；原ImageUtils完整类/Jimp0.22.12与Read图片方法、模型/二进制门槛、blob去重已恢复；非UTF编码全集、其他文本Read原方法/错误码复核及遥测待补                                                                            |
 |    5 | Core search tools | 主路径高覆盖                 | 原始 Glob/Grep schema、60s Glob timeout、ripgrep、node_modules/.git 排除、mtime 排序、分页、三种 Grep 输出、上下文/类型/multiline 参数、50,000 字符截断已实现                                                                                                                         |
 |    5 | Core shell tools  | 核心控制流已实现             | 原始 Bash/PowerShell schema、120s/600s timeout、30k/150k 限制、上下文 env、前台 envelope、6 位 task ID、显式后台、timeout 转后台、后台输出/kill 已实现；sandbox orchestrator、ConPTY、safe-delete、安全分类和 UI streaming 待补                                                   |
-|    6 | Permission flow | 完整原控制器/权限服务及SDK控制客户端 | 原InterruptionService、always/background审批、权限/缓存/模式策略已移植；SDK JSONL权限/Hook/MCP消息/elicitation客户端与dispatcher已接真实SDK。显式sdkControl默认启用nativePermissions/nativeApprovals；SDK启动/鉴权/产品初始化依赖、MCP server/proxy、policy到独立guard统一、Auto backend/SettingsManager仍待补，普通CLI/Web默认不变 |
+|    6 | Permission flow | 完整原控制器/权限服务及SDK控制客户端 | 原InterruptionService、always/background审批、权限/缓存/模式策略已移植；SDK JSONL权限/Hook/MCP消息/elicitation客户端与dispatcher已接真实SDK。显式sdkControl默认启用nativePermissions/nativeApprovals及原生MCP server/proxy；SDK启动/鉴权/产品初始化依赖、policy到独立guard统一、Auto backend/SettingsManager仍待补，普通CLI/Web默认不变 |
 |    6 | AgentTask         | 完成/失败仲裁与主生命周期差分通过 | setup/execute/cleanup、new/resume/fork、model/permission/hooks/skills/转发/usage 主路径保留；agent_end/idle、stream final-step guard、retryInProgress/compaction、200ms/120s 压缩轮询/重挂、精确取消、原错误 rethrow、Hook best-effort、RESULT delimiter、nullish resume meta 与 teammate failure 已恢复。executePhaseWithRetry 无内部重试循环；普通会话重试现由 InterruptionService 负责，45s throttle/watchdog 已确认属于 Workflow 并在对应链路恢复；独立 result reset/落盘 barrier 为 host adapter |
 |    6 | Agent tool | 同步/Worktree/进程内与显式进程外 Team 接入真实 SDK | 原 schema、env max turns、model variant、fork boilerplate/child 检测、disabled fork、父 toolCall id、同步/中断/错误码 19920..19923/subAgent meta 已恢复。真实 SDK 验证 Explore→Read→独立 transcript→resume、子审批、Worktree、Team，以及子任务网络重试不误判失败。spawn chain/重名/颜色/rollback/失败后 chain 拒绝保持原行为；默认保持原 in-process，显式 standalone override 接 detached-process；全部权限宿主分支仍待补 |
 |    6 | AgentTaskManager | 核心调度与 Team 策略接入 | register/get/alias/status/session/wait/cancel/events、5 分钟 TTL/60s cleanup、20 个已完成 Team session 上限、4s 通知延迟/30s dedup/末成员强制通知/10s auto-team cleanup 已恢复；现接 TeamManager/registry/mailbox/cleanup adapter，长时间调度/全部失败竞态未穷举 |
@@ -58,7 +58,7 @@
 |    7 | Skill provider / descriptions | Workspace provider 主路径差分通过 | project/user/connector/session-dir/bundled、深度 5/并发 32/symlink、metadata 四类优先顺序、visibility/颜色/品牌与变量、clone cache/force、描述 8k 预算/150 cap/200 总数仅削减 user/protected/collision/agent.skills 已恢复，description vars 与 frontmatter preload 已接入；插件 loader/seed 物化、描述缓存/热刷新生命周期仍待补 |
 |    7 | Command / reference runtime | 核心协议、改写拦截与 Workflow 命令接入 | 57 normal+4 conditional 元数据、model-invocation allowlist、条件 feature/env、作用域覆盖、parse/register/local execute、CommandMessageUtils 全套 XML/history、参数/inline Bash/@引用已恢复；新增 AgentSwitch priority1600、AgentManager.getCommands、agent/model/allowedTools/custom/MCP/skill 改写与 Workflow 两个本地 executor。CLI 分派与 host DI 明确为适配；其余 executor/UI、MCP prompt renderer、插件物化及 Shell sandbox/PTY 待补 |
 |    7 | PromptContext/interceptors | 核心注入已接入 | 顺序 initializer/in-flight coalescing、系统/Git/语言/模型/会话/feature、prompt-vars primitive 校验/快照/防覆盖、Env(priority2000)、SkipRun(1700)、SystemReminder(1200)、UserQueryWrapper(1025) 已接入；规则来源 adapter、IDE 2000 字符截断、Hook context consume、channel/MCP symbol 注入与 user-query 合并已恢复。MemoryPrompt initializer和真实规则来源/条件priority1740已接入；插件/扩展initializer、Windows shell factory及遥测日志副作用仍待补 |
-|    7 | MCP               | resources 主路径高覆盖       | ready barrier、连接状态集合、显式 `mcp__server__tool` 白名单、connector URI、resource/template catalog、List/Read、二进制落盘、connector-proxy fallback、5 秒 WaitForMcpServers 分类与原始文案已实现；真实 MCP manager 生命周期、OAuth/transport 与动态工具刷新待接 |
+|    7 | MCP               | 原proxy/remote与SDK transport完整类已接入 | 六remote override、SdkMcpServer/Transport、ServerManager/TransportManager/SubagentToolManager、McpUtils/JSONC/大结果与UI helper已恢复；157处完整成员/函数AST、752次行为比较、30项专项含真实SDK与自有stdio/HTTP/SSE验证。ready/resource/catalog等既有路径保留；完整顶层McpManager配置发现/代次reconcile/索引刷新、OAuth/Hook服务端/产品channel security仍待补 |
 |    8 | Workflow          | 主链、控制层与命令/事件桥差分通过 | Execution/Factory、Acorn8.16.0 Parser、Compiler/prelude、root/nested VM、durability/hash/budget/journal/record/registry、Spawner/AgentTask/schema/watchdog/Worktree 已恢复；主链1,412次。第37个 handler WorkflowTool、Manager/PauseGate/快照/saveAs/recent/provider/后台通知恢复，控制层536次。新增 `/workflows`、`/save-workflow`、保存命令注入/专用指令分支、AcpBridge/PrintModeHandler及显式宿主接线，1,488次差分；保留空 prompt 与完整ID限制。真实SDK、CLI、本地JSONL/跨OS进程cache验证通过；产品React UI/完整ACP生命周期/完整stream-json视图、内置脚本资源及全状态崩溃恢复待补 |
 |    8 | Record/replay     | 原模型/Store协议替换兼容骨架，启动与离线CLI已接通 | 原RecordingStoreImpl同步JSONL/metadata/覆盖/队列推断/peek/consume/fallback/count/close、RecordingModel请求先写/stream offsets、ReplayModel错误类/仅model strict/倍率、Provider模式/env均恢复；2,282次差分。13项专项含真实SDK录制/重放、新进程CLI与工具权限守卫；不承诺全产品bootstrap/磁盘故障/全并发状态空间，重放不等于dry run |
 |    8 | WebFetch / WebSearch | 原handler、协议/本地/SDK主链已接入 | 第38/39个handler：schema/错误/freshness/域名筛选、API请求头/IOA/超时/结果投影、WebFetch API优先竞跑/本地HTML/Turndown7.2.1/100k截断/15k分析/15分钟URL缓存/contentAnalyzer/逐字回退Prompt/网络策略/遥测映射；托管Security Center转换及V3/V2/file网络来源已接。544次差分+15项专项，真实SDK和CLI仅本地受控HTTP验证；产品服务认证/远端检索、完整Sandbox/UI/所有平台故障仍未恢复 |
@@ -518,3 +518,27 @@ createHarness的显式sdkControl默认启用nativePermissions/nativeApprovals，
 本批门槛：693项核心测试、10项Web宿主测试、615项编译JS smoke、38组差分、check/build/config和实际CLI/Web启动均通过。固定SDK/OpenAI依赖、六份配置JSON、115个prompt与memory policy不变。OpenAI Docs仅核对SDK生命周期边界，不用当前文档改写锁定0.5.2的运行行为。
 
 剩余边界：普通CLI/Web默认仍为兼容审批宿主；SDK控制组件不等于原stdin/headless startup或鉴权命令全集。完整McpServerManager `9186841..9198615` 的server/tool/Hook proxy、SdkMcpServer与重写transport已定位但本批没有把定位计为实现；下一批优先恢复其完整依赖链。之后继续ProductManager动态初始化/插件刷新、Auto classifier backend、SettingsManager磁盘持久化，并统一原policy allow到执行guard的默认语义。整体目标保持进行中，不以当前门槛代替最终完成标准。
+
+## MCP 原生 proxy、transport 与 SDK server 批次
+
+本批延续固定5.3.14样本和REA证据，不执行整个应用bootstrap。以下均为bundle UTF-16索引，不是字节偏移；类方法仅加TS注解与外层DI，不将新宿主逻辑记为原源码。
+
+- stdio两类 `9163484..9167354`、`9167384..9168040`；SSE两类 `9168078..9172056`、`9172084..9172734`；HTTP两类 `9172783..9176847`、`9176886..9177569`。
+- SdkMcpTransport `9177633..9178529`、SdkMcpServer `9179086..9185768`，McpServerManager `9186841..9198615`，McpTransportManager `9284064..9285512`。
+- 完整McpSubagentToolManager `9288945..9289339`、McpUtils `13306418..13309176`；结果处理13函数 `9153118..9157667`，UI三函数 `9306064..9307806`，另恢复span/header/progress/sideband/channel/配置指纹helper。原JSONC module52537 factory逐字保留，不猜替代npm parser版本。
+
+原server/tool proxy包含schema归一化、工具前缀/transparent aliases/builtin passthrough、defer overlay和子Agent白名单、needsApproval、PreToolUse改写/拒绝/错误best-effort、PostToolUse与payment替换顺序、非枚举is_error/_meta、sideband与UI广播。保留原空builtin分支，不将其误改成缺失实现；原SDK server.callTool只接受两参数、不转发第三参数progress/meta，也不按新版SDK行为“修正”。
+
+remote override恢复listTools缓存/30秒失败cooldown、原toolFilter、call timeout/signal/progress、模型X-Model-ID的AsyncLocal隔离、错误清理和close。McpUtils默认tool timeout为原值100,000,000ms，不能误写成100秒；配置写入保留原atomic/symlink/模式/fallback。结果保留原4*token字符预算、image不计数且保留、audio/resource/link截断、大结果父/子Agent目录与完整读取提示。channel helper保持原SDK/generic的不同bypass分支；未用真实联系人验证。
+
+`native-mcp-host` 是明确新增的拥有者：只连接显式配置，注入DI、管理timer/subscription、等待创建及关闭，包括原disposeUnderlying已移除但仍异步关闭的旧连接。重复initialize复用相同活跃transport，不重复SDK握手。stdio依赖调用方Hook endpoint；默认抛错。OAuth默认不伪造登录，产品channel security/支付/遥测/ACP传输仍需显式adapter。
+
+两处跨模块接线由真实SDK测试发现并对照源码修复。其一，完整顶层McpManager（尚未移植）在`9201138..9223000`持有稳定connectedServersCache并splice更新，而AgentManager.refreshAgentTools不会替换mcpServers；独立registry现遵循相同live-array契约，初始化后添加和删除工具均可见。其二，样本SDK mcpToFunctionTool会转发needsApproval，但npm固定0.5.2未转发。AgentFactory仅在安装SDK转换后补这一descriptor字段，保留SDK依赖、转换器和缓存，不修改node_modules/不vendor SDK源码。允许/拒绝实际调用真实SDK验证，拒绝时无底层tools/call。
+
+嵌入API提供`nativeMcp`、`connectNativeMcp`与`nativeMcp.delete/close`；`sdkControl`默认接入同一宿主，原initialize可添加SDK MCP server。普通CLI/Web不新增假称原版的配置flags；默认兼容审批宿主不变。独立MCP依赖按样本固定别名`mcp-sdk-native = npm:@modelcontextprotocol/sdk@1.24.3`，此前lock中的已有包版本未变，OpenAI SDK/OpenAI版本不变。此次安装audit为16项（9 moderate / 7 high），未做改变还原行为的强制升级。
+
+`verify:mcp-native`核对12个完整类的全部成员与34个helper，共157处AST，另逐字核对JSONC factory；752次差分为400个proxy矩阵、64个filter/defer矩阵和288个大结果比较，使用隔离VM与fake I/O。McpUtils/UI等完整类/函数主要由AST覆盖，不把752次比较夸大成所有方法全行为状态空间。30项专项覆盖原hook/alias/meta/whitelist、JSONC自有临时文件、结果落盘、transport abort/cooldown/progress/并发header、稳定proxy/cache、关闭屏障；真实SDK经JSONL MCP allow/deny/重复initialize，及真实stdio子进程、loopback HTTP/SSE和完整harness审批/执行/删除均通过。未用真实账号、产品服务或远端模型。
+
+本批门槛：723核心测试、10Web宿主测试、645最新编译JS smoke、39组样本差分、check/build/config、CLI/Web实际启动全部通过。六份JSON/115 Prompt与memory policy哈希保持不变；OpenAI Docs仅辅助核对MCP集成边界，不以现行文档覆盖锁定SDK行为。
+
+下一批优先完整顶层McpManager配置来源/代次reconcile/权限/索引与热刷新，之后ProductManager动态初始化、SDK输入/鉴权与Hook服务端、Auto backend和SettingsManager持久化。完整ServerManager不等于完整产品McpManager；整体目标继续进行，不宣称100%完成。

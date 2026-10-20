@@ -16,6 +16,12 @@ Web 使用单运行槽以避免用户在同一进程对多个会话并发修改�
 
 SDK控制协议现由原StdoutWriter、Permission/Hooks/McpMessage/Elicitation客户端、ControlSignalHandler和初始化/模式/模型handler组成，所有I/O在工厂闭包显式注入。提供 `sdkControl` 时自动连接原Hook调用与权限控制器，默认启用两条native权限路径；`receive/receiveLine`消费控制响应，输出按JSONL保留原前缀分发和stdout背压行为。独立宿主拥有定时器/drain监听/拒绝Promise的清理，不添加原请求中不存在的默认permission timeout，不关闭外部stream。
 
-初始化handler的完整原方法已移植，但其ProductManager刷新、环境切换、SDK MCP server创建依赖不能由空adapter伪装完成。默认宿主对未接入的动态覆盖返回明确错误，模型API key也不映射成原账号token。完整stdin/headless parser、SDK鉴权命令及产品启动与该可用控制组件仍有区别。
+初始化handler的完整原方法已移植；SDK MCP server现接入原生宿主，其ProductManager刷新、环境切换依赖仍不能由空adapter伪装完成。默认宿主对未接入的动态覆盖返回明确错误，模型API key也不映射成原账号token。完整stdin/headless parser、SDK鉴权命令及产品启动与该可用控制组件仍有区别。
 
-下一批优先完整McpServerManager的server/tool/Hook proxy与SDK MCP server，随后ProductManager初始化覆盖与刷新、SDK输入/启动、AutoMode backend和SettingsManager持久化。统一默认审批时还须验证原policy allow与独立guard的边界，不能只因为可选路径测试通过就声明默认已等价。新增Web UI不计为这些原产品服务已恢复。
+原生MCP模块将server/tool/Hook proxy、六个remote override、SDK server/JSON-RPC transport、transport registry、subagent白名单、JSONC配置工具与结果截断/落盘按完整原类/函数移植。外层 `native-mcp-host` 只负责显式配置、DI与资源所有权，不扫描安装账户或配置。已有Agent持有同一个live connectedServersCache，增删连接通过splice更新；工具元数据收集仍调用原proxy.listTools。
+
+样本bundle中的SDK mcpToFunctionTool会把descriptor.needsApproval传入tool，npm固定0.5.2没有该字段传递。AgentFactory在安装SDK转换后仅补回此字段，不改SDK转换器、缓存或node_modules。真实SDK的拒绝测试验证底层tools/call没有执行。独立MCP依赖使用别名固定样本1.24.3，OpenAI SDK自身依赖不改。
+
+原manager替换underlying连接时会fire-and-forget close，外层宿主跟踪这些Promise，shutdown等待当前与已替换连接关闭，清理自有timer/subscription；不改原manager的方法体。stdio Hook endpoint、产品OAuth、channel security/遥测/支付/ACP传输仍为可注入边界，不能以空adapter计为恢复。
+
+下一批优先完整顶层McpManager（配置来源、代次reconcile、权限、索引与刷新），随后ProductManager初始化覆盖与刷新、SDK输入/启动、AutoMode backend和SettingsManager持久化。统一默认审批时还须验证原policy allow与独立guard的边界，不能只因为可选路径测试通过就声明默认已等价。新增Web UI不计为这些原产品服务已恢复。

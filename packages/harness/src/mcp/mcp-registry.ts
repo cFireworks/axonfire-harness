@@ -6,7 +6,7 @@ export type McpConnection = MCPServer & {
   connected?: boolean;
   status?: McpServerStatus;
   /** Explicit product connection configuration for native first-run prewait; no installed config discovery. */
-  nativeConfig?:Record<string,any>;
+  nativeConfig?: Record<string, any>;
   listResources?: () => Promise<McpResource[]>;
   listResourceTemplates?: () => Promise<McpResourceTemplate[]>;
   readResource?: (input: { uri: string }) => Promise<McpResourceContent[]>;
@@ -55,10 +55,17 @@ export type McpServerRecord = {
 
 export class McpRegistry {
   private readonly servers = new Map<string, McpConnection>();
+  // Original McpManager returns one live connectedServersCache and mutates it via splice.
+  private readonly connectedServersCache: McpConnection[] = [];
   private settlePromise: Promise<void> = Promise.resolve();
 
   register(server: McpConnection): void {
     this.servers.set(server.name, server);
+    this.connectedServers();
+  }
+  unregister(name: string): void {
+    this.servers.delete(name);
+    this.connectedServers();
   }
 
   setSettlePromise(promise: Promise<void>): void {
@@ -78,11 +85,18 @@ export class McpRegistry {
   }
 
   connectedServers(): McpConnection[] {
-    return [...this.servers.values()].filter(
+    const connected = [...this.servers.values()].filter(
       (server) =>
         server.connected !== false &&
-        (server.status === undefined || server.status === McpServerStatus.CONNECTED),
+        (server.status === undefined ||
+          server.status === McpServerStatus.CONNECTED),
     );
+    this.connectedServersCache.splice(
+      0,
+      this.connectedServersCache.length,
+      ...connected,
+    );
+    return this.connectedServersCache;
   }
 
   async getConnectedServers(): Promise<McpConnection[]> {
@@ -99,7 +113,17 @@ export class McpRegistry {
           : McpServerStatus.CONNECTED),
     }));
   }
-  async listForAgentManager():Promise<any[]>{return [...this.servers.values()].map(server=>({name:server.name,status:server.status??(server.connected===false?McpServerStatus.DISCONNECTED:McpServerStatus.CONNECTED),config:server.nativeConfig??{type:"sdk"}}));}
+  async listForAgentManager(): Promise<any[]> {
+    return [...this.servers.values()].map((server) => ({
+      name: server.name,
+      status:
+        server.status ??
+        (server.connected === false
+          ? McpServerStatus.DISCONNECTED
+          : McpServerStatus.CONNECTED),
+      config: server.nativeConfig ?? { type: "sdk" },
+    }));
+  }
 
   serversForAgent(agent: ProductAgent): McpConnection[] {
     const explicit = (agent.tools ?? []).filter((name) =>

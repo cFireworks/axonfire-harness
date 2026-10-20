@@ -19,6 +19,7 @@ import {
 } from "./plugin-agent-compose.js";
 import { createAgentMarkdownUtils } from "./native-agent-markdown.js";
 import { CapturedYaml } from "../vendor/captured-yaml.js";
+import { McpSubagentToolManager } from "../mcp/native-mcp-subagent-tools.js";
 import { substituteLoadTimeVariables } from "../commands/skill-product-provider.js";
 export type AgentManagerHostOptions = {
   settings?: { get(key: string): Promise<any>; list?(): Promise<any> };
@@ -124,11 +125,7 @@ export class StandaloneAgentManagerHost {
         mcpReadyService: options.mcpReadyService ?? {
           waitForServersReady: () => mcp.waitForServersReady(),
         },
-        mcpSubagentToolManager: options.mcpSubagentToolManager ?? {
-          register: (name: string, values: string[]) =>
-            this.mcpWhitelists.set(name, values),
-          unregister: (name: string) => this.mcpWhitelists.delete(name),
-        },
+        mcpSubagentToolManager: options.mcpSubagentToolManager ?? Object.assign(new McpSubagentToolManager(), { allowedToolsMap: this.mcpWhitelists }),
         cliProvider: {
           parseOpts: () => ({ opts: options.getCliOptions?.() ?? {} }),
         },

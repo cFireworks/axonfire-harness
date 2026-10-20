@@ -32,6 +32,7 @@ import { InterruptionService, type InterruptionServiceOptions } from "../permiss
 import { PermissionMode } from "../permissions/permission.js";
 import { createSdkControlHost, type SdkControlHostOptions } from "../sdk/sdk-control-host.js";
 import { attachHarnessSdkControl } from "../sdk/harness-sdk-control.js";
+import { createNativeMcpHost, type NativeMcpHostOptions } from "../mcp/native-mcp-host.js";
 import { ProductPromptRenderer } from "../prompts/prompt-renderer.js";
 import { RunnerFactory } from "../runner/runner-factory.js";
 import { ToolCallLoopDetectorImpl } from "../runner/tool-call-loop-detector.js";
@@ -178,6 +179,7 @@ export type HarnessOptions = {
   approvalController?: Partial<NonNullable<InterruptionServiceOptions["controller"]>>;
   /** Explicit owned JSONL control transport; enables both native permission paths by default. */
   sdkControl?: SdkControlHostOptions;
+  nativeMcp?: Partial<Omit<NativeMcpHostOptions, "getWorkDir" | "getHomeProjectDir" | "permissionUtils">> & { servers?: Record<string, any> };
   permissionHost?: Partial<ToolPermissionHostOptions>;
   workDir: string;
   stateDir?: string;
@@ -466,6 +468,30 @@ export async function createHarness(options: HarnessOptions) {
   ]);
   prompts.attachContextProvider(promptContext);
   let service!: AgentService;
+  const nativeMcp = options.nativeMcp || sdkControl ? createNativeMcpHost({
+    getWorkDir, getHomeProjectDir: () => blobRuntime.paths.getHomeProjectDir(), permissionUtils: permissions.permissionUtils, registry: mcp,
+    ...options.nativeMcp,
+    dependencies: {
+      store, sessions, stateMachine, queue: messageQueue, settings,
+      toolHooks: nativeHooks!.toolManager, permissions,
+      channels: channelManager,
+      channelSecurity: undefined, // Explicit nativeMcp.dependencies adapter until the product security service is restored.
+      channelPermission: channelPermissionAdapter,
+      sdkMcpMessageClient: sdkControl?.mcp,
+      overlayCache: agents.standaloneHost.runtime.dependencies.agentToolDeferOverlayCache,
+      deferConfig: agents.standaloneHost.runtime.dependencies.deferToolConfigService,
+      subagentTools: agents.standaloneHost.runtime.dependencies.mcpSubagentToolManager,
+      agents,
+      service: { run: (...args: any[]) => nativeMcp?.closed ? Promise.resolve() : (service.run as any)(...args) },
+      ...options.nativeMcp?.dependencies,
+    },
+  }) : undefined;
+  if (nativeMcp) agentFactory.attachNativeMcpApprovalResolver(name => nativeMcp.resolveNeedsApproval(name));
+  async function connectNativeMcp(name: string, config: any, scope?: string) {
+    if (!nativeMcp) throw Error("Native MCP host is not configured");
+    const proxy = await nativeMcp.connect(name, config, scope); mcp.register(proxy);
+    return proxy;
+  }
   const interruptions:InterruptionService = new InterruptionService(stateMachine, {
     ...(nativeApprovals ? { controller: {
       permissions: { async applyUpdate(session: HarnessSession, update: any) { await permissions.initializeContext(session); return permissions.service.applyUpdate(session, update); } },
@@ -735,7 +761,10 @@ export async function createHarness(options: HarnessOptions) {
     settings: { get: (key: string) => settings.get(key), async set(key: string, value: any) { sdkSettings.set(key, value); } },
     cliSettings: { async set(key: string, value: any) { sdkSettings.set(key, value); } },
     logger: { warn: (...args: any[]) => options.logger?.warn(args.map(String).join(' ')) },
-    ...(options.sdkControl?.initializeDependencies ? { initializeDependencies: options.sdkControl.initializeDependencies } : {}),
+    initializeDependencies: {
+      ...(nativeMcp ? { mcpReadyService: { waitForServersReady: () => mcp.waitForServersReady() }, mcpManager: { add: connectNativeMcp } } : {}),
+      ...options.sdkControl?.initializeDependencies,
+    },
   }) : undefined;
 
   async function openSession(id?: string, config: { print?: boolean; permissionMode?: PermissionMode; jsonSchema?: string | Record<string, unknown>; outputFormat?: "text" | "json" | "stream-json" } = {}): Promise<HarnessSession> {
@@ -835,7 +864,9 @@ export async function createHarness(options: HarnessOptions) {
   async function close(): Promise<void> {
     if (closed) return;
     closed = true;
+    for (const session of active.keys()) session.abortController.abort();
     sdkControl?.close();
+    await nativeMcp?.close();
     channelHost.close(); channelClients?.close(); channelApprovalTargets.clear();
     sessionQueueSubscription.unsubscribe(); teamLeadPoller.stopTeamLeadPoller(); teamMailbox.stopAll(); shutdownCoordinator.cancelAll("harness closed");
     for (const session of opened) session.teamCancelled = true;
@@ -902,11 +933,17 @@ export async function createHarness(options: HarnessOptions) {
     telemetryService:createSessionResultObservers(options.sessionLifecycle).telemetryService,
     logger:options.sessionLifecycle?.logger??{info:(...args)=>options.logger?.info?.(args.map(String).join(' ')),debug(){},warn:(...args)=>options.logger?.warn(args.map(String).join(' ')),error:(...args)=>options.logger?.warn(args.map(String).join(' '))},
   }));
-  try{await agents.start();await agents.getDefault();}catch(error){await close();throw error;}
+  try{
+    await agents.start(); await agents.getDefault();
+    for (const [name, config] of Object.entries(options.nativeMcp?.servers ?? {})) {
+      if ((config as any).type === "sdk") throw Error("Register SDK MCP servers through initialize after the control receiver is ready");
+      await connectNativeMcp(name, config);
+    }
+  }catch(error){await close();throw error;}
   channelClients?.initializeConfigured();
   channelHost.start();
   return { product, agents, agentFactory, tools, mcp, sessions, store, service, stateMachine, interruptions, compactor, memory, memoryRules, autoMemory, hooks:nativeHooks, permissions, shell, taskManager, taskStorage, taskTools, agentTool, taskOutputTools, plans, planTools, asks, askTool, promptContext, createWorkflowSubagentSpawner, createWorkflowRuntime, workflowTool, backgroundTaskNotifier, recordingStore, recordReplayProvider: provider, webFetchTool, webSearchTool, webRuntime,
-    sdkControl, sdkHandlers, channelHost, channelClients, channelManager, channelPermissionAdapter, wechatReplyTool, wecomReplyTool,
+    sdkControl, sdkHandlers, nativeMcp, connectNativeMcp, channelHost, channelClients, channelManager, channelPermissionAdapter, wechatReplyTool, wecomReplyTool,
     delegateToolManager, delegateToolsChangedHandler, delegateTool,
     lspManager, lspTool,
     mediaRuntime, imageService, videoService, imageGenTool, imageEditTool, videoGenTool, imageToolHookInputProcessor,

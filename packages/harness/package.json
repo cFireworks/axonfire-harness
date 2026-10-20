@@ -17,7 +17,7 @@
     "build": "tsc -p tsconfig.json",
     "check": "tsc -p tsconfig.json --noEmit",
     "test": "node --import tsx --test test/**/*.test.ts",
-    "smoke:runtime": "node --test dist/test/sdk-runtime-integration.test.js dist/test/standalone-runtime.test.js dist/test/task-agent-tools.test.js dist/test/plan-question-context.test.js dist/test/skill-command-tools.test.js dist/test/management-notebook-output.test.js dist/test/cron-queue-runtime.test.js dist/test/worktree-runtime.test.js dist/test/team-runtime.test.js dist/test/lifecycle-runtime.test.js dist/test/recovery-retry-runtime.test.js dist/test/workflow-subagent-runtime.test.js dist/test/team-external-runtime.test.js dist/test/workflow-core-runtime.test.js dist/test/workflow-control-runtime.test.js dist/test/workflow-presentation-runtime.test.js dist/test/record-replay-runtime.test.js dist/test/web-tools-runtime.test.js dist/test/delegate-runtime.test.js dist/test/lsp-runtime.test.js dist/test/media-runtime.test.js dist/test/computer-use-runtime.test.js dist/test/channel-runtime.test.js dist/test/channel-clients-runtime.test.js dist/test/history-pipeline-runtime.test.js dist/test/blob-runtime.test.js dist/test/image-codec-runtime.test.js dist/test/session-result-runtime.test.js dist/test/history-response-runtime.test.js dist/test/agent-manager-runtime.test.js dist/test/memory-rules-runtime.test.js dist/test/auto-memory-runtime.test.js dist/test/generic-hook-runtime.test.js dist/test/hook-lifecycle-runtime.test.js dist/test/interruption-result-runtime.test.js dist/test/tool-permission-runtime.test.js dist/test/interruption-controller-runtime.test.js dist/test/sdk-control-runtime.test.js",
+    "smoke:runtime": "node --test dist/test/sdk-runtime-integration.test.js dist/test/standalone-runtime.test.js dist/test/task-agent-tools.test.js dist/test/plan-question-context.test.js dist/test/skill-command-tools.test.js dist/test/management-notebook-output.test.js dist/test/cron-queue-runtime.test.js dist/test/worktree-runtime.test.js dist/test/team-runtime.test.js dist/test/lifecycle-runtime.test.js dist/test/recovery-retry-runtime.test.js dist/test/workflow-subagent-runtime.test.js dist/test/team-external-runtime.test.js dist/test/workflow-core-runtime.test.js dist/test/workflow-control-runtime.test.js dist/test/workflow-presentation-runtime.test.js dist/test/record-replay-runtime.test.js dist/test/web-tools-runtime.test.js dist/test/delegate-runtime.test.js dist/test/lsp-runtime.test.js dist/test/media-runtime.test.js dist/test/computer-use-runtime.test.js dist/test/channel-runtime.test.js dist/test/channel-clients-runtime.test.js dist/test/history-pipeline-runtime.test.js dist/test/blob-runtime.test.js dist/test/image-codec-runtime.test.js dist/test/session-result-runtime.test.js dist/test/history-response-runtime.test.js dist/test/agent-manager-runtime.test.js dist/test/memory-rules-runtime.test.js dist/test/auto-memory-runtime.test.js dist/test/generic-hook-runtime.test.js dist/test/hook-lifecycle-runtime.test.js dist/test/interruption-result-runtime.test.js dist/test/tool-permission-runtime.test.js dist/test/interruption-controller-runtime.test.js dist/test/sdk-control-runtime.test.js dist/test/mcp-native-runtime.test.js",
     "verify:config": "node --import tsx scripts/verify-config.ts",
     "verify:loop": "node --import tsx scripts/verify-loop-recovery.ts",
     "verify:model-config": "node --import tsx scripts/verify-model-config-recovery.ts",
@@ -56,7 +56,8 @@
     "verify:interruption-result": "node --import tsx scripts/verify-interruption-result-recovery.ts",
     "verify:tool-permission": "node --import tsx scripts/verify-tool-permission-recovery.ts",
     "verify:interruption-controller": "node --import tsx scripts/verify-interruption-controller-recovery.ts",
-    "verify:sdk-control": "node --import tsx scripts/verify-sdk-control-recovery.ts"
+    "verify:sdk-control": "node --import tsx scripts/verify-sdk-control-recovery.ts",
+    "verify:mcp-native": "node --import tsx scripts/verify-mcp-native-recovery.ts"
   },
   "dependencies": {
     "@openai/agents": "0.5.2",
@@ -68,6 +69,7 @@
     "jsonrepair": "3.13.0",
     "jimp": "0.22.12",
     "minisearch": "7.2.0",
+    "mcp-sdk-native": "npm:@modelcontextprotocol/sdk@1.24.3",
     "nunjucks": "3.1.7",
     "openai": "6.25.0",
     "rxjs": "6.6.7",

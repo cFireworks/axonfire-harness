@@ -42,4 +42,34 @@ Web 的 `--cwd` 指定工具工作目录：`npm start -- --cwd /absolute/path/to
 
 `hook_`、`mcp_`、`elic_`响应也按原前缀分发；MCP成功payload为 `response.mcp_response`，Hook成功payload为原hook输出对象。权限请求默认无超时，Hook默认60秒；关闭可取消全部pending。`initialize`、`get_available_modes`、`get_available_models`、`set_permission_mode`、`set_model`已注册。独立宿主默认initialize返回account:null，不映射模型API key为产品账号。
 
-`sdkControl.initializeDependencies` 可提供原ProductManager/env/MCP/账号等依赖。未提供ProductManager时systemPrompt/appendSystemPrompt/agents动态覆盖明确返回错误；环境切换和SDK MCP server注册同样需要真实adapter，不返回假成功。原类完整方法保留，但SDK stdin/headless启动程序、鉴权命令、ProductManager刷新、SDK MCP server及MCP Hook proxy还不能视为完成。显式SDK客户端allowed可授权独立guard；Hook allow与完整native政策到guard的统一仍是后续默认路径对齐边界。
+`sdkControl.initializeDependencies` 可提供原ProductManager/env/账号等依赖。未提供ProductManager时systemPrompt/appendSystemPrompt/agents动态覆盖明确返回错误；环境切换仍需真实adapter，不返回假成功。后续MCP批次已接入原SdkMcpServer/transport与Hook proxy，见下节；SDK stdin/headless启动程序、鉴权命令和ProductManager刷新仍未完成。显式SDK客户端allowed可授权独立guard；Hook allow与完整native政策到guard的统一仍是后续默认路径对齐边界。
+
+## 原生 MCP（嵌入 API）
+
+最新门槛为723核心 + 10宿主、645编译smoke、39组样本差分。本批恢复stdio / HTTP / SSE override、SdkMcpTransport / SdkMcpServer、McpServerManager / McpTransportManager、子Agent白名单及结果处理；不是完整顶层McpManager的配置发现与热刷新。
+
+普通嵌入调用可在已有模型配置上添加：
+
+```js
+const harness = await createHarness({
+  ...modelOptions, // 现有 workDir / stateDir / 模型配置，或测试用 modelProvider
+  nativeMcp: {
+    servers: { owned: { type: "http", url: "http://127.0.0.1:4000/mcp" } },
+  },
+  approveTool: async (name, input, session) => askOperator({ name, input, session }),
+});
+try {
+  const session = await harness.openSession();
+  await harness.prompt(session, "调用 owned 的工具");
+} finally {
+  await harness.close();
+}
+```
+
+地址仅为示例，需要你自己运行并信任该MCP服务；不自动启动示例端口或读取原应用配置。`nativeMcp.servers` 在创建时连接；后续可用 `harness.connectNativeMcp(name, config)` 添加/替换，`harness.nativeMcp.delete(name)` 删除。连接数组按源码保持同一动态对象，因此已创建Agent也能看到变化。`nativeMcp` 不自动打开两条native权限开关，仍按当前审批宿主请求确认。
+
+stdio配置按原字段提供 `command`、`args`、`env`，还必须提供 `nativeMcp.endpointProvider.get()`，返回由调用方实际拥有的Hook服务地址；缺省明确报错，不虚构产品网关。HTTP/SSE默认仅适合无鉴权公共服务或调用方显式配置的认证头；产品OAuth流程尚未还原，可通过 `oauthManager` 注入。执行stdio命令和连接任意URL具有本机权限，嵌入方负责配置可信度与网络限制。
+
+提供 `sdkControl` 会默认创建原生MCP宿主。收到原 `initialize` 请求时，其中SDK MCP配置会注册到同一连接列表，并通过已恢复的 `mcp_` 请求/`response.mcp_response` 往返JSON-RPC。不要将 `type:"sdk"` 放入启动期 `servers`，应在控制接收器就绪后使用initialize，避免启动等待尚不可回复的协议。重复相同配置的initialize不重新握手；控制断线/关闭会终止pending请求。完整示例见 `packages/harness/test/mcp-native-runtime.test.ts`，测试仅启动自有loopback/stdio peer。
+
+大结果落盘使用当前宿主state目录下的原生MCP输出路径，不读取安装应用数据；保留原完整读取提示、字符截断和image规则。OpenAI SDK仍是外部依赖，仅在Agent工厂补回样本SDK转换器的MCP `needsApproval` 字段，保证原proxy审批回调确实被调用。channel security、OAuth、遥测/支付与ACP广播仍为显式依赖边界，不因类方法已恢复就宣称整个产品服务完成。
