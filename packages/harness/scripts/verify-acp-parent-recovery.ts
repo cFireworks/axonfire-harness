@@ -2,20 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { getCapturedBundlePath } from "./helpers/captured-bundle-path.js";
 import { loadCapturedAcpParent } from "./helpers/captured-acp-parent.js";
-import { loadCapturedNativeHttp } from "./helpers/captured-native-http.js";
-import { loadCapturedAgentRun } from "./helpers/captured-agent-run.js";
-import { loadCapturedNativeRunner } from "./helpers/captured-native-runner.js";
-import { loadCapturedAuthentication } from "./helpers/captured-authentication.js";
-import { loadCapturedToolPermission } from "./helpers/captured-tool-permission.js";
-import { loadCapturedInteractionServices } from "./helpers/captured-interaction-services.js";
-import { loadCapturedAcpProtocol } from "./helpers/captured-acp-protocol.js";
-import { loadCapturedAcpConnections } from "./helpers/captured-acp-connections.js";
-import { loadCapturedAcpServices } from "./helpers/captured-acp-services.js";
-import { loadCapturedAcpLifecycle } from "./helpers/captured-acp-lifecycle.js";
-import {
-  loadCapturedInterruptionController,
-  loadCapturedToolApprovalServices,
-} from "./helpers/captured-interruption-controller.js";
+import { loadCapturedParentGraph } from "./helpers/captured-parent-graph.js";
 import { ACP_PARENT_CASES } from "./helpers/acp-parent-scenarios.js";
 import {
   acpRendezvousSdk,
@@ -30,22 +17,7 @@ for (const scenario of ACP_PARENT_CASES)
     await scenario.run(original.factory),
     scenario.name,
   );
-const reference = {
-  ...rendezvousFactories,
-  parent: original.factory,
-  http: loadCapturedNativeHttp(source).factory,
-  agentRun: loadCapturedAgentRun(source),
-  runner: loadCapturedNativeRunner(source).factory,
-  authentication: loadCapturedAuthentication(source).factory,
-  protocol: loadCapturedAcpProtocol(source) as any,
-  connections: loadCapturedAcpConnections(source).factory,
-  lifecycle: loadCapturedAcpLifecycle(source).factory,
-  services: loadCapturedAcpServices(source).factory,
-  interruption: loadCapturedInterruptionController(source),
-  approvals: loadCapturedToolApprovalServices(source),
-  permission: loadCapturedToolPermission(source),
-  interaction: loadCapturedInteractionServices(source).factory,
-};
+const reference = loadCapturedParentGraph(source);
 for (const mode of ACP_RENDEZVOUS_MODES)
   assert.deepEqual(
     await acpRendezvousSdk(rendezvousFactories, mode),

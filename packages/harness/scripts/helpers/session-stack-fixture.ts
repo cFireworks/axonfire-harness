@@ -28,16 +28,17 @@ export async function sessionStackFixture(
   factory = createNativeSessionStack,
   patch: any = {},
 ) {
-  const root = await io.mkdtemp(
-    path.join(tmpdir(), "axonfire-source-sessions-"),
-  );
+  const root =
+    patch.ownedRoot ??
+    (await io.mkdtemp(path.join(tmpdir(), "axonfire-source-sessions-")));
   const projects = path.join(root, "projects"),
     project = path.join(projects, "owned"),
     cwd = path.join(root, "cwd");
   await io.mkdir(project, { recursive: true });
-  await io.mkdir(cwd);
-  const ingress = sessionIngressFixture(undefined, {
+  await io.mkdir(cwd, { recursive: true });
+  const ingress = sessionIngressFixture(patch.ingressFactory, {
       httpModule: patch.httpModule,
+      uuidPrefix: patch.uuidPrefix,
     }),
     calls: any[] = [],
     logs = ingress.logs,
@@ -313,6 +314,7 @@ export async function sessionStackFixture(
     manager.context.disable();
     manager.skipHistoryContext.disable();
     attributes.disable();
+    if (patch.ownedRoot) return;
     if (
       path.dirname(root) !== tmpdir() ||
       !path.basename(root).startsWith("axonfire-source-sessions-")

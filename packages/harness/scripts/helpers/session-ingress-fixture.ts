@@ -33,7 +33,7 @@ export function sessionIngressFixture(
   ) as any;
   const common = {
     CustomError: class extends Error {},
-    generateUUUID: () => "owned-" + ++serial,
+    generateUUUID: () => (patch.uuidPrefix ?? "owned-") + ++serial,
     ContainerUtil: {
       get(token: any) {
         if (!di.has(token)) throw Error("Explicit fixture DI missing");

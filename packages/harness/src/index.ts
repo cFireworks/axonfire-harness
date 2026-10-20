@@ -138,6 +138,7 @@ export * from "./http/native-http-host.js";
 export * from "./auth/native-authentication.js";
 export * from "./protocol/acp-rendezvous-host.js";
 export * from "./protocol/native-acp-parent-primitives.js";
+export * from "./protocol/native-acp-replay.js";
 export * from "./runner/tool-call-loop-detector.js";
 export * from "./runtime/create-harness.js";
 export * from "./agents/model-config-agent-run-interceptor.js";

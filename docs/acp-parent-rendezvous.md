@@ -71,6 +71,8 @@ close先关闭RPC准入，需要时用原cancel，再结束原iterator、拒绝�
 
 ## 证据与边界
 
+后续[原回放/父恢复批次](acp-replay-recovery.md)已补完整module67037，并用关闭旧图后的新服务图验证load/resume/continue、内部HTTP fork→ACP load和异常入口。不是实现本版原Agent并不支持的session/fork。第65组既有父链参考侧也换成完整原Manager/Store/Ingress；新增第67组负责回放及恢复成对验证。
+
 ```sh
 npm run smoke:acp-parent
 npm run verify:acp-parent -w @axonfire/harness -- /absolute/path/codebuddy.js

@@ -19,6 +19,9 @@ import { createNativeAcpConnections } from "../../src/protocol/native-acp-connec
 import { createNativeAcpLifecycle } from "../../src/protocol/native-acp-lifecycle.js";
 import { createNativeAcpServices } from "../../src/protocol/native-acp-services.js";
 import { createNativeAcpParentPrimitives } from "../../src/protocol/native-acp-parent-primitives.js";
+import { createNativeAcpReplay } from "../../src/protocol/native-acp-replay.js";
+import { createNativeSessionStack } from "../../src/sessions/native-session-stack.js";
+import { createNativeSessionIngress } from "../../src/sessions/native-session-ingress.js";
 import { createCapturedAcpSdk } from "../../src/vendor/captured-acp-sdk.js";
 import { createNativeRunner } from "../../src/runner/native-runner.js";
 import { createNativeHttpRuntime } from "../../src/http/native-http-runtime.js";
@@ -70,6 +73,20 @@ export const rendezvousFactories = {
   approvals: createNativeToolApprovalServices,
   permission: nativeToolPermissionFactories,
   interaction: createNativeInteractionServices,
+  replay: createNativeAcpReplay,
+  stack: createNativeSessionStack,
+  ingress: createNativeSessionIngress,
+};
+
+export type OwnedParentScenario = {
+  ownedRoot?: string;
+  uuidPrefix?: string;
+  modelLabel?: string;
+  entrance?: {
+    method: "new" | "load" | "resume" | "continue";
+    sessionId?: string;
+  };
+  run?(parent: any): Promise<any>;
 };
 
 export const ACP_RENDEZVOUS_MODES = [
@@ -89,6 +106,7 @@ export const ACP_RENDEZVOUS_MODES = [
 export async function acpRendezvousSdk(
   factories = rendezvousFactories,
   mode: (typeof ACP_RENDEZVOUS_MODES)[number] = "single",
+  scenario: OwnedParentScenario = {},
 ) {
   return withTrace(new LocalNoopTrace(), async () => {
     let initializePermissions: ((session: any) => Promise<void>) | undefined;
@@ -97,6 +115,10 @@ export async function acpRendezvousSdk(
         emptyMeta: true,
         httpModule: h.native.getModule(47005),
         permissions: (session: any) => initializePermissions?.(session),
+        ownedRoot: scenario.ownedRoot,
+        stackFactory: factories.stack,
+        ingressFactory: factories.ingress,
+        uuidPrefix: scenario.uuidPrefix,
       });
     const auth = authenticationFixture(factories.authentication),
       authToken = "owned-explicit-parent-token";
@@ -137,6 +159,7 @@ export async function acpRendezvousSdk(
       reviews: any[] = [],
       decisions: any[] = [],
       executedTools: string[] = [];
+    const expectedProtocolDiagnostics = new Set<any>();
     const resumedStates: any[] = [];
     let reviewedState: any;
     let reviewResumeIndex = 0;
@@ -204,7 +227,7 @@ export async function acpRendezvousSdk(
         prompts = new ProductPromptRenderer(product),
         tools = new ToolManager(product, prompts),
         mcp = new McpRegistry();
-      await io.mkdir(join(f.root, "plans"));
+      await io.mkdir(join(f.root, "plans"), { recursive: true });
       const interactions = factories.interaction({
         modules: {
           16928: { join },
@@ -429,6 +452,12 @@ export async function acpRendezvousSdk(
                             ],
                           },
                         ];
+          if (scenario.modelLabel)
+            for (const item of output) {
+              if (item.id) item.id = scenario.modelLabel + "-" + item.id;
+              if (item.callId)
+                item.callId = scenario.modelLabel + "-" + item.callId;
+            }
           yield { type: "response_started" };
           if (output[0]?.type === "message")
             yield {
@@ -586,6 +615,7 @@ export async function acpRendezvousSdk(
         getModule: (id: number) => p!.base.getModule(id),
       });
       const placeholders: any = {
+        67037: {},
         71915: {},
         7357: {},
         30654: {},
@@ -607,6 +637,14 @@ export async function acpRendezvousSdk(
       const acpSdk = factories.sdk({
         console: { error: (...args: any[]) => errors.push(["sdk", ...args]) },
       });
+      class OwnedProtocolClock extends Date {
+        constructor(value?: any) {
+          super(value ?? f.runtime.Date.now());
+        }
+        static override now() {
+          return f.runtime.Date.now();
+        }
+      }
       p = acpProtocolFixture(factories.protocol, {
         session: f.s,
         sessionManager: f.manager,
@@ -614,7 +652,7 @@ export async function acpRendezvousSdk(
         tasks,
         interruptionService: interruption,
         realTimers: true,
-        Date,
+        Date: OwnedProtocolClock,
         modules: { ...placeholders, 38113: acpSdk },
       });
       p.setDependency(p.modules[40348].AskService, asks);
@@ -698,6 +736,57 @@ export async function acpRendezvousSdk(
         sourceFactory: factories.services,
       });
       p.modules[20881] = services.helpers.titleHelpers;
+      const replayTrace = Symbol("owned replay trace"),
+        replayTasks = Symbol("owned replay tasks"),
+        replayCheckpoint = Symbol("owned replay checkpoint"),
+        replayVersions = Symbol("owned replay versions");
+      p.modules[57135] = { TaskStorageService: replayTasks };
+      p.modules[6512] = {
+        CheckpointService: replayCheckpoint,
+        FileVersionStore: replayVersions,
+      };
+      p.setDependency(replayTasks, { list: async () => [] });
+      p.setDependency(replayCheckpoint, {
+        getLatestCheckpoint: () => undefined,
+      });
+      p.setDependency(replayVersions, { get: async () => undefined });
+      p.setDependency(replayTrace, {
+        startTrace() {
+          const span: any = {
+            setAttributes() {},
+            markAsSuccessful() {},
+            markAsFailed() {},
+            startSpan() {
+              return span;
+            },
+          };
+          return span;
+        },
+      });
+      Object.assign(
+        placeholders[67037],
+        factories.replay({
+          ...p.runtime,
+          env: {},
+          Date: f.runtime.Date,
+          modules: {
+            ...p.modules,
+            92735: {
+              ...interactions.getModule(33563),
+              TraceService: replayTrace,
+            },
+            82263: services.helpers.getModule(82263),
+          },
+          setTimeout(fn: () => void, ms: number) {
+            const timer = setTimeout(() => {
+              interactionTimers.delete(timer);
+              fn();
+            }, ms);
+            interactionTimers.add(timer);
+            return timer;
+          },
+        }).replay,
+      );
       p.modules[76586] = {
         SessionTitleService: services.helpers.SessionTitleService,
       };
@@ -1040,9 +1129,28 @@ export async function acpRendezvousSdk(
         }),
       );
       assert.equal(initialized.protocolVersion, 1);
+      const entrance = scenario.entrance ?? { method: "new" };
       const result: any = await checked(
-        "newSession",
-        client.newSession({ cwd: f.cwd, mcpServers: [] }),
+        "session entrance",
+        entrance.method === "load"
+          ? client.loadSession({
+              cwd: f.cwd,
+              mcpServers: [],
+              sessionId: entrance.sessionId,
+            })
+          : entrance.method === "resume"
+            ? client.resumeSession({
+                cwd: f.cwd,
+                mcpServers: [],
+                sessionId: entrance.sessionId,
+              })
+            : client.newSession({
+                cwd: f.cwd,
+                mcpServers: [],
+                ...(entrance.method === "continue"
+                  ? { _meta: { "codebuddy.ai/continue": true } }
+                  : {}),
+              }),
       );
       assert.equal(restCalls.length, 1);
       assert.equal(restCalls[0].body.acp, true);
@@ -1059,12 +1167,85 @@ export async function acpRendezvousSdk(
       assert.equal(entry?.ready, true);
       const session = entry!.session;
       assert.notEqual(session, f.s);
-      assert.equal(session.id, result.sessionId);
+      if (entrance.method === "new") assert.equal(session.id, result.sessionId);
+      else assert.equal(session.id, entrance.sessionId);
       assert.equal(registration[0].session, session);
       assert.equal(registration[0].path, "/internal/agent");
       assert.equal(httpRequests[0].response.writableEnded, false);
       assert.equal(p.agent.getCurrentSessionId(), session.id);
       assert.equal(p.agent.getSessionRequest(), undefined);
+      async function finishOwnedParent() {
+        accepting = false;
+        await host!.close();
+        await Promise.allSettled([...transports]);
+        await Promise.allSettled([...interruptionJobs]);
+        for (const sub of interruptionSubscriptions) sub.unsubscribe();
+        assert.equal(httpRequests[0].response.writableEnded, true);
+        assert.equal(host!.pendingCount, 0);
+        assert.equal(host!.timerCount, 0);
+        assert.equal(host!.rawView.activeRenderConnections.size, 0);
+        assert.equal(tasks.eventNames().length, 0);
+        assert.equal(host!.asynchronousErrors.length, 0);
+        assert.equal(f.errors.length, 0);
+        assert.equal(
+          errors.filter((e) => !expectedProtocolDiagnostics.has(e)).length,
+          0,
+          JSON.stringify(errors),
+        );
+      }
+      if (scenario.run) {
+        const customResult = await scenario.run({
+          client,
+          session,
+          result,
+          agent: p.agent,
+          manager: f.manager,
+          store: f.store,
+          host,
+          fixture: f,
+          updates,
+          modelRequests,
+          httpRequests,
+          restCalls,
+          cliOptions,
+          checked,
+          async expectProtocolFailure(
+            method: string,
+            code: number,
+            operation: () => Promise<any>,
+          ) {
+            const before = errors.length;
+            await assert.rejects(operation(), (e: any) => e.code === code);
+            assert.equal(errors.length, before + 1);
+            const diagnostic = errors[before];
+            assert.equal(diagnostic[0], "sdk");
+            assert.equal(diagnostic[1], "Error handling request");
+            assert.equal(diagnostic[2].method, method);
+            assert.equal(diagnostic[3].code, code);
+            expectedProtocolDiagnostics.add(diagnostic);
+            return diagnostic[3];
+          },
+          async postInternal(body: any) {
+            return rest
+              .create()
+              .post(origin + "/internal/agent", body, {
+                headers: parentNative.security.withSecurityHeader({
+                  "content-type": "application/json",
+                  "acp-connection-id": connectionId,
+                }),
+                proxy: false,
+              });
+          },
+        });
+        await f.drain();
+        await finishOwnedParent();
+        return {
+          scenario: entrance.method,
+          customResult,
+          modelRequests: modelRequests.length,
+          sourceRenderCleaned: true,
+        };
+      }
       assert.equal(result.modes.currentModeId, "default");
       assert.equal(result.models.currentModelId, product.raw.models[0]!.id);
       const responses: any[] = [];
@@ -1294,19 +1475,7 @@ export async function acpRendezvousSdk(
           currentTargetUpdated: true,
         };
       }
-      accepting = false;
-      await host.close();
-      await Promise.allSettled([...transports]);
-      await Promise.allSettled([...interruptionJobs]);
-      for (const sub of interruptionSubscriptions) sub.unsubscribe();
-      assert.equal(httpRequests[0].response.writableEnded, true);
-      assert.equal(host.pendingCount, 0);
-      assert.equal(host.timerCount, 0);
-      assert.equal(host.rawView.activeRenderConnections.size, 0);
-      assert.equal(tasks.eventNames().length, 0);
-      assert.equal(host.asynchronousErrors.length, 0);
-      assert.equal(f.errors.length, 0);
-      assert.equal(errors.length, 0, JSON.stringify(errors));
+      await finishOwnedParent();
       return {
         mode,
         newSession: true,
