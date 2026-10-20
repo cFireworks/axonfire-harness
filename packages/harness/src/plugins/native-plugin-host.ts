@@ -18,6 +18,9 @@ import { FileLockService } from "../tasks/file-lock-service.js";
 import { createNativeMarketplace } from "./native-marketplace.js";
 import { createCapturedMarketplacePolicy } from "../vendor/captured-marketplace-policy.js";
 import { createOwnedMarketplaceIO } from "./owned-marketplace-io.js";
+import { createNativePluginInstallers } from "./native-plugin-installers.js";
+import { createNativePluginStorage } from "./native-plugin-storage.js";
+import { createOwnedPluginOptionSettings } from "./owned-plugin-option-settings.js";
 
 export type NativePluginHostOptions = {
   directories?: readonly string[];
@@ -27,7 +30,7 @@ export type NativePluginHostOptions = {
   /** Explicit standalone profile; the installed product's remote markets are not enabled implicitly. */
   builtInMarketplaces?: Record<string, any>;
   marketplaceRuntime?: Record<string, any>;
-  /** Remote installers, product policy and persistent settings remain explicit. */
+  /** Custom installers, product policy and full persistent Settings remain injectable. */
   dependencies?: Record<string, any>;
   managerRuntime?: Record<string, any>;
   loaderRuntime?: Record<string, any>;
@@ -81,6 +84,29 @@ export function createNativePluginHost(options: {
     // The embedding settings view has no native disk cache. Forward only if supplied.
     clearCache: () => options.settings.clearCache?.(),
   };
+  const fsExtra = createOwnedPluginFilesystem(options.stateDir);
+  const storageClasses = createNativePluginStorage({
+    fsExtra,
+    getHomeDir: () => options.stateDir,
+  });
+  const errorCollector =
+    options.plugins?.dependencies?.errorCollector ??
+    new storageClasses.PluginErrorCollector();
+  const optionSettings = createOwnedPluginOptionSettings(
+    options.stateDir,
+    fsExtra,
+  );
+  const pluginOptionsStorage =
+    options.plugins?.dependencies?.pluginOptionsStorage ??
+    Object.assign(new storageClasses.PluginOptionsStorageImpl(), {
+      logger,
+      settingsManager:
+        options.plugins?.settings ??
+        options.plugins?.dependencies?.pluginOptionSettings ??
+        optionSettings,
+    });
+  if (!options.plugins?.dependencies?.pluginOptionsStorage)
+    pluginOptionsStorage.init();
   const sourceSettings = {
     waitUntilSettled: async () => {},
     isScopeAllowed: async () => true,
@@ -113,8 +139,7 @@ export function createNativePluginHost(options: {
     if (id === 13423) return createCapturedMarketplacePolicy();
     if (id === 91943) return fs.promises;
     if (id === 16928) return path;
-    if (id === 2845 && options.plugins?.dependencies?.pluginOptionsStorage)
-      return { PluginOptionsStorage: "pluginOptionsStorage" };
+    if (id === 2845) return { PluginOptionsStorage: "pluginOptionsStorage" };
     return unavailable("dynamic module " + id);
   };
   requireModule.t = (id: number) => requireModule(id);
@@ -123,19 +148,10 @@ export function createNativePluginHost(options: {
     ...runtime,
     ...options.plugins?.loaderRuntime,
   });
-  const errors: any[] = [],
-    errorCollector = {
-      addError(e: any) {
-        errors.push(e);
-      },
-      getErrorCount() {
-        return errors.length;
-      },
-    };
   const loader = Object.assign(new loaderClasses.PluginLoaderManager(), {
     logger,
     errorCollector,
-    pluginOptionsStorage: options.plugins?.dependencies?.pluginOptionsStorage,
+    pluginOptionsStorage,
     ...Object.fromEntries(
       [
         ["agentLoader", "AgentExtensionLoader"],
@@ -176,8 +192,18 @@ export function createNativePluginHost(options: {
   Object.assign(utilities.PathUtils, {
     resolveFilePathToWorkDir: paths.resolveFilePathToWorkDir.bind(paths),
   });
-  const fsExtra = createOwnedPluginFilesystem(options.stateDir);
   const marketplaceIO = createOwnedMarketplaceIO(options.stateDir, fsExtra);
+  const installerExec =
+    options.plugins?.marketplaceRuntime?.exec ?? marketplaceIO.exec;
+  const installerClasses = createNativePluginInstallers({
+    fsExtra,
+    exec: installerExec,
+    process: { env },
+  });
+  const extraInstallers = Object.values(installerClasses).map((Native: any) =>
+    Object.assign(new Native(), { logger, errorCollector }),
+  );
+  for (const installer of extraInstallers) installer.init?.();
   const lockDirectory = path.join(options.stateDir, "tmp");
   const lockNative = new FileLockService(lockDirectory, { fs: fsExtra });
   const fileLockService = {
@@ -212,6 +238,7 @@ export function createNativePluginHost(options: {
     { errorCollector },
   );
   marketplaceClasses.installers.push(localInstaller);
+  marketplaceClasses.installers.push(...extraInstallers);
   const marketplaceStorage = Object.assign(
     new marketplaceClasses.MarketplaceStorage(),
     { logger, errorCollector, fileLockService },
@@ -255,6 +282,9 @@ export function createNativePluginHost(options: {
   marketplaceConfigManager.init();
   builtInMarketplaceProvider.init();
   for (const service of [
+    pluginOptionsStorage,
+    localInstaller,
+    ...extraInstallers,
     marketplaceStorage,
     marketplaceConfigManager,
     builtInMarketplaceProvider,
@@ -315,7 +345,7 @@ export function createNativePluginHost(options: {
       AG: { isWorkBuddyDesktop: () => false },
       A5: utilities,
       t5: { ...utilities, JsonUtils: CapturedJsonUtils },
-      t8: { default: () => unavailable("git/process execution") },
+      t8: { default: installerExec },
       AH: {
         SETTINGS_FILENAME: "settings.json",
         SETTINGS_LOCAL_FILENAME: "settings.local.json",
@@ -358,7 +388,10 @@ export function createNativePluginHost(options: {
       },
       container: {
         get: (key: string) =>
-          options.plugins?.dependencies?.[key] ?? unavailable(key),
+          options.plugins?.dependencies?.[key] ??
+          (key === "pluginOptionsStorage"
+            ? pluginOptionsStorage
+            : unavailable(key)),
       },
       ...options.plugins?.dependencies,
     });
@@ -413,6 +446,11 @@ export function createNativePluginHost(options: {
     loaderClasses,
     managerClasses,
     marketplaceClasses,
+    storageClasses,
+    installerClasses,
+    pluginOptionsStorage,
+    optionSettings,
+    errorCollector,
     marketplaceIO,
     marketplaceUpdateChecker,
     gitAvailabilityDetector,
@@ -425,7 +463,9 @@ export function createNativePluginHost(options: {
     executor,
     outputStyles,
     classes,
-    errors,
+    get errors() {
+      return errorCollector.getErrors?.() ?? [];
+    },
     runtime,
     attach(dependencies: Record<string, any>) {
       Object.assign(refresh, dependencies);
@@ -470,6 +510,7 @@ export function createNativePluginHost(options: {
       }
       while (pending.size) await Promise.allSettled([...pending]);
       await marketplaceClosing;
+      await optionSettings.close();
       await pluginManager.builtInMarketplaceRefreshPromise;
       await refresh.waitForRefreshSettled();
       if (!options.plugins?.pluginManager)
@@ -478,12 +519,19 @@ export function createNativePluginHost(options: {
       processEvents.removeAllListeners();
       settingEvents.dispose();
       policyEvents.dispose();
+      if (!options.plugins?.dependencies?.errorCollector)
+        errorCollector.onDidChangeEmitter.dispose();
     },
     get pendingCount() {
       return pending.size;
     },
     get ownedHandleCount() {
-      return timers.size + immediates.size + subscriptions.size;
+      return (
+        timers.size +
+        immediates.size +
+        subscriptions.size +
+        marketplaceIO.ownedHandleCount
+      );
     },
     get closed() {
       return closed;

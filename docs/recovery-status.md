@@ -18,7 +18,7 @@
 |    1 | OpenAI Agents SDK | 完成                         | 精确锁定 `@openai/agents* 0.5.2`、`openai 6.25.0`；SDK 不重写                                                                                                                                                                                                                         |
 |    2 | Product config    | 100% 字节保留                | default/cloudhosted/internal/ioa/selfhosted/sandbox 六份原始 JSON；SHA 验证                                                                                                                                                                                                           |
 |    2 | ProductManager / providers | 原manager、merger及文件/模型provider默认接入 | 首批19类/112处AST/743次比较；文件/模型15类及helper为118处AST/263次比较。插件完整刷新队列现默认接入原manager并更新各消费者；Cloud product、市场/资源seed/环境服务和磁盘Settings仍待补，不等于完整产品bootstrap |
-|    2 | PluginManager / loaders / refresh | 完整核心类、本地/Git/HTTP/ZIP市场主路径默认接入 | 首批14完整类含PluginManager 194成员、七loader、事务/reload命令/output style；294处AST/472次比较/3纯constant factory。市场/锁批次现累计15完整类、19 helper、129处AST/584次比较/12原常量/1纯policy factory。真实SDK远端ZIP→版本cache→Agent/命令→重启通过；其他Git/npm/subdir插件安装器、资源seed、Options/完整策略与磁盘Settings仍待补 |
+|    2 | PluginManager / loaders / refresh | 完整核心类、市场与独立插件安装/Options主路径默认接入 | 首批14完整类含PluginManager 194成员、七loader/事务/reload/style；294处AST/472次比较。市场/锁15类+19 helper：129处AST/584次比较。新增Git/npm/subdir/Options/ErrorCollector共5完整类：45处AST/120次比较；三安装器真实SDK→版本cache→Agent/命令→重启通过。资源seed、MCPB/完整策略与磁盘Settings仍待补；非敏感Options有明确窄adapter，不算完整Settings恢复 |
 |    2 | Prompt registry   | 100% 内容保留                | 115 模板、284,899 Unicode code point；Nunjucks `autoescape:false`、编译缓存、失败回退                                                                                                                                                                                                 |
 |    2 | Tool registry | 47个不同名称均有handler | 原48条声明含一条重复Agent。新增WeChatReply/WeComReply与bridge，默认CLI声明不变；WeCom连接沿原逻辑补入已构造Agent内存tools。47/47只是名称覆盖，已有工具的客户端/宿主分支、动态缓存/插件等仍待补；不是整体100% |
 |    2 | AgentManager | 完整原类移植，68个非constructor方法结构对照 | eager构建/ready与models屏障、pending/force重建/指纹、CLI/handoff/asTool、模型继承/related/env、插件replace/volatile expert/settings优先级、MCP首轮等待/原生defer/权限门槛已恢复；74个原YAML模块factory逐字保留。独立host明确适配DI/Deferred/Emitter，不等于完整ProductManager/插件loader/工具索引热刷新服务 |
@@ -683,3 +683,21 @@ REA惰性module14783派生证据`ev_f99aa1ee5da288fab92c030d50e9b0dd0ad331a27d04
 本批仅新增yauzl及其新传递依赖，既有版本完全未变；锁定SDK/OpenAI、六份JSON、115 Prompt和memory policy摘要均不变。npm audit现17项（10中危/7高危），其中yauzl3.2.0新增[GHSA-gmq8-994r-jv83](https://github.com/advisories/GHSA-gmq8-994r-jv83)中危告警。当前原路径不调用该告警涉及的entry.getLastModDate，但不宣称总体安全，也不通过升级破坏样本保真；只用可信归档。
 
 最新门槛：870核心、11Web宿主、792编译JS smoke、44组样本差分、check/build/config与实际CLI/Web启动。另从暂存快照在无原应用/bundle/旧node_modules的全新目录验证npm ci/check/build、76项编译后插件/市场测试、11项Web测试与CLI/Web实际回复。下一批继续独立Git/npm/subdir插件安装器、Options/原策略/磁盘Settings及资源seed、Cloud product和其余产品bootstrap，整体目标仍未完成。
+
+## 独立插件安装器与Options/ErrorCollector批次
+
+移植5个完整原类：GitPluginInstaller `9784026..9788420`、NpmPluginInstaller `9789325..9790587`、GitSubdirPluginInstaller `9791710..9795641`、PluginErrorCollector `9796644..9797503`、PluginOptionsStorageImpl `9818861..9822846`。以上均为固定SHA样本的UTF-16索引；45处完整成员AST与5个原常量initializer（含env/正则/100条上限）验证，120次原类/还原类owned DI有限比较。UUID无参v4以Node crypto适配，Emitter/FS/Settings/进程在工厂注入，不执行原bootstrap，不改SDK依赖或原方法体。
+
+三个installer加入默认同一个集合，原Manager的Git版本/tag/cache方法接入owned执行器。Git保留完整40位SHA、ref与默认分支的不同fetch/checkout/reset/clean分支、SHA验证失败清理和错误收集；sparse保留filter=tree:0、no-cone、120/60/30秒超时、嵌套path与祖先.git查找、pull失败清理/重装。npm保留package/versionConstraint优先级、prefix/no-save/registry透传和120秒超时；没有偷偷添加ignore-scripts。实际fixture的安装脚本正常执行，说明信任/权限边界，不能把owned路径适配当作沙箱或完整孙进程树清理保证。
+
+原NPM正则接受前导连字符，install后仍检查包目录；原update将installedPath上溯两层再交给install，包含scoped包时也保留嵌套prefix边界。sparse checkout失败会删除clone，但checkout成功后不存在subdir会保留目录；update失败会清理找到的repo再重装。测试只使用自有clone，外部写/删除被standalone FS/cwd边界拒绝；不操作用户checkout、不访问生产registry/仓库。默认Git/npm HOME/config/cache不读取安装账号或用户npmrc，认证仍需显式适配。
+
+OptionsStorage恢复USER/pluginConfigs与pluginSecrets拆分、敏感值精确true/转字符串、合并/跨存储scrub、cache别名/clear、has/delete与词字符占位替换。默认敏感文件位于本次state/credentials.json，明文、首次创建0600；已有mode不保证收紧。损坏JSON读作空，下次保存可覆盖损坏内容；保留原无锁read-modify-write，非事务。敏感先写、非敏感失败时可能已存新secret却仍保留旧缓存，确定性测试覆盖，不添加原实现没有的rollback/自动清缓存。
+
+非敏感默认使用新增owned-plugin-option-settings，只保存USER/pluginConfigs到state/plugins/plugin-options.json，有本进程写队列/临时rename，不冒充完整原SettingsManager，也不保证跨进程RMW事务。调用方显式提供nativePlugins.settings或dependencies.pluginOptionSettings时沿用其get/set/list，read-only视图的失败仍由原类处理。默认loader与Manager动态容器共用原OptionsStorage，真实SDK验证保存→reload→组件变量替换→重启；模型请求不含测试secret。ErrorCollector默认替换原数组占位，保留100条上限、Date排序和plugin/source查询键，不擅自把pluginName/marketplaceName改作匹配键。
+
+适配桥另修正mkdirp对this的依赖：原类通过(0, fs.mkdirp)无绑定调用，原fs-extra支持，之前Node桥不支持；现在保持同一owned范围并支持无绑定调用。新增installer/Options Promise纳入关闭屏障，错误Emitter只释放自建实例；ownedHandleCount也包含已有I/O资源。不是通过改原方法来掩盖宿主缺口。
+
+新增29项专项：真实自有Git/SHA/sparse更新，真实本地npm tarball+loopback registry与生命周期脚本，Git/npm/subdir各两次真实SDK安装/版本cache/Agent/command恢复，选项拆分/迁移/部分失败/损坏文件/cache/替换/delete、原ErrorCollector筛选与窄Settings边界。模型是fake，registry/仓库/进程/文件均为自有，未操作真实账户、联系人或桌面。REA对惰性module2845生成派生证据`ev_cdbe6f3bf44d8099f0443e3b3e408b28dc8b0b86ace1e411008bb040bb28ba52`，750节点/150unknown/45秒上限，语义图partial/truncated，不当作完整应用覆盖。
+
+最新门槛：899核心、11Web宿主、821编译JS smoke、45组样本差分、check/build/config与CLI/Web实际启动；全新暂存快照副本无原应用/bundle/旧node_modules，npm ci/check/build、105项插件/市场/安装器编译后测试、11项Web测试与CLI/Web启动均通过。SDK/OpenAI固定版本、六份JSON/115 Prompt/memory policy摘要与依赖锁均不变，已有17项audit风险未强制升级。下一批推进完整PluginPolicy/磁盘Settings与资源seed/Cloud product/其余bootstrap；安装器与选项可用不等于完整产品控制器或整个harness已100%恢复。

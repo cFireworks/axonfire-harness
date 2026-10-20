@@ -78,7 +78,9 @@ export function createOwnedPluginFilesystem(stateDir: string) {
       return fs.promises.mkdir(assertWrite(target), { recursive: true });
     },
     async mkdirp(target: string) {
-      return this.ensureDir(target);
+      if (path.resolve(target) === root)
+        return fs.promises.mkdir(root, { recursive: true });
+      return fs.promises.mkdir(assertWrite(target), { recursive: true });
     },
     async writeFile(target: string, ...args: any[]) {
       return (fs.promises.writeFile as any)(assertWrite(target), ...args);

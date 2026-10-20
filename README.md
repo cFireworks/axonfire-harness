@@ -75,7 +75,7 @@ npm run verify:config
 npm run verify:recovery -- /absolute/path/to/codebuddy.js
 ```
 
-最新验证：870 项核心测试、11 项 Web 宿主测试、792 项编译后 smoke、44 组原样本差分通过。原 ProductManager 默认驱动配置合并、动态 provider 与 Agent/命令刷新；原文件/模型 providers、企业策略、PluginManager 的本地插件加载与跨服务刷新现已接入。本地/Git/HTTP/ZIP 市场、配置持久化/修复、更新检查与文件锁已接入；真实 SDK 从远端 ZIP 安装到版本缓存并重启恢复 Agent/命令通过自有服务验证。CLI/Web 可直接执行 `/reload-plugins`，本地命令不发送给模型。独立 Git/npm/subdir 插件安装器、资源 seed、完整磁盘 Settings 和产品 bootstrap 仍未完成。完整权限服务和原审批控制器通过 `nativePermissions`、`nativeApprovals` 显式使用；`sdkControl` 或 `nativeMcp` 默认启用这两条 native 路径及原生 MCP 宿主。CLI/Web 默认保留兼容审批宿主。配置中的 115 个原始 prompt 和固定哈希保持不变。详细边界见 [还原状态](docs/recovery-status.md)，配置与启动验证见 [使用说明](docs/getting-started.md)。
+最新验证：899 项核心测试、11 项 Web 宿主测试、821 项编译后 smoke、45 组原样本差分通过。原 ProductManager 默认驱动配置合并、动态 provider 与 Agent/命令刷新；原文件/模型 providers、企业策略、PluginManager 的本地插件加载与跨服务刷新现已接入。本地/Git/HTTP/ZIP 市场、配置持久化/修复、更新检查与文件锁已接入；真实 SDK 从远端 ZIP 安装到版本缓存并重启恢复 Agent/命令通过自有服务验证。CLI/Web 可直接执行 `/reload-plugins`，本地命令不发送给模型。独立 Git/npm/subdir 安装器、原插件选项存储与错误收集也已接入；资源 seed、完整策略、磁盘 Settings 和产品 bootstrap 仍未完成。完整权限服务和原审批控制器通过 `nativePermissions`、`nativeApprovals` 显式使用；`sdkControl` 或 `nativeMcp` 默认启用这两条 native 路径及原生 MCP 宿主。CLI/Web 默认保留兼容审批宿主。配置中的 115 个原始 prompt 和固定哈希保持不变。详细边界见 [还原状态](docs/recovery-status.md)，配置与启动验证见 [使用说明](docs/getting-started.md)。
 
 本地工作台演示：
 

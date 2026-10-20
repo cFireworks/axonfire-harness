@@ -145,10 +145,13 @@ export function createOwnedMarketplaceIO(stateDir: string, fsExtra: any) {
     if (closed) return Promise.reject(Error("Marketplace I/O is closed"));
     return observe(
       (async () => {
-        if (command !== "git")
-          throw Error("Only git is supported by marketplace process adapter");
+        if (command !== "git" && command !== "npm")
+          throw Error(
+            "Only git or npm are supported by plugin process adapter",
+          );
         const operation = args[0];
         if (
+          command === "git" &&
           ![
             "--version",
             "rev-parse",
@@ -156,11 +159,41 @@ export function createOwnedMarketplaceIO(stateDir: string, fsExtra: any) {
             "fetch",
             "reset",
             "clean",
+            "checkout",
+            "sparse-checkout",
+            "pull",
+            "config",
+            "for-each-ref",
+            "ls-remote",
+            "cat-file",
+            "show",
           ].includes(operation ?? "")
         )
           throw Error("Unsupported marketplace git operation");
-        if (operation === "clone") fsExtra.assertWritePath(args.at(-1));
-        else if (operation !== "--version")
+        if (command === "npm") {
+          if (operation !== "install")
+            throw Error(
+              "Only npm install is supported by plugin process adapter",
+            );
+          const prefixIndex = args.indexOf("--prefix");
+          if (prefixIndex < 0)
+            throw Error("npm plugin install requires an owned prefix");
+          fsExtra.assertWritePath(args[prefixIndex + 1]);
+          fsExtra.assertWritePath(options.cwd);
+        } else if (operation === "clone") fsExtra.assertWritePath(args.at(-1));
+        else if (operation === "config") {
+          if (args[1] !== "--get")
+            throw Error("Only read-only git config is supported");
+        } else if (
+          ![
+            "--version",
+            "rev-parse",
+            "for-each-ref",
+            "ls-remote",
+            "cat-file",
+            "show",
+          ].includes(operation ?? "")
+        )
           fsExtra.assertWritePath(options.cwd);
         const home = path.join(stateDir, "marketplace-git-home");
         await fsExtra.ensureDir(home);
@@ -182,6 +215,9 @@ export function createOwnedMarketplaceIO(stateDir: string, fsExtra: any) {
               GIT_ASKPASS: "",
               SSH_ASKPASS: "",
               GIT_CONFIG_COUNT: "0",
+              npm_config_cache: path.join(stateDir, "npm-cache"),
+              npm_config_userconfig: path.join(home, "npmrc"),
+              npm_config_globalconfig: path.join(home, "global-npmrc"),
               // No installed SSH agent, identities, config or known-host mutation. Inject exec for authenticated SSH.
               GIT_SSH_COMMAND:
                 "ssh -F /dev/null -o BatchMode=yes -o IdentitiesOnly=yes -o IdentityAgent=none -o IdentityFile=none -o StrictHostKeyChecking=yes -o UserKnownHostsFile=/dev/null -o GlobalKnownHostsFile=/dev/null",
@@ -210,7 +246,7 @@ export function createOwnedMarketplaceIO(stateDir: string, fsExtra: any) {
               reject(
                 Object.assign(
                   Error(
-                    `git ${operation} failed (${code ?? signal}): ${stderr.trim()}`,
+                    `${command} ${operation} failed (${code ?? signal}): ${stderr.trim()}`,
                   ),
                   { stdout, stderr, exitCode: code, signal },
                 ),

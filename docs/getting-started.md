@@ -46,7 +46,7 @@ Web 的 `--cwd` 指定工具工作目录：`npm start -- --cwd /absolute/path/to
 
 ## 原生 MCP（嵌入 API）
 
-最新门槛为870核心 + 11宿主、792编译smoke、44组样本差分。完整原MCP类群、ProductManager、文件/模型providers及企业模型策略已接入。插件loader、active snapshot提交和完整刷新事务、本地/Git/HTTP/ZIP市场与市场存储/文件锁/更新检查现已接入。其他插件安装器、资源seed与完整设置服务仍是后续边界。
+最新门槛为899核心 + 11宿主、821编译smoke、45组样本差分。完整原MCP类群、ProductManager、文件/模型providers及企业模型策略已接入。插件loader、active snapshot提交和完整刷新事务、本地/Git/HTTP/ZIP市场与市场存储/文件锁/更新检查现已接入。Git/npm/subdir安装器与原OptionsStorage/ErrorCollector现也默认接入；资源seed、完整策略与完整Settings服务仍待补。
 
 普通嵌入调用可在已有模型配置上添加：
 
@@ -129,7 +129,7 @@ CLI：`npm run cli -- --plugin-dir /absolute/plugin --cwd /absolute/project`；W
 
 输入`/reload-plugins`可刷新同一active snapshot及MCP/LSP/工具/配置/命令/输出样式/Agent。已产生模型输出、当前Agent不含ToolSearch且MCP有效server名称集改变时，原处理器要求`/reload-plugins --force`。该检查按有效名称集合，不是任意配置变化检测。SDK新运行等待刷新队列完成，再取重新构建的托管Agent。Web与嵌入`harness.prompt`也走本地命令分派；结果写JSONL并返回/流式输出，不多调用模型。
 
-原PluginManager完整194个成员已移植，但不代表全部外部服务已恢复。市场Factory、本地/Git/HTTP/ZIP provider与LocalPluginInstaller、原Storage/ConfigManager/BuiltInProvider、FileLock和更新检查现在默认接入；Git/npm/subdir独立插件安装器、MCPB下载、真实磁盘Settings/Options/策略服务仍需恢复或显式适配。Node文件桥不是原fs-extra，写入与清理限制在本次state，拒绝外部symlink路径；不是OS沙箱。无需安装WorkBuddy即可使用以上链路。
+原PluginManager完整194个成员已移植，但不代表全部外部服务已恢复。市场Factory、本地/Git/HTTP/ZIP provider、Local/Git/npm/git-subdir安装器、Storage/ConfigManager/BuiltInProvider、FileLock/更新检查与原OptionsStorage/ErrorCollector现在默认接入；MCPB下载、真实完整磁盘Settings/策略服务仍需恢复或显式适配。Node文件桥不是原fs-extra，写入与清理限制在本次state，拒绝外部symlink路径；不是OS沙箱。无需安装WorkBuddy即可使用以上链路。
 
 ### 本地目录市场（嵌入接口）
 
@@ -157,11 +157,21 @@ HTTP provider按原实现只下载清单，并把插件路径附加到完整base
 
 ZIP第三方依赖固定样本`yauzl 3.2.0`，新增一项[中危时间戳解析告警](https://github.com/advisories/GHSA-gmq8-994r-jv83)，当前npm audit共17项（10中危/7高危）。原提取路径未调用告警对应的`entry.getLastModDate()`，这不等于整体安全证明；未自动升级或修改原控制流。远端TLS/代理/认证/真实市场资源与所有平台故障仍需继续验证。
 
+### 独立插件来源与选项
+
+可信市场的plugin entry支持原source形状：Git为`{"source":"url","url":"https://your-trusted-host/plugin.git","sha":"40位完整SHA"}`或`{"source":"github","repo":"owner/repo","ref":"main"}`；子目录为`{"source":"git-subdir","url":"...","path":"nested/plugin"}`，同样可带ref/sha；npm为`{"source":"npm","package":"your-package","versionConstraint":"^1.0.0","registry":"https://your-trusted-registry"}`。配置具体enabledPlugins后，原启动链选installer并物化到版本cache；Git/npm/subdir三种真实SDK路径和重启均已用自有fixture验证，未访问生产仓库/registry。
+
+npm必须使用可信包和registry：原安装参数没有ignore-scripts，启用插件会运行npm生命周期脚本。默认HOME/npmrc/cache均重定向到本次state，但脚本不是沙箱，仍可访问宿主权限允许的资源。源码保留的名称正则接受前导连字符，不要把其视作完整argv安全校验。原npm.update还有嵌套prefix计算边界，未静默改成另一套更新算法。
+
+声明userConfig的插件可经`await harness.pluginManager.savePluginOptions(name, marketplace, values)`保存，`getPluginOptions(name, marketplace)`读取。随后`await harness.pluginRuntimeRefresh.refresh('reload-command')`使loader重新消费。默认非敏感值写`<state>/plugins/plugin-options.json`；敏感值按原实现转字符串、明文写`<state>/credentials.json`的pluginSecrets，首次创建mode0600，不加密、不读取已安装应用凭据。敏感标志只认精确true，未传入的旧值仍保留；跨存储写入不是事务，部分失败可能已写新secret但缓存仍旧。
+
+`pluginHost.pluginOptionsStorage`暴露原load/save/delete/has/clear/substitute方法，`pluginHost.errorCollector`暴露原错误检索与清理。默认非敏感存储只支持USER/pluginConfigs；若提供nativePlugins.settings，请提供原OptionsStorage需要的get/set/list。仅get的视图仍可加载，但保存/删除将按原失败分支处理。此窄适配不等于完整磁盘SettingsManager，启停插件等需settings.update的API仍需调用方提供，不能据安装链可用宣称所有产品控制器已恢复。
+
 `harness.pluginManager`为当前来源，`pluginRuntimeRefresh.refresh(reason, options)`为原队列服务，`pluginHost`暴露原类与宿主生命周期。已有`agentManager.plugins`只读adapter继续兼容，但不冒充完整manager，也不会自动启用原刷新事务；同时提供`nativePlugins`时必须明确共用同一个完整manager。显式LSP配置在插件刷新后由宿主重新注册，不被原LSP shutdown顺带清除。
 
 插件可能含可执行Hooks，加载即表示信任其内容；本地命令/Hook不是OS沙箱，也不是逐次工具审批。MCP自动接线只在显式`nativeMcp`宿主启用时生效；CLI/Web新增目录参数并未暗中扩大MCP/legacy工具allowlist。卸下插件可删除其manifest后reload；原plugin-tag实例会被清理，和普通文件Agent缓存残留行为不同。
 
-本批再次将Git暂存快照检出到全新空目录，不复制任何node_modules、原安装包或bundle：`npm ci`、`npm run check`、`npm run build`、CLI/Web launcher smoke、76项插件/市场编译后测试与11项Web测试均通过。完整870核心/792编译smoke及44组差分在主验证目录运行；差分仍需用户自行提供固定SHA样本。semver仍固定7.7.2、async-mutex仍0.5.0，本批按CLI样本新增yauzl 3.2.0；既有依赖版本不变，audit风险现为17项，详见远端市场边界。
+本批再次将Git暂存快照检出到全新空目录，不复制任何node_modules、原安装包或bundle：`npm ci`、`npm run check`、`npm run build`、CLI/Web launcher smoke、105项插件/市场/安装器编译后测试与11项Web测试均通过。完整899核心/821编译smoke及45组差分在主验证目录运行；差分仍需用户自行提供固定SHA样本。semver仍7.7.2、async-mutex仍0.5.0、yauzl仍3.2.0，本批未改变依赖锁，audit风险仍17项，详见远端市场边界。
 
 缓存默认用本宿主独立的原MemoryLocalStorage；可用`productRuntime.storage`注入自己拥有的get/set及可选getSync。缓存保留原gzip/base64、稳定快照与版本key，不自动读取原应用的本地存储。`productRuntime.env`是显式拥有的配置环境对象，默认空；原Env provider可处理其中的ACC_PRODUCT_CONFIG等字段，不会自动扫描进程中可能包含账号的产品配置环境。模型API key仍使用原CLI/Web自己的配置，不映射为产品账号。
 

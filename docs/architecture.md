@@ -40,7 +40,7 @@ CustomAgents/CustomCommands、Models/CustomModels、AgentModelResolver、Availab
 
 注意原AgentManager只淘汰plugin缓存：删除普通Agent文件后，新product快照不再包含它，但先前注册过的非插件SDK Agent仍可能由get(name)取出。命令删除会刷新命令表。这个原样本行为保持不变，不能把文件发现已恢复表述为所有旧实例都被清理。
 
-PluginManager完整194成员、七类extension loader及loader manager、PluginRuntimeRefreshService、reload命令和输出样式manager现已移植。默认owned plugin host启动原manager，只有显式目录进入inline来源；同一active snapshot供Product provider、AgentManager、Hooks、MCP及LSP消费。完整原刷新队列在beforeCommit比较MCP有效server名称，提交后刷新各服务；AgentService使用已有原join屏障，继续从同名托管Agent取新实例。本地/Git/HTTP/ZIP市场现由完整原provider/Factory、Storage、ConfigManager、BuiltInProvider、LocalInstaller、Git检测/转换/回退和FileLock/UpdateChecker实现。其他Git/npm/subdir插件安装器、MCPB和完整磁盘Settings仍未恢复。
+PluginManager完整194成员、七类extension loader及loader manager、PluginRuntimeRefreshService、reload命令和输出样式manager现已移植。默认owned plugin host启动原manager，只有显式目录进入inline来源；同一active snapshot供Product provider、AgentManager、Hooks、MCP及LSP消费。完整原刷新队列在beforeCommit比较MCP有效server名称，提交后刷新各服务；AgentService使用已有原join屏障，继续从同名托管Agent取新实例。本地/Git/HTTP/ZIP市场现由完整原provider/Factory、Storage、ConfigManager、BuiltInProvider、LocalInstaller、Git检测/转换/回退和FileLock/UpdateChecker实现。原Git/npm/subdir安装器、OptionsStorage和ErrorCollector也默认接入；MCPB、完整策略及磁盘Settings仍未恢复。
 
 市场存储使用原`known_marketplaces.json`、原子临时文件/rename、损坏备份、legacy cache引用修复、进程内写队列和mkdir/lock.json跨进程协议；原市场存储拿锁失败会继续无跨进程锁执行，这个降级行为保留而不是宣传为强一致事务。FileLock的第三方Mutex按样本依赖async-mutex 0.5.0，完整类保留其Map缓存。独立宿主把市场和锁路径限制在本次state，并等待市场inflight写入后关闭；该文件桥不是OS沙箱，也不是原fs-extra。内置市场provider本身为完整原类，但宿主默认显式空profile，不自动使用原配置JSON里的生产市场；可经`nativePlugins.builtInMarketplaces`显式提供。
 
@@ -49,6 +49,10 @@ ZIP的19个完整原helper保留下载/HEAD重定向与60/30秒超时、ETag/Las
 编译后并行测试还暴露原FileLock的发布竞态：mkdir成功但lock.json尚未写入时，另一个进程会把缺少metadata当作stale并删除，可能出现双owner和丢更新。原类与还原类均由确定性barrier复现；不修改原协议。真实跨进程正向测试明确在有效lock.json上争用并控制调度，不据其通过宣传所有并发下强一致。市场存储还有原拿锁失败降级，两者均须与接口/控制流保真区分。
 
 `owned-marketplace-io`仅负责request/response、AbortController、ZIP打开/entry stream、子进程和关闭屏障，不重写上述决策。默认Git adapter无shell，clone目标与更新cwd限于state；原reset --hard/clean -fd只作用于自有clone，不作用于用户项目。Git HOME/config与SSH身份/agent隔离，不读取安装账号；认证SSH需显式注入`nativePlugins.marketplaceRuntime.exec`。真实HTTPS证书/代理/私有仓库未由本地fixture证明。依赖yauzl按样本固定3.2.0并记录其告警，不以修改原实现或强制升级冒充等价。
+
+独立安装器沿原顺序加入同一个installer集合，Manager的tag/SHA/ref/cache决策现在使用owned Git接口。Git保留完整40位SHA/分支/默认HEAD路径，subdir保留filter=tree:0、no-cone sparse checkout、祖先repo查找及pull失败重装；npm保留install spec、prefix、120秒与registry透传，**未添加ignore-scripts**。只启用可信包：npm生命周期脚本会执行，owned cwd/HOME与无shell并不是OS沙箱，也不保证任意脚本孙进程树的清理。默认npm config/cache重定向到state，不读取系统账号或用户npmrc。
+
+原OptionsStorage处理敏感/非敏感拆分、跨存储迁移、缓存与替换；敏感值原样明文写入本次state的credentials.json，首次创建0600，不使用系统Keychain，也不保证加严既有文件mode。非敏感值默认由新建的USER/pluginConfigs窄存储适配保存到plugins/plugin-options.json；这是standalone adapter，不是原SettingsManager。显式`nativePlugins.settings`或`nativePlugins.dependencies.pluginOptionSettings`可替换该依赖，完整启停/策略/作用域磁盘配置仍待恢复。原ErrorCollector的100条上限、timestamp排序和plugin/source匹配（并非pluginName/marketplaceName）保持不变。
 
 新宿主只拥有路径、数据/平台adapter、订阅/定时器/immediate及所有原方法返回Promise的追踪，关闭时先拒绝新刷新，释放MCP/LSP I/O，再等待事务和旧任务，最后关闭ProductManager。Node fs桥写入限于owned state；signal=0只读存活检查保留，不允许通过该接口发送终止信号。原source的方法体与字符串不替换成宿主逻辑。原reload/builtin-seed的LSP刷新故意后台执行，host额外持有关闭屏障；默认显式LSP config由宿主补回，属于standalone配置兼容而非原方法变更。
 
