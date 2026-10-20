@@ -1,5 +1,7 @@
 # ACP 标题、friction、广播与 usage 服务
 
+后续阶段已用完整原 Agent/View.render 循环与单一审批 lease 接入已有真实 SDK 会话，批准/拒绝/Defer Write 不再需要测试 bypassPermissions。默认入口仍未切换，新会话/认证需真实父宿主，见 [ACP View 宿主](acp-view-host.md)。本页早期 executePrompt 单次验证的范围与外部服务边界仍保留。
+
 本阶段沿固定 WorkBuddy 5.3.14 CLI 样本恢复完整 `SessionTitleServiceImpl`、`FrictionAnalysisServiceImpl`、`FrictionRecallClientImpl`、`AcpBroadcastServiceImpl`、`AcpUsagePublisherImpl` 和 `UsageUtils`，共 6 类、70 成员，另有 17 完整函数、15 初始化和 8 个完整惰性 factory。原生标题 helpers、MessageContentUtils/MessageUtils、SessionUtils、usage 分类/上下文构建器及 ProductFeature/FeatureToggle 枚举也在这些 factory 内完整保留。标题、friction、recall 的 16 个原模块导出 getter/DI tokens 单独核对，`getModule(68593/18945/43324)` 保留原接口映射，不只暴露 Impl。所有范围按 UTF-16 记录，编译后的完整声明与原 AST 独立核对。
 
 ## 可以使用什么

@@ -118,7 +118,7 @@ export function acpProtocolFixture(
     ...seed.modules,
   };
   const base = createCapturedAcpModules({
-    Date: Clock,
+    Date: seed.Date ?? Clock,
     modules,
     os: { EOL: "\n" },
     fs: {},
@@ -126,7 +126,7 @@ export function acpProtocolFixture(
   const primitiveModules = { ...modules };
   delete primitiveModules[8046];
   const p = factories.primitives({
-    Date: Clock,
+    Date: seed.Date ?? Clock,
     modules: primitiveModules,
     getModule: base.getModule,
   });
@@ -141,7 +141,7 @@ export function acpProtocolFixture(
   modules[66545] = base.getModule(69466);
   modules[12502] = { AcpUtils: base.AcpUtils };
   const runtime = {
-    Date: Clock,
+    Date: seed.Date ?? Clock,
     setTimeout: seed.realTimers ? globalThis.setTimeout : timer,
     clearTimeout: seed.realTimers
       ? globalThis.clearTimeout

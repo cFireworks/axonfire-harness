@@ -63,7 +63,9 @@ export function createNativeAcpView(runtime: any = {}) {
     Set: any = globalThis.Set,
     Date: any = runtime.Date ?? globalThis.Date;
   const setTimeout = runtime.setTimeout ?? globalThis.setTimeout,
-    clearTimeout = runtime.clearTimeout ?? globalThis.clearTimeout;
+    clearTimeout = runtime.clearTimeout ?? globalThis.clearTimeout,
+    setInterval = runtime.setInterval ?? globalThis.setInterval,
+    clearInterval = runtime.clearInterval ?? globalThis.clearInterval;
   const module = (id: number) =>
     runtime.modules?.[id] ??
     runtime.getModule?.(id) ??

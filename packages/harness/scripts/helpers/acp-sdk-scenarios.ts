@@ -114,6 +114,20 @@ const scenario = (
 });
 export const ACP_SDK_CASES: Case[] = [
   scenario(
+    "original SDK client drops product session_end extension with invalid-params log",
+    async (p) => {
+      await p.agent.sessionUpdate({
+        sessionId: "owned",
+        update: { sessionUpdate: "session_end", stopReason: "end_turn" },
+      });
+      await settle();
+      assert.equal(p.updates.length, 0);
+      assert.equal(p.logs.length, 1);
+      assert.equal(p.logs[0][2].code, -32602);
+      return [p.updates, p.logs];
+    },
+  ),
+  scenario(
     "captured ACP initializes, creates session and parses prompt defaults without app bootstrap",
     async (p) => {
       await p.client.initialize({

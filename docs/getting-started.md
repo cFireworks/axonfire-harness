@@ -439,3 +439,5 @@ const answer = await backend.promptAcp({
 标题/friction/广播/usage 已有完整源服务和 `createAcpServicesHost` 资源宿主，专项验证命令是 `npm run smoke:acp-services -w @axonfire/harness`。它需要父 ACP runtime 的显式依赖，并不自动把 Web/CLI 或 Addon.promptAcp 改为完整 RPC 服务。接口、关闭与借用边界见 [ACP 服务说明](acp-services.md)。
 
 连接/Stream/guard 和样本修改版 ACP SDK 的专项可运行 `npm run smoke:acp-connections`。这些是已恢复的显式嵌入组件，不新增默认 ACP 服务器命令；真实业务 Agent/审批 owner 接线仍待继续，CLI/Web 快速启动方式不变。接口与安全/所有权限制见 [ACP 连接说明](acp-connections.md)。
+
+完整原生 Agent/View 循环与单一审批归属现有显式已有会话宿主，专项 `npm run smoke:acp-view`。已验证真实 SDK 的批准/拒绝/Defer Write、续轮、队列与关闭，不需要 bypassPermissions；父 ACP runtime/新会话认证和默认命令仍未自动提供。嵌入、关闭顺序与 session_end/client schema 差异见 [ACP View 宿主](acp-view-host.md)。

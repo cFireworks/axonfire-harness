@@ -97,3 +97,5 @@ IO只在外层owned fs/OS/env适配：剪贴板缓存和时间/原扩展名规�
 完整 ACP 服务阶段新增 6 类 70 成员、17 helpers、15 初始化和 8 惰性 factory，并核对标题/friction/recall 的 16 个原导出 getter（含 DI tokens）。原 AcpView.executePrompt 经真实 SDK 完成 Read、旁路广播、usage、标题与第二轮历史；没有以空服务代替执行依赖。createAcpServicesHost 只借用后端与父 ACP runtime，观察原方法及未 await 回调、拥有订阅/定时器/关闭屏障；原类体不修改。默认不请求召回/上报，REST/Event adapter 需明确注入。完整 RPC/入口/连接认证/审批 owner、request-send telemetry、daemon 重放等仍未完成；见 [ACP 服务说明](acp-services.md)。
 
 连接阶段恢复 Server/Controller/Stream/transport/guard/security 等 10 类 84 成员和完整样本修改版 ACP SDK（5 类 88 成员）。原 SDK 使用隔离的既有 zod3/v4 4.0.0 core，与根 Zod/OpenAI SDK 不混用。完整声明/配置/HTTP 路由 AST 和 38 组行为差分通过，owned stdio/HTTP 已验证双向协议；业务 Agent 在传输测试中为明确 double，默认业务入口与审批 owner 未切换。原 stop/close 的资源遗漏由测试所有权边界显式回收，不修改源方法；不提供可公网部署的 listener。见 [ACP 连接说明](acp-connections.md)。
+
+View 生命周期阶段恢复取消/outcome/接口等 6 完整 factory 和 8 源声明。createAcpViewHost 显式拥有完整原 render/iterator 的运行期、回调/定时器与单一审批 lease，借用真实 SDK backend/Agent/services；不编造登录/新会话。只有被 lease 占用的真实会话让旧 UI/prompt/queue 让出处理权；人工审批或原 policy 确实放行后才发一次性执行凭据，false 中的缓存 deny 不作为允许。34 项专项及六组完整原代码＋原 SDK/Zod 成对集成验证批准/拒绝/Defer/Read/Always Allow 等，原 client 拒收 session_end 的差异也保留。见 [ACP View 宿主](acp-view-host.md)。

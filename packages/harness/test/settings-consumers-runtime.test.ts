@@ -11,6 +11,7 @@ import {
   type HarnessOptions,
 } from "../src/runtime/create-harness.js";
 import { createNativeSettingsHost } from "../src/config/native-settings-host.js";
+import { createToolPermissionHost } from "../src/permissions/tool-permission-host.js";
 import { createOwnedSettingsFilesystem } from "../src/config/owned-settings-filesystem.js";
 import { createNativeMcpHost } from "../src/mcp/native-mcp-host.js";
 import { createNativeMcpProjectionHost } from "../src/mcp/native-mcp-projection-host.js";
@@ -259,15 +260,30 @@ for (const [destination, relative] of [
   );
 test("native replace/remove rules, setMode and directory mutations use destination scope and retain duplicates on disk", async (t) => {
   const root = await owned(t),
-    // This test isolates sequential permission transformations. The default
-    // environment's fire-and-forget reads deliberately retain the source cache
-    // race, covered with the complete original classes in product-environment.
     h = await createHarness(
       opts(root, { productRuntime: { watch: false, environment: false } }),
-    );
+    ),
+    // This assertion is about sequential native transformations, not concurrent
+    // ProductManager reads. Use a dedicated real scope store/service; disabling
+    // just environment does not exclude all source fire-and-forget consumers.
+    scope = createNativeSettingsHost({
+      stateDir: join(root, "sequential-state"),
+      getWorkDir: () => root,
+      logger: {},
+    }),
+    permissions = createToolPermissionHost({
+      getWorkDir: () => root,
+      getHomeDir: () => join(root, "sequential-state"),
+      settingsManager: scope.manager,
+      sessionStore: h.store,
+      planStorageService: h.plans,
+      sessionHookManager: h.hooks!.sessionManager,
+      toolHookManager: h.hooks!.toolManager,
+    });
   try {
-    const s = await h.openSession();
-    await h.settingsHost.flush();
+    await scope.start();
+    const s = new HarnessSession("owned-sequential-transform");
+    await permissions.initializeContext(s);
     for (const value of [
       update("userSettings"),
       update("userSettings"),
@@ -282,17 +298,20 @@ test("native replace/remove rules, setMode and directory mutations use destinati
         directories: ["/owned/missing"],
       }),
     ]) {
-      await h.permissions.service.applyUpdate(s, value);
-      // Flush the real owned SettingsHost; this is not a transaction guarantee.
-      await h.settingsHost.flush();
+      await permissions.service.applyUpdate(s, value);
+      await scope.flush();
     }
-    const p = await h.settingsManager.get("permissions", "user");
+    const p = await scope.manager.get("permissions", "user");
     assert.deepEqual(p.allow, ["Read"]);
     assert.equal(p.defaultMode, "acceptEdits");
     assert.deepEqual(p.additionalDirectories, ["/owned/extra", "/owned/extra"]);
     assert.equal(s.permissionModeSubject.value, "acceptEdits");
   } finally {
-    await h.close();
+    try {
+      await scope.close();
+    } finally {
+      await h.close();
+    }
   }
 });
 test("native session and CLI destinations never become persistent files", async (t) => {

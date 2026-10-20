@@ -20,6 +20,14 @@ export type ToolPermissionHostOptions = {
   commandParserService?: any;
   commandSafety?: any;
   logger?: any;
+  /** Passive host observation after the complete original SDK permission gate; never changes its decision. */
+  onSdkDecision?(
+    tool: any,
+    context: any,
+    input: any,
+    callId: string | undefined,
+    needsApproval: boolean,
+  ): void;
 };
 /** Owned standalone composition; never reads installed app settings or invokes a real classifier implicitly. */
 export function createToolPermissionHost(options: ToolPermissionHostOptions) {
@@ -137,7 +145,17 @@ export function createToolPermissionHost(options: ToolPermissionHostOptions) {
       resolveArgs?: any,
     ) {
       if (context?.context) await initializeContext(context.context);
-      return service.needsApproval(tool, context, input, callId, resolveArgs);
+      const result = service.needsApproval(
+        tool,
+        context,
+        input,
+        callId,
+        resolveArgs,
+      );
+      if (!options.onSdkDecision) return result;
+      const decision = await result;
+      options.onSdkDecision(tool, context, input, callId, decision);
+      return decision;
     },
     async checkPermission(
       tool: any,

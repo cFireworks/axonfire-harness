@@ -9,11 +9,18 @@ import type { ShutdownCoordinator } from "./shutdown-coordinator.js";
 export class TeamLeadInboxPoller {
   private stopPoller: (() => void) | undefined;
   private readonly paused = new WeakSet<HarnessSession>();
+  private readonly borrowedPauseStates = new WeakMap<HarnessSession, { setLeadInboxPaused(session: HarnessSession, paused: boolean): void; isLeadInboxPaused(session: HarnessSession): boolean }>();
   constructor(readonly mailbox: TeamMailbox, readonly registry: TeamMemberRegistry, readonly shutdown: ShutdownCoordinator, readonly queue: MessageQueueManager, readonly stateMachine: SessionRunStateMachine,
     readonly runtime: { runInput(session: HarnessSession, input: AgentInputItem[]): Promise<void>; isDeferredDispatchEnabled(): boolean; richQueue?: { enqueueItem(sessionId: string, blocks: string[]): { items: Array<{ id?: string }> }; sendNow(sessionId: string, id: string): void }; dispatch?: { register(session: HarnessSession): void; unregister(id: string): void } }) {}
   stopTeamLeadPoller(): void { if (this.stopPoller) { this.stopPoller(); this.stopPoller = undefined; } }
-  setLeadInboxPaused(session: HarnessSession, paused: boolean): void { if (paused) this.paused.add(session); else this.paused.delete(session); }
-  isLeadInboxPaused(session: HarnessSession): boolean { return this.paused.has(session); }
+  setLeadInboxPaused(session: HarnessSession, paused: boolean): void { const state = this.borrowedPauseStates.get(session); if (state) state.setLeadInboxPaused(session, paused); else if (paused) this.paused.add(session); else this.paused.delete(session); }
+  isLeadInboxPaused(session: HarnessSession): boolean { return this.borrowedPauseStates.get(session)?.isLeadInboxPaused(session) ?? this.paused.has(session); }
+  /** Explicit ownership bridge: use the original ACP module's WeakSet for this exact session while its View owns ingress. */
+  borrowPauseState(session: HarnessSession, state: { setLeadInboxPaused(session: HarnessSession, paused: boolean): void; isLeadInboxPaused(session: HarnessSession): boolean }): () => void {
+    if (this.borrowedPauseStates.has(session)) throw Error("Session already has a borrowed follow-up pause state");
+    state.setLeadInboxPaused(session, this.paused.has(session)); this.borrowedPauseStates.set(session, state); let released = false;
+    return () => { if (released) return; released = true; const paused = state.isLeadInboxPaused(session); this.borrowedPauseStates.delete(session); this.setLeadInboxPaused(session, paused); };
+  }
   startTeamLeadInboxPolling(team: string, session: HarnessSession): void {
     if (this.stopPoller) return;
     let waking = false;

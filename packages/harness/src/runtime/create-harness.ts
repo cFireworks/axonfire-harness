@@ -1,4 +1,5 @@
-import { NoopTrace, withTrace, type AgentInputItem, type ModelProvider } from "@openai/agents-core";
+import { withTrace, type AgentInputItem, type ModelProvider } from "@openai/agents-core";
+import { LocalNoopTrace } from "./local-trace.js";
 import { mkdir } from "node:fs/promises";
 import { createChannelHost, type ChannelHostOptions } from "../channels/channel-host.js";
 import { createNativeSettingsHost, type NativeSettingsHostOptions } from "../config/native-settings-host.js";
@@ -30,6 +31,7 @@ import { ConditionalRulesAgentRunInterceptor } from "../agents/conditional-rules
 import { MemoryPromptContextInitializer } from "../prompts/prompt-context.js";
 import { WorkBuddyModelProvider, type SettingsManager } from "../models/model-provider.js";
 import { InterruptionService, type InterruptionServiceOptions } from "../permissions/interruption-service.js";
+import { createApprovalOwners } from "../permissions/approval-owner.js";
 import { PermissionMode } from "../permissions/permission.js";
 import { createSdkControlHost, type SdkControlHostOptions } from "../sdk/sdk-control-host.js";
 import { attachHarnessSdkControl } from "../sdk/harness-sdk-control.js";
@@ -170,12 +172,6 @@ import { StaticBuiltinWorkflowProvider } from "../workflow/builtin-workflow-prov
 import type { WorkflowAcpAgentManager, WorkflowEventWriter } from "../workflow/workflow-presentation.js";
 import { PromptContextProvider, SystemInfoPromptContextInitializer, GitPromptContextInitializer, SettingsPromptContextInitializer, ModelPromptContextInitializer,
   SessionPromptContextInitializer, ProductFeaturePromptContextInitializer, PromptVarsFileContextInitializer } from "../prompts/prompt-context.js";
-
-// 0.5.2 clones its AsyncLocal trace context; inherited NoopTrace.clone()
-// returns a normal Trace. Preserve the no-op identity across that SDK path.
-class LocalNoopTrace extends NoopTrace {
-  override clone(): LocalNoopTrace { return new LocalNoopTrace(); }
-}
 
 export type HarnessOptions = {
   productRuntime?: Partial<Omit<NativeProductHostOptions, "initialConfiguration" | "getWorkDir" | "getHomeDir">>;
@@ -375,6 +371,12 @@ export async function createHarness(options: HarnessOptions) {
   const plans = new PlanStorageService(resolve(stateDir, "plans"));
   const asks = new AskService();
   const approvedCalls = new WeakMap<HarnessSession, Set<string>>();
+  function rememberApprovedCall(source:HarnessSession,name:string,input:any,id:string) {
+    if(!id)return;
+    if(name==="DeferExecuteTool"&&typeof input?.toolName==="string")name=input.toolName;
+    if(name==="ToolSearch"||name==="DeferExecuteTool"||name==="WaitForMcpServers")return;
+    let entries=approvedCalls.get(source);if(!entries)approvedCalls.set(source,entries=new Set());entries.add(`${name}\0${id}`);
+  }
   const channelApprovalTargets = new Map<string, {session: HarnessSession; name: string}>();
   const channelLogger = { ...noopChannelLogger, info: (...args: any[]) => options.logger?.info?.(args.map(String).join(" ")), warn: (...args: any[]) => options.logger?.warn(args.map(String).join(" ")), error: (...args: any[]) => options.logger?.warn(args.map(String).join(" ")) };
   const channelManager = new ChannelManagerImpl(channelLogger, settings);
@@ -474,6 +476,13 @@ export async function createHarness(options: HarnessOptions) {
     logger: { warn: (...args: any[]) => options.logger?.warn(args.map(String).join(' ')) },
     ...options.permissionHost,
     settingsManager: options.permissionHost?.settingsManager ?? pluginSettings,
+    onSdkDecision(tool,context,input,callId,needsApproval) {
+      const source=context?.context as HarnessSession|undefined;
+      // Source false also means a cached denial. Never convert it into an executor allowance.
+      const cached=source&&callId?source.preToolUseHookResults?.get(callId):undefined;
+      if(!needsApproval&&source&&callId&&approvalOwners.ownsApprovalRoute(source)&&cached?.allowed!==false&&cached?.permissionDecision!=="deny")rememberApprovedCall(source,tool.name,input,callId);
+      options.permissionHost?.onSdkDecision?.(tool,context,input,callId,needsApproval);
+    },
   });
   if (nativePermissions) { tools.attachPermissionService(permissions); deferredRuntime.deferExecute.attachPermissionAdapter(permissions); }
   const skillPaths = options.skillPaths ?? { get project() { return resolve(getWorkDir(), ".codebuddy/skills"); }, user: resolve(stateDir, "skills"), connector: resolve(stateDir, "connector-skills") };
@@ -607,10 +616,19 @@ export async function createHarness(options: HarnessOptions) {
     },
     resolveRejectedResult: async (name, raw) => (await tools.get(name))?.resolveRejectedResult?.(raw) as AgentInputItem[] ?? [],
   });
+  const approvalOwners = createApprovalOwners({ sessions, stateMachine, interruptions, isRunning: session => active.has(session) || dispatchingQueue.has(session), onReleased: session => scheduleQueueDispatch(session), onApproved(source, item) {
+    const raw = item.rawItem as any, id = raw.callId || raw.id;
+    if (!id || raw.type !== "function_call") return;
+    try {
+      const input = typeof raw.arguments === "string" ? JSON.parse(raw.arguments || "{}") : raw.arguments;
+      rememberApprovedCall(source,raw.name,input,id);
+    } catch { /* Malformed source arguments do not grant an executor receipt. */ }
+  } });
   const pendingSubscription = interruptions.pending$.subscribe((pending) => {
     if (!pending) return;
     const source = interruptions.findSessionByItem(pending.item);
     if (!source) return;
+    if (approvalOwners.ownsPending(source, pending.item)) return;
     // The captured stream-json path delegates to the SDK client, not the local UI.
     if (nativeApprovals && source.options.inputFormat === "stream-json" && !source.options.acp) return;
     const raw = pending.item.rawItem as any;
@@ -799,6 +817,7 @@ export async function createHarness(options: HarnessOptions) {
     queueMicrotask(() => {
       dispatchScheduled.delete(session);
       if (closed || dispatchingQueue.has(session) || active.has(session) || session.abortSignal.aborted || session.isCompressing || !stateMachine.isIdle(session)) return;
+      if (approvalOwners.has(session)) { if (session.queue.length) approvalOwners.wakeQueue(session); return; }
       const regular = session.queue.filter((item) => !isQueueHoldItem(item)); if (!regular.length) return;
       const deferred = deferredQueueDispatch();
       dispatchingQueue.add(session);
@@ -958,6 +977,7 @@ export async function createHarness(options: HarnessOptions) {
 
   function prompt(session: HarnessSession, input: string | AgentInputItem[], promptOptions: PromptOptions = {}): Promise<string> {
     if (closed) return Promise.reject(new Error("Harness is closed"));
+    if (approvalOwners.has(session)) return Promise.reject(new Error("This session's prompt ingress is owned by ACP"));
     if (active.has(session)) return Promise.reject(new Error("A prompt is already running for this session"));
     // SDK 0.5.2 Runner.tracingDisabled disables model traces but still creates
     // a root trace. An explicit NoopTrace also prevents root/tool export, without
@@ -969,6 +989,7 @@ export async function createHarness(options: HarnessOptions) {
   }
 
   async function compact(session: HarnessSession, compactOptions: CompactOptions = {}): Promise<boolean> {
+    if (approvalOwners.has(session)) throw new Error("Cannot compact an ACP-owned harness session");
     if (closed || active.has(session)) throw new Error("Cannot compact a closed or busy harness session");
     await waitForMemory();
     return withTrace(new LocalNoopTrace(), () => compactor.compactAndSummarize(session, { force: true, skipContinue: true, ...compactOptions }));
@@ -1048,6 +1069,7 @@ export async function createHarness(options: HarnessOptions) {
       session.abortController.abort();interruptions.disposeSession(session);
       await sessions.flushHistory(session);sessions.release(session);
     }
+    approvalOwners.close();
   }
   if(options.sessionLifecycle?.interceptors===undefined)responseInterceptors.push(...createNativeResponseInterceptors({
     getAgentService:()=>service,getAgentManager:()=>agents,utilities:responseUtilities,stateMachine,
@@ -1069,7 +1091,7 @@ export async function createHarness(options: HarnessOptions) {
   channelClients?.initializeConfigured();
   channelHost.start();
   return { product, agents, agentFactory, tools, mcp, sessions, store, service, stateMachine, interruptions, compactor, memory, memoryRules, autoMemory, hooks:nativeHooks, permissions, shell, taskManager, taskStorage, taskTools, agentTool, taskOutputTools, plans, planTools, asks, askTool, promptContext, createWorkflowSubagentSpawner, createWorkflowRuntime, workflowTool, backgroundTaskNotifier, recordingStore, recordReplayProvider: provider, webFetchTool, webSearchTool, webRuntime,
-    sdkControl, sdkHandlers, nativeMcp, connectNativeMcp, productRuntime, productManager: productRuntime.facade, settingsHost,settingsManager:pluginSettings,pluginHost, pluginManager: pluginSource, pluginRuntimeRefresh: pluginHost?.refresh, channelHost, channelClients, channelManager, channelPermissionAdapter, wechatReplyTool, wecomReplyTool,
+    sdkControl, sdkHandlers, nativeMcp, connectNativeMcp, nativePermissions, approvalOwners, productRuntime, productManager: productRuntime.facade, settingsHost,settingsManager:pluginSettings,pluginHost, pluginManager: pluginSource, pluginRuntimeRefresh: pluginHost?.refresh, channelHost, channelClients, channelManager, channelPermissionAdapter, wechatReplyTool, wecomReplyTool,
     delegateToolManager, delegateToolsChangedHandler, delegateTool,
     lspManager, lspTool,
     mediaRuntime, imageService, videoService, imageGenTool, imageEditTool, videoGenTool, imageToolHookInputProcessor,

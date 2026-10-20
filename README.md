@@ -10,6 +10,8 @@
 
 ACP 连接/Stream/guard 的 10 个完整类及样本修改版 ACP SDK 已恢复，通过完整 AST、原样本行为差分和真实本地 stdio/HTTP 双向传输测试；尚未接管默认业务/审批入口，见 [ACP 连接说明](docs/acp-connections.md)。OpenAI SDK 仍保留原依赖，不重新实现。
 
+完整原生 ACP Agent/View 循环现可显式接入已有 SDK 会话，以单一审批归属完成真实 Write/拒绝/Defer、续轮、队列与关闭；不再只测单次 executePrompt，也不靠 bypassPermissions。新会话/认证/默认入口尚未切换，见 [ACP View 宿主](docs/acp-view-host.md)。
+
 ## 快速开始
 
 需要 Node.js **22.19+** 和 npm。无需安装原版应用。

@@ -967,3 +967,25 @@ REA对三份惰性组件/SDK/Zod桥静态分析证据`ev_08971e22aaf8eb0c81242c3
 完整业务RPC入口、View.render迭代/关闭与单一审批owner、真实网关认证、request-send telemetry/标题Hook、Desktop SessionManager/HistoryStore/Plan回放、daemon模式自动重启回收仍待继续。CLI/Web、Addon.prompt和promptAcp默认路径保持不变，整个harness没有宣称100%完成；[连接说明](acp-connections.md)记录API与所有权边界。
 
 最终门槛：check/build、1229核心+11Web、1150项编译JS smoke、57组源码/行为验证、原字节配置与CLI/Web实际启动全部通过。新的暂存快照不含原应用/bundle/旧node_modules，重新npm ci/check/build，通过277项编译后连接/服务/协议/输入/用户Prompt/资源/环境/设置消费者/Addon/Cloud相关测试、11项Web、实际CLI/Web seed/reload启动与配置检查。SDK依赖、115 product prompts、6 JSON与22 Desktop资源（304358字节）保持不变。发布审计675文件，在所检查的凭据/运行文件规则内无发现，不是安全证明；既有17项依赖告警（10中危/7高危）保留。
+
+## 2026-10-21：完整 ACP View 循环、单一审批归属与取消生命周期
+
+固定 CLI SHA 不变。新增 native-acp-lifecycle 的6完整惰性factory：7357/66742 task outcome与错误类别、95449 ReferenceService token、99006 session接口/phase、71389全部run-state枚举/helpers、50523完整取消清理。另恢复HostCapabilityProvider完整类/常量、CliExternalUriOpener完整类，以及team pause/resume等5函数和原WeakSet，共8完整声明；没有执行decorators，也不冒充整个71915/79814聚合模块。
+
+保留源取消的Plan恢复/残留清理、in_progress任务仅加metadata不改status、allSettled/日志容错、compact两种检测、queue浅拷贝不清原队列和progress/reset顺序；follow-up仅恢复cancel暂停原因；URI先通知后open，失败返回false。第58组verify:acp-lifecycle对全部factory/声明做AST核对、14组有限差分，并以完整原Agent/View/primitive/services/ACP SDK（参考侧完整原Zod factory）和真实SDK后端做批准、拒绝、Defer Write、自动Read、Always Allow及deny rule六组成对集成。仅比较时归一化临时目录，不用有限运行代替时间/随机meta的全部证明。
+
+createAcpViewHost为明确新增的已有会话所有权桥，运行完整原render/iterator，而非单次executePrompt或新agent loop。借用实际SDK backend、专用source Agent/连接、源ServicesHost与显式DI/Context；rpcAgent facade拒绝关闭后的新RPC，缺少真实父依赖不会填空服务。外围观察源async事件订阅、SDK result.completed、history/审批续跑、任务存储和未await队列分支；拥有View定时器/监听，source类体AST不变。Noop trace原clone策略抽到共享宿主helper，不改SDK/global processors。
+
+backend.approvalOwners只在内存保存精确session lease；idle、无pending、无standalone执行时才可claim/release。实际主会话当前item及queue对象身份均匹配才让旧UI退出，不依靠持久化meta/伪造parent ID。原控制器接受该SDK待决item后登记standalone执行器的一次性call ID/name凭据，Defer归属真实目标；自动Read/规则/Always Allow则被动观察原native gate、不重复分类，false中的allowed=false/permissionDecision=deny缓存不算放行，仍由原hook pipeline阻止。人工未owned/过期/无state/sandbox不登记。原ACK/allow/always/reject/abort竞争仍由完整source Agent处理，不启用bypassPermissions；View要求nativePermissions/nativeApprovals都启用。
+
+占用期间旧prompt/compact拒绝并发，原standalone队列派发唤醒完整View.triggerDrain；释放后恢复旧入口。TeamLeadInboxPoller对精确session借用同一源WeakSet，释放保留暂停状态。close走原cancel、结束iterator、处理未完成Deferred，join owned SDK/审批后才对已abort且仍CANCELLING的会话做宿主关闭归一化；不改原运行期取消行为。借用backend/services/connection由父宿主按顺序关闭。
+
+新增34专项（14源依赖、7归属、13完整View/SDK），实际批准/拒绝/Defer Write、自动Read、Always Allow后二次Write、deny=false无落盘、两轮history、队列唤醒、取消无落盘、异步CLI设置等待、Context错误/启动失败和close后legacy可用都通过，不再仅bypass测试。另发现并验证原View发送session_end产品扩展、而原SDK client schema以-32602拒收；分别记录原始wire与丢弃，不改宽schema。这不证明原产品UI收不到消息，因为其通知消费者尚未证实相同。SDK差分现10组，连接专项42项。
+
+REA对生命周期/新View宿主/审批归属/权限观察桥/后端接线/团队暂停/Noop trace共7文件的最终静态证据`ev_2a8162465945f3ed8a1dc37cf929443d231fd367cf78cd10926298d7f8d7fa3a`，17890 AST nodes、0 parse失败。semantic上限750节点/150 unknown、45秒，仍partial/truncated，不执行应用bootstrap，不冒充整个运行时等价。OpenAI Docs核对[官方审批/续跑边界](https://developers.openai.com/api/docs/guides/agents/guardrails-approvals)，实际仍使用锁定SDK和原调用链，不根据当前文档改写样本。
+
+剩余：默认完整ACP父runtime/内部新会话与认证路由/启动入口、Ask/Plan/回放完整交互、真实AuthenticationManager/网关、Desktop SessionManager/HistoryStore、daemon模式自动重启回收、request-send telemetry/标题Hook及外部Docs/其余native服务等。CLI/Web默认仍可用但未整体切换ACP；这个现有会话完整循环不是整个harness 100%。见[ACP View宿主](acp-view-host.md)。
+
+全量干净编译首轮暴露两处验证问题：仓库根直接node --test误用package相对config路径，改在harness workspace执行；已有串行权限变换测试即使environment:false仍出现defaultMode丢失，说明仅关环境provider不排除其他源并发读，也不能把flush当全部消费者屏障。该聚焦断言改为专用真实SettingsHost/PermissionHost和session，保留相同磁盘/模式/重复项严格断言；其余默认完整消费者测试和完整原类的确定性慢读回填/丢规则对照仍保留。没有给原SettingsManager加锁、版本化缓存或改变生产语义，不把重跑通过当修复原竞态。
+
+最终门槛：check/build、1264核心+11Web、1185项编译JS smoke、58组源码/行为验证、原字节配置与CLI/Web实际启动通过。无原应用/bundle/旧node_modules的暂存快照重新npm ci/check/build，在正确workspace运行全部1264项编译后核心测试和11项Web全部通过，实际CLI/Web seed/reload启动与配置检查通过。115 product prompts、6 JSON、22 Desktop资源（304358字节）和SDK依赖版本保持不变。发布审计686文件，在所检查的凭据/运行文件规则内无发现，不是安全证明；既有17项依赖告警（10中危/7高危）保留。
