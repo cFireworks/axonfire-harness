@@ -8,8 +8,6 @@ Axonfire recovers modules from a fixed WorkBuddy **5.3.14** sample and connects 
 
 > This is an independent, ongoing reconstruction—not an official WorkBuddy release or a claim of complete recovery. The Web workbench is a new host, not the original product UI. Recovered material does not imply an open-source license grant; see [usage and licensing](#usage-and-licensing).
 
-![Axonfire local workbench](docs/images/web-demo.png)
-
 ## What you can do
 
 - **Run locally:** use the interactive CLI, a single-prompt CLI invocation, or a browser workbench with streaming responses.
