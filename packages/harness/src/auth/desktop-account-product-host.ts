@@ -4,6 +4,8 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { Agent as HttpAgent } from "node:http";
 import { Agent as HttpsAgent } from "node:https";
+import { Subject } from "rxjs";
+import { createNativeDesktopExternalLink } from "./native-desktop-external-link.js";
 import { createNativeHostedCliLifecycle } from "../terminal/native-hosted-cli-lifecycle.js";
 import { createNativeAuthenticationRuntime } from "./native-authentication.js";
 import { createNativeWorkbuddyAuthBindings } from "./native-workbuddy-auth-bindings.js";
@@ -36,6 +38,8 @@ export interface DesktopAccountProductHostOptions {
   };
   /** Additional original providers may be wired by the parent before start. */
   authenticationProviders?: (services: any) => any[];
+  /** Explicit browser boundary. The opener and client-info service are borrowed. */
+  browserLogin?: { externalUriOpener: any; clientInfoProvider: any };
   /** Explicit parent configuration layers, evaluated by the original product manager. */
   productProviders?: (services: any) => any[];
   http?: { timeout?: number; proxy?: false };
@@ -253,6 +257,29 @@ export function createDesktopAccountProductHost(
   app.setWorkbuddyAuthSessionSyncer((session: any) =>
     coordinator.syncResolvedProduct(session),
   );
+  const browserUrls = new Subject<string>();
+  const externalLinkApi: any = options.browserLogin
+    ? createNativeDesktopExternalLink({
+        ...runtime,
+        core,
+        authenticationApi: app.authenticationApi,
+      })
+    : undefined;
+  const externalLink = externalLinkApi
+    ? Object.assign(new externalLinkApi.ExternalLinkAuthenticationProvider(), {
+        logger,
+        productManager: product,
+        productEnvService: environment,
+        restOperations,
+        clientInfoProvider: options.browserLogin!.clientInfoProvider,
+        externalUriOpener: {
+          urlSubject: browserUrls,
+          open: (url: string) =>
+            options.browserLogin!.externalUriOpener.open(url),
+        },
+      })
+    : undefined;
+  let browserSubscription: { unsubscribe(): void } | undefined;
   const services = {
     authentication,
     product,
@@ -266,11 +293,17 @@ export function createDesktopAccountProductHost(
     restOperations,
     environment,
     authenticationApi: app.authenticationApi,
+    externalLink,
+    externalLinkApi,
   };
   providers.push(...(options.productProviders?.(services) ?? []));
   const additionalProviders = options.authenticationProviders?.(services) ?? [];
   authentication.authenticationProvider = {
-    get: () => [customProvider, ...additionalProviders],
+    get: () => [
+      customProvider,
+      ...(externalLink ? [externalLink] : []),
+      ...additionalProviders,
+    ],
   };
 
   let state: "open" | "closing" | "closed" = "open";
@@ -300,6 +333,7 @@ export function createDesktopAccountProductHost(
     customStorage,
     localStorage,
     environment,
+    ...(externalLink ? [externalLink] : []),
   ]) {
     const names = new Set<string>();
     for (
@@ -351,6 +385,13 @@ export function createDesktopAccountProductHost(
       product.loadFromCache();
       await product.sync();
       environment.init();
+      if (externalLink) {
+        browserSubscription =
+          options.browserLogin!.externalUriOpener.urlSubject.subscribe(
+            (url: string) => browserUrls.next(url),
+          );
+        externalLink.init();
+      }
       fileStorage.init();
       await authentication.doInit();
       coordinator.init();
@@ -368,6 +409,8 @@ export function createDesktopAccountProductHost(
         await starting?.catch(() => undefined);
         const stoppingLifecycles = [...lifecycleStops].map((stop) => stop());
         authentication.dispose();
+        browserSubscription?.unsubscribe();
+        browserUrls.complete();
         await fileStorage.dispose();
         fileStorage.storeSessionSubject.complete();
         if (product.proxySyncThrottleTimer) {
@@ -383,6 +426,9 @@ export function createDesktopAccountProductHost(
         await experiment.clear("host-drained");
         await drain();
       } finally {
+        browserSubscription?.unsubscribe();
+        browserUrls.complete();
+        externalLinkApi?.setLoginStepCallback(undefined);
         if (product.proxySyncThrottleTimer)
           clearTimeout(product.proxySyncThrottleTimer);
         product.onDidChangeEmitter.dispose();

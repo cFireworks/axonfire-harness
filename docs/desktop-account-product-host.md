@@ -16,7 +16,11 @@ The constructor requires absolute `resourcesRoot`, `productDirectory` and `confi
 
 The caller supplies logger, tracing, events, notifications and current-user path services. Logger must support the original methods, including `time` and `timeEnd`. These are borrowed services. The host owns its newly constructed HTTP agents, account/product instances, file watcher and polling resources; it does not remove persisted configuration or credentials on close.
 
-The optional provider callback can bind additional authentication providers using the constructed services. Their browser/IDE/other external resource ownership remains with the parent. The built-in path is custom-token authentication; this is not yet a complete browser-login host.
+The optional provider callback can bind additional authentication providers using the constructed services. Their browser/IDE/other external resource ownership remains with the parent.
+
+`browserLogin: { externalUriOpener, clientInfoProvider }` additionally constructs the recovered `ExternalLinkAuthenticationProvider` with the same original REST client, product environment and authentication error identities as the owner. The opener must expose `open(url)` and an RxJS-compatible `urlSubject`; client info must provide `get()` with `pluginVersion`. Both dependencies are borrowed. The owner forwards URL notifications through its own subject, initializes the original provider before authentication restoration, and tracks its asynchronous prototype methods. Closing disconnects the borrowed stream and completes the owned bridge, including subscriptions left by an original rejected-opener path. It does not close the parent's opener or URL stream.
+
+The original provider still determines supported authentication types, performs state/token/account HTTP requests and polling, and continues polling when the opener returns false. Original timeout and cancellation behavior is preserved. Closing aborts the authentication context and drains accepted provider calls; a borrowed opener that never settles can still delay close. This is an explicit host capability, not a new browser-account UI or automatic browser-launch policy in default Web.
 
 ## Startup and shutdown
 
@@ -42,7 +46,7 @@ Tests block rotation, pool flush and account reset independently and confirm own
 
 Owned loopback tests cover file-backed login and persisted reopening, original cloud headers/model publication, HTTP-401 rollback, coalesced start/close, subscription and file-watcher cleanup, close before start, close during an accepted cloud request, close during startup and initialization failure cleanup. They use the actual recovered services and native filesystem/HTTP behavior.
 
-The wrapper is integration code and has no new REA source-equivalence claim. Source provenance remains in [application bindings](native-workbuddy-auth-bindings.md), [account/product assembly](native-desktop-account-product-assembly.md) and their linked component evidence. Full browser-login dependencies, experiment polling under this owner and shutdown through all original retry/error branches still require broader integration verification.
+The wrapper is integration code and has no new REA source-equivalence claim. Source provenance remains in [application bindings](native-workbuddy-auth-bindings.md), [account/product assembly](native-desktop-account-product-assembly.md) and their linked component evidence. Default Web browser-login/UI wiring, production browser dependencies, experiment polling under this owner and shutdown through all original retry/error branches still require broader integration verification.
 
 The root build passes. Compiled owner tests pass 5/5 under Node and 5/5 under WorkBuddy Electron (`work/desktop-account-host-compiled.log`, `work/desktop-account-host-electron.log`). This does not represent a new full CLI/Web host-suite run.
 
@@ -52,3 +56,5 @@ The full core regression passes 2,442/2,442 (`work/desktop-account-host-core.log
 After lifecycle integration, the root build passes and compiled owner tests pass 8/8 under both Node and WorkBuddy Electron (`work/desktop-account-lifecycle-compiled-final.log`, `work/desktop-account-lifecycle-electron-final.log`). The real sidecar host case passes 1/1 on each runtime (`work/desktop-account-lifecycle-sidecar.log`, `work/desktop-account-lifecycle-sidecar-electron.log`). The lifecycle source verifier passes eight original regions and eight paired scenarios. No new full-host aggregate is claimed.
 
 Final core regression after bootstrap input isolation passes 2,445/2,445 (`work/desktop-account-lifecycle-core-final.log`).
+
+Browser-provider integration adds three owner cases: real HTTP login/cloud publication/logout, cancellation while an opener is pending, and rejected-opener subscription cleanup. All eleven owner cases pass under Electron (`work/browser-owner-electron.log`). Root build and type/syntax checks pass; full core passes 2,448/2,448 (`work/browser-owner-core.log`), and default Web bootstrap/real process ownership passes 6/6 (`work/browser-owner-web.log`). Original provider verification remains 33 regions and six paired scenarios; REA evidence remains `ev_f753d877405e184ebe0e7adf289f69b170019acb052a87337007efcd895d2fa8`.

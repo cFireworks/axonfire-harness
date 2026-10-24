@@ -1,4 +1,5 @@
 import { test } from "node:test";
+import { Subject } from "rxjs";
 import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as os from "node:os";
@@ -6,7 +7,10 @@ import * as path from "node:path";
 import { createServer } from "node:http";
 import { createDesktopAccountProductHost } from "../src/auth/desktop-account-product-host.js";
 
-async function fixture(run: (context: any) => Promise<void>) {
+async function fixture(
+  run: (context: any) => Promise<void>,
+  browserLogin?: any,
+) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "axon-account-host-"));
   const requests: any[] = [];
   let release: (() => void) | undefined;
@@ -23,7 +27,28 @@ async function fixture(run: (context: any) => Promise<void>) {
       });
       res.end(
         JSON.stringify({
-          data: { models: [{ id: "remote", contextWindow: 64000 }] },
+          data:
+            browserLogin && req.url?.includes("/auth/state")
+              ? { state: "owned-state", authUrl: "https://owned.invalid/login" }
+              : browserLogin && req.url?.includes("/auth/token")
+                ? {
+                    accessToken: "browser-token",
+                    expiresIn: 3600,
+                    domain: "owned.invalid",
+                  }
+                : browserLogin && req.url?.endsWith("/accounts")
+                  ? {
+                      accounts: [
+                        {
+                          uid: "browser-user",
+                          type: "personal",
+                          pluginEnabled: true,
+                        },
+                      ],
+                    }
+                  : browserLogin && req.url?.includes("/login/account")
+                    ? { uid: "browser-user", type: "personal" }
+                    : { models: [{ id: "remote", contextWindow: 64000 }] },
         }),
       );
     };
@@ -41,7 +66,7 @@ async function fixture(run: (context: any) => Promise<void>) {
     models: [{ id: "local", contextWindow: 32000 }],
     authentication: {
       id: "owned",
-      type: "custom-token",
+      type: browserLogin ? "external-link" : "custom-token",
       attributes: { token: "owned-token", externalDomain: "owned.invalid" },
     },
   };
@@ -84,6 +109,7 @@ async function fixture(run: (context: any) => Promise<void>) {
         filePathService: { setCurrentUserId() {} },
       },
       http: { proxy: false, timeout: 5000 },
+      browserLogin,
     });
     hosts.push(host);
     return host;
@@ -412,4 +438,148 @@ test("owned lifecycle preserves original rotation failure handling and still flu
     assert.deepEqual(calls, ["rotate", "flush"]);
     await host.close();
   });
+});
+
+test("owned browser login uses original HTTP provider, publishes and persists account, then logs out", async () => {
+  const urls = new Subject<string>();
+  const opened: string[] = [];
+  await fixture(
+    async ({ make, requests }) => {
+      const host = make(false);
+      await host.start();
+      assert.equal(urls.observers.length, 1);
+      assert.equal(await host.login({ type: "external" }), true);
+      assert.equal(
+        host.services.authentication.currentSessionSubject.getValue().account
+          .uid,
+        "browser-user",
+      );
+      assert.equal(
+        JSON.parse(
+          fs.readFileSync(
+            await host.services.fileStorage.getAuthSavePath(),
+            "utf8",
+          ),
+        ).account.uid,
+        "browser-user",
+      );
+      await host.refresh();
+      assert.equal(
+        JSON.parse(host.env.ACC_PRODUCT_CONFIG_V3!).models[0].id,
+        "remote",
+      );
+      assert.ok(
+        requests.some(
+          (r: any) => r.url === "/cloud" && r.token === "Bearer browser-token",
+        ),
+      );
+      assert.equal(
+        new URL(opened[0]!).searchParams.get("version"),
+        "owned-version",
+      );
+      await host.logout();
+      assert.equal(await host.services.fileStorage.restore(), undefined);
+      await host.close();
+      assert.equal(urls.observers.length, 0);
+      assert.equal(urls.isStopped, false);
+    },
+    {
+      externalUriOpener: {
+        urlSubject: urls,
+        async open(url: string) {
+          opened.push(url);
+          return false;
+        },
+      },
+      clientInfoProvider: {
+        async get() {
+          return { pluginVersion: "owned-version" };
+        },
+      },
+    },
+  );
+  urls.complete();
+});
+
+test("owner close aborts browser login and drains an accepted opener without committing a late account", async () => {
+  const urls = new Subject<string>();
+  let release!: () => void;
+  let opened = false;
+  await fixture(
+    async ({ make }) => {
+      const host = make(false);
+      await host.start();
+      const login = host.login({ type: "external" });
+      await until(() => opened);
+      let closed = false;
+      const closing = host.close().then(() => {
+        closed = true;
+      });
+      await tick();
+      assert.equal(closed, false);
+      release();
+      assert.equal(await login, false);
+      await closing;
+      assert.equal(
+        host.services.authentication.currentSessionSubject.getValue(),
+        undefined,
+      );
+      assert.equal(urls.observers.length, 0);
+      assert.equal(urls.isStopped, false);
+    },
+    {
+      externalUriOpener: {
+        urlSubject: urls,
+        open() {
+          opened = true;
+          return new Promise<boolean>((resolve) => {
+            release = () => resolve(true);
+          });
+        },
+      },
+      clientInfoProvider: {
+        async get() {
+          return { pluginVersion: "owned-version" };
+        },
+      },
+    },
+  );
+  urls.complete();
+});
+
+test("rejected browser opener does not leave a subscription on the borrowed URL stream after close", async () => {
+  const urls = new Subject<string>();
+  await fixture(
+    async ({ make }) => {
+      const host = make(false);
+      await host.start();
+      let error: unknown;
+      assert.equal(
+        await host.login({
+          errorHandler: (value: unknown) => {
+            error = value;
+          },
+        }),
+        false,
+      );
+      assert.ok(error instanceof Error);
+      await host.close();
+      assert.equal(urls.observers.length, 0);
+      assert.equal(urls.isStopped, false);
+    },
+    {
+      externalUriOpener: {
+        urlSubject: urls,
+        async open() {
+          throw new Error("owned opener rejected");
+        },
+      },
+      clientInfoProvider: {
+        async get() {
+          return { pluginVersion: "owned-version" };
+        },
+      },
+    },
+  );
+  urls.complete();
 });

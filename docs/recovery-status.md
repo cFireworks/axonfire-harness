@@ -5,6 +5,15 @@
 
 Entries below are newest first. Older entries retain the boundaries known at that stage; later entries supersede them where new evidence is recorded.
 
+## Browser login provider owned by the account/product host (2026-10-25)
+
+The account host now accepts explicit borrowed browser opener/client-info services and constructs the complete recovered external-link provider using its existing original REST client, product environment and shared authentication error classes. Provider methods participate in the owned-operation drain. An owned URL-stream bridge keeps original opener subscriptions off the borrowed stream and is completed during shutdown. Original provider bodies, timeout/polling intervals and false-opener manual-login behavior remain unchanged.
+
+New loopback integration covers real HTTP state/token/account login, file persistence, cloud snapshot publication, logout, close while browser opening is pending, stale-account rejection after close, and opener rejection cleanup. The parent URL subject remains usable after owner close. Eleven focused owner cases pass under Electron (`work/browser-owner-electron.log`). The source verifier passes 33 original regions and six paired groups (`work/browser-owner-source-verify.log`). REA re-inspection retains `ev_f753d877405e184ebe0e7adf289f69b170019acb052a87337007efcd895d2fa8`; this is host integration around existing original source, not new module recovery.
+
+Default Web browser-login controls and production browser dependencies remain open. A borrowed opener must settle for shutdown to drain it; the host does not invent cancellation for that external service. Root build and type/syntax checks pass (`work/browser-owner-build.log`, `work/browser-owner-check.log`). Full core passes 2,448/2,448 (`work/browser-owner-core.log`); default Web bootstrap and real process-owner checks pass 6/6 (`work/browser-owner-web.log`). The full CLI/Web aggregate was not rerun for this optional provider addition; its latest 126-pass/one-TODO result remains the preceding managed-path run.
+
+
 ## Managed path-only product snapshot startup (2026-10-25)
 
 CLI and default Web now share `prepareNativeProductInput()`. It preserves explicit Axonfire-file precedence and existing inline V3 handling, accepts a path-only managed snapshot, validates that its file contains a JSON object, and leaves it on disk for the original environment provider. Informational CLI calls retain their prior no-input behavior. No recovered provider, merger, spill publisher or SDK code was changed.
