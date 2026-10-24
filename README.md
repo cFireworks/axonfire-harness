@@ -195,7 +195,7 @@ npm run smoke:launchers   # CLI/Web launcher checks
 npm run verify:config     # Fixed configuration and prompt verification
 ```
 
-The latest full host run recorded **126 passes, zero failures and one known MCP permission TODO (127 tests total)**. The earlier intermittent sandbox audit failure did not reproduce in this run and remains an open reliability issue; see the [current recovery ledger](docs/recovery-status.md). The latest core suite passed 2,457 tests. The lower-level manager shutdown race remains preserved; the recovered original AppServer stop method catches it and completes daemon cleanup. See the [lifecycle contract](docs/native-prewarm-pool.md#original-appserver-shutdown).
+The latest full host run recorded **126 passes, zero failures and one known MCP permission TODO (127 tests total)**. The earlier intermittent sandbox audit failure did not reproduce in this run and remains an open reliability issue; see the [current recovery ledger](docs/recovery-status.md). The latest core suite passed 2,461 tests. The lower-level manager shutdown race remains preserved; the recovered original AppServer stop method catches it and completes daemon cleanup. See the [lifecycle contract](docs/native-prewarm-pool.md#original-appserver-shutdown).
 
 Host tests run with two workers to limit concurrent native processes. Captured-binary tests run on macOS arm64; the Python trash subtest also requires `python3` and explicitly skips when it is unavailable.
 
@@ -258,7 +258,7 @@ When the Desktop main bundle is outside its original application layout, set `WO
 | Execution | [Agent execution chain](docs/native-agent-run.md) · [Runner creation](docs/native-runner.md) · [AgentService/Runner host](docs/native-agent-run-host.md) · [Default interceptor assembly](docs/native-agent-interceptors-host.md) |
 | HTTP | [HTTP/MVC/CLS](docs/native-http.md) · [Parent HTTP host](docs/native-agent-http-host.md) |
 | Authentication | [Core](docs/native-authentication.md) · [Runtime host](docs/native-authentication-host.md) · [Desktop manager](docs/native-desktop-authentication.md) · [Account/product composition](docs/native-desktop-account-product-assembly.md) · [Application bindings](docs/native-workbuddy-auth-bindings.md) |
-| Desktop login | [Account host and explicit browser binding](docs/desktop-account-product-host.md) · [File storage](docs/native-desktop-file-authentication.md) · [Custom token](docs/native-desktop-custom-token.md) · [Browser login](docs/native-desktop-external-link.md) · [Host opener](docs/native-host-external-opener.md) · [Client info](docs/native-workbuddy-client-info.md) |
+| Desktop login | [Account host and explicit browser binding](docs/desktop-account-product-host.md) · [File storage](docs/native-desktop-file-authentication.md) · [Custom token](docs/native-desktop-custom-token.md) · [Browser login](docs/native-desktop-external-link.md) · [Host opener](docs/native-host-external-opener.md) · [Client info](docs/native-workbuddy-client-info.md) · [User-Agent](docs/native-desktop-user-agent.md) |
 | Desktop environment | [Base product](docs/native-desktop-client-product.md) · [Environment service](docs/native-desktop-product-environment.md) · [Configuration providers](docs/native-desktop-environment-providers.md) · [File cache](docs/native-workbuddy-local-storage.md) |
 | Interaction | [AskService and PlanStorage](docs/native-interaction-services.md) |
 

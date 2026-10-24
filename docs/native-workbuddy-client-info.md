@@ -12,9 +12,9 @@ On Windows, absent an inherited download channel, the provider starts one backgr
 
 ## Account host integration
 
-When browser login is configured without `clientInfoProvider`, the account owner constructs this original provider. It uses the owner's scoped environment/runtime context, product manager and asset roots; initializes it before authentication restoration; tracks accepted asynchronous methods; and completes its subject after shutdown drain. `WORKBUDDY_APP_VERSION` retains the original runtime-context precedence. A supplied client-info provider remains borrowed.
+The account owner constructs this original provider by default for account HTTP traffic and browser login. A supplied `browserLogin.clientInfoProvider` remains an explicit override. It uses the owner's scoped environment/runtime context, product manager and asset roots; initializes it before authentication restoration; tracks accepted asynchronous methods; and completes its subject after shutdown drain. `WORKBUDDY_APP_VERSION` retains the original runtime-context precedence. A supplied client-info provider remains borrowed.
 
-The owner supplies its IDE-aware file-path service only when that service supports `setIDEType`; the original provider already allows the service to be absent. Browser login now needs only an explicit browser delegate or opener to use original client information. Default Web browser-account controls remain separate work.
+The owner supplies its IDE-aware file-path service only when that service supports `setIDEType`; the original provider already allows the service to be absent. The [original User-Agent interceptor](native-desktop-user-agent.md) shares this identity source with browser login. Browser login needs only an explicit browser delegate or opener to use original client information. Default Web browser-account controls remain separate work.
 
 ## Evidence and limits
 

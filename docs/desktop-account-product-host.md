@@ -4,7 +4,7 @@
 
 ## Service graph
 
-The host constructs the original application authentication manager, environment service, bootstrap/file/custom-token storage and application userinfo provider. Product services use the original base/Internet/development providers, merger strategies, file local storage, cloud manager, experiment manager and authentication/product coordinator. REST uses the recovered CellJS factory with bundled Axios and both original HTTP interceptors.
+The host constructs the original application authentication manager, environment service, bootstrap/file/custom-token storage and application userinfo provider. Product services use the original base/Internet/development providers, merger strategies, file local storage, cloud manager, experiment manager and authentication/product coordinator. REST uses the [original User-Agent interceptor](native-desktop-user-agent.md) and recovered CellJS factory with bundled Axios and both original HTTP interceptors.
 
 Provider sorting calls the recovered framework `Prioritizeable.prioritizeAll`; the product manager retains its own reversal and merge rules. Authentication storage selection is also original: an environment-enabled custom token takes precedence over file storage and does not acquire invented file-persistence behavior. File-backed login is tested separately.
 

@@ -19,6 +19,7 @@ async function fixture(
       url: req.url,
       user: req.headers["x-user-id"],
       token: req.headers.authorization,
+      userAgent: req.headers["user-agent"],
     });
     const reply = () => {
       if (res.writableEnded) return;
@@ -156,6 +157,7 @@ test("owned Desktop account/product host starts original graph, publishes cloud,
       url: "/cloud",
       user: "owned",
       token: "Bearer owned-token",
+      userAgent: "WorkBuddy/5.3.14",
     });
     assert.equal(
       JSON.parse(host.env.ACC_PRODUCT_CONFIG_V3).models[0].id,
@@ -615,4 +617,21 @@ test("account owner constructs the original host opener from an explicit browser
       },
     },
   );
+});
+
+test("account HTTP uses original User-Agent identity and exact skip-header semantics", async () => {
+  await fixture(async ({ make, requests }) => {
+    const host = make(false);
+    await host.start();
+    await host.services.restOperations.get("/identity", {
+      headers: { "User-Agent": "Extra/1" },
+    });
+    assert.equal(requests.at(-1).userAgent, "WorkBuddy/5.3.14 Extra/1");
+    await host.services.restOperations.get("/identity", {
+      headers: { "User-Agent": "Exact/2", "X-Skip-User-Agent-Merge": true },
+    });
+    assert.equal(requests.at(-1).userAgent, "Exact/2");
+    await host.close();
+    assert.equal(host.services.clientInfo.clientInfo$.isStopped, true);
+  });
 });

@@ -614,3 +614,5 @@ export * from "./auth/desktop-account-product-host.js";
 export { createNativeHostExternalUriOpener, HOST_EXTERNAL_URI_OPENER_SOURCE } from "./auth/native-host-external-uri-opener.js";
 
 export {createNativeWorkbuddyClientInfo,WORKBUDDY_CLIENT_INFO_SOURCE} from "./auth/native-workbuddy-client-info.js";
+
+export {createNativeDesktopUserAgent,DESKTOP_USER_AGENT_SOURCE} from "./http/native-desktop-user-agent.js";

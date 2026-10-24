@@ -5,6 +5,15 @@
 
 Entries below are newest first. Older entries retain the boundaries known at that stage; later entries supersede them where new evidence is recorded.
 
+## Original account HTTP User-Agent composition (2026-10-25)
+
+Recovered the complete original `UserAgentHttpInterceptor` and header constants, then registered it in the account owner's recovered REST client. The original application client-info provider is now constructed by default for all account HTTP traffic; browser login shares it. Original header order, unknown-version fallback, skip-header removal and provider-error propagation are unchanged. See [the User-Agent contract](native-desktop-user-agent.md).
+
+Verification passes three verbatim source regions and three paired scenario groups (`work/user-agent-verify.log`). REA `ev_2e489d377e92c241cfdc5c667dc2f5f4829a53c7525e000617915c53bd96380f` covers 1,159 bytes, 180 AST nodes and zero parse failures. Node owner/interceptor tests pass 16/16 (`work/user-agent-owner.log`), including real HTTP headers for cloud traffic, merged caller values and exact skip behavior.
+
+Root build and type/syntax checks pass (`work/user-agent-build.log`, `work/user-agent-check.log`). Electron owner/interceptor tests pass 16/16 (`work/user-agent-electron.log`). Full core passes 2,461/2,461 (`work/user-agent-core.log`); default Web bootstrap/real process ownership passes 6/6 (`work/user-agent-web.log`). Default Web account controls, OS browser launch wiring and complete diagnostic/HTTP policy services remain open.
+
+
 ## Original application client-info provider (2026-10-25)
 
 Recovered the complete `WorkbuddyClientInfoProvider` and original registry, asset and protocol helpers. The browser-login account owner now defaults to this provider, reusing recovered machine identity and runtime context, with explicit scoped assets/environment. Borrowed client-info providers remain supported. Original class bodies are unchanged. See [client-info behavior and provenance](native-workbuddy-client-info.md).

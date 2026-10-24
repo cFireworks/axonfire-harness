@@ -8,6 +8,7 @@ import { Subject } from "rxjs";
 import { createNativeDesktopExternalLink } from "./native-desktop-external-link.js";
 import { createNativeHostExternalUriOpener } from "./native-host-external-uri-opener.js";
 import { createNativeWorkbuddyClientInfo } from "./native-workbuddy-client-info.js";
+import { createNativeDesktopUserAgent } from "../http/native-desktop-user-agent.js";
 import { createNativeHostedCliLifecycle } from "../terminal/native-hosted-cli-lifecycle.js";
 import { createNativeAuthenticationRuntime } from "./native-authentication.js";
 import { createNativeWorkbuddyAuthBindings } from "./native-workbuddy-auth-bindings.js";
@@ -263,10 +264,9 @@ export function createDesktopAccountProductHost(
     coordinator.syncResolvedProduct(session),
   );
   const browserUrls = new Subject<string>();
-  const clientInfoApi =
-    options.browserLogin && !options.browserLogin.clientInfoProvider
-      ? createNativeWorkbuddyClientInfo(runtime)
-      : undefined;
+  const clientInfoApi = !options.browserLogin?.clientInfoProvider
+    ? createNativeWorkbuddyClientInfo(runtime)
+    : undefined;
   clientInfoApi?.setWorkbuddyClientInfoAssetResolver((...segments: string[]) =>
     segments[0] === "cli"
       ? path.join(options.resourcesRoot, ...segments)
@@ -281,6 +281,15 @@ export function createDesktopAccountProductHost(
             : undefined,
       })
     : undefined;
+  const userAgentApi = createNativeDesktopUserAgent();
+  const userAgentPolicy = Object.assign(
+    new userAgentApi.UserAgentHttpInterceptor(),
+    {
+      restOperations,
+      clientInfoProvider:
+        options.browserLogin?.clientInfoProvider ?? clientInfo,
+    },
+  );
   const hostOpenerApi =
     options.browserLogin && !options.browserLogin.externalUriOpener
       ? createNativeHostExternalUriOpener(runtime)
@@ -419,6 +428,7 @@ export function createDesktopAccountProductHost(
       experiment.init();
       endpointPolicy.initialize();
       authPolicy.initialize();
+      userAgentPolicy.initialize();
       product.loadFromCache();
       await product.sync();
       environment.init();
