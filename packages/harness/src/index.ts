@@ -610,3 +610,5 @@ export * from "./auth/native-workbuddy-auth-bindings.js";
 export * from "./config/native-workbuddy-local-storage.js";
 
 export * from "./auth/desktop-account-product-host.js";
+
+export { createNativeHostExternalUriOpener, HOST_EXTERNAL_URI_OPENER_SOURCE } from "./auth/native-host-external-uri-opener.js";

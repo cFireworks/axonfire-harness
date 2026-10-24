@@ -5,6 +5,15 @@
 
 Entries below are newest first. Older entries retain the boundaries known at that stage; later entries supersede them where new evidence is recorded.
 
+## Original host browser opener and immediate-login shutdown (2026-10-25)
+
+Recovered all five original application opener declarations (842 bytes) with the original delegate binding, URL notification order and mock rejection switch. The account owner can now construct this opener from an explicit `openExternal` delegate; supplied opener instances remain borrowed. Original false/rejected-delegate behavior is retained: with a configured delegate the host opener still returns true. See [the opener contract](native-host-external-opener.md).
+
+The new real HTTP login/owner test exposed a shutdown ordering defect in the host adapter: immediate close could complete the product configuration stream before an accepted environment/remote refresh finished awaiting it. A 15-second bounded diagnostic reproduced the hang (`work/host-opener-debug.log`). Shutdown now drains accepted work before completing configuration; the same unqualified-login/immediate-close test passes without changing recovered source. Node focused tests pass 15/15 (`work/host-opener-tests-final.log`).
+
+Source verification passes five verbatim regions and three paired scenario groups (`work/host-opener-verify.log`). REA `ev_f78b6103d5055137d77a61f3713d9261e20154297afd95081bad7d4d82d2a42d` reports 842 bytes, 88 AST nodes and zero parse failures. Root build and type/syntax checks pass (`work/host-opener-build.log`, `work/host-opener-check.log`). Electron also passes all 15 focused cases (`work/host-opener-electron.log`). Full core passes 2,452/2,452 (`work/host-opener-core.log`), and default Web bootstrap/real process ownership passes 6/6 (`work/host-opener-web.log`). Original client-info integration and default Web account controls remain open; source inspection located the application-specific `WorkbuddyClientInfoProvider` in `module-base.js` for the next dependency recovery.
+
+
 ## Browser login provider owned by the account/product host (2026-10-25)
 
 The account host now accepts explicit borrowed browser opener/client-info services and constructs the complete recovered external-link provider using its existing original REST client, product environment and shared authentication error classes. Provider methods participate in the owned-operation drain. An owned URL-stream bridge keeps original opener subscriptions off the borrowed stream and is completed during shutdown. Original provider bodies, timeout/polling intervals and false-opener manual-login behavior remain unchanged.

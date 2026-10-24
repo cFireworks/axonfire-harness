@@ -233,6 +233,7 @@
     "verify:desktop-auth": "node --import tsx scripts/verify-desktop-auth-recovery.ts",
     "verify:desktop-file-auth": "node --import tsx scripts/verify-desktop-file-auth-recovery.ts",
     "verify:desktop-custom-token": "node --import tsx scripts/verify-desktop-custom-token-recovery.ts",
+    "verify:host-external-opener": "node --import tsx scripts/verify-host-external-opener-recovery.ts",
     "verify:desktop-external-link": "node --import tsx scripts/verify-desktop-external-link-recovery.ts",
     "verify:desktop-product-environment": "node --import tsx scripts/verify-desktop-product-environment-recovery.ts",
     "verify:desktop-environment-providers": "node --import tsx scripts/verify-desktop-environment-providers-recovery.ts",

@@ -583,3 +583,34 @@ test("rejected browser opener does not leave a subscription on the borrowed URL 
   );
   urls.complete();
 });
+
+test("account owner constructs the original host opener from an explicit browser delegate", async () => {
+  const opened: string[] = [];
+  await fixture(
+    async ({ make }) => {
+      const host = make(false);
+      await host.start();
+      assert.equal(await host.login(), true);
+      assert.equal(opened.length, 1);
+      // The captured host opener reports true even when its delegate reports false.
+      assert.equal(host.services.externalLink.lastBrowserOpenSuccess, true);
+      assert.equal(
+        host.services.authentication.currentSessionSubject.getValue().account
+          .uid,
+        "browser-user",
+      );
+      await host.close();
+    },
+    {
+      openExternal: async (url: string) => {
+        opened.push(url);
+        return false;
+      },
+      clientInfoProvider: {
+        async get() {
+          return { pluginVersion: "owned-version" };
+        },
+      },
+    },
+  );
+});

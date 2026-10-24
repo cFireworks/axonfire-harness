@@ -6,6 +6,7 @@ import { Agent as HttpAgent } from "node:http";
 import { Agent as HttpsAgent } from "node:https";
 import { Subject } from "rxjs";
 import { createNativeDesktopExternalLink } from "./native-desktop-external-link.js";
+import { createNativeHostExternalUriOpener } from "./native-host-external-uri-opener.js";
 import { createNativeHostedCliLifecycle } from "../terminal/native-hosted-cli-lifecycle.js";
 import { createNativeAuthenticationRuntime } from "./native-authentication.js";
 import { createNativeWorkbuddyAuthBindings } from "./native-workbuddy-auth-bindings.js";
@@ -39,7 +40,10 @@ export interface DesktopAccountProductHostOptions {
   /** Additional original providers may be wired by the parent before start. */
   authenticationProviders?: (services: any) => any[];
   /** Explicit browser boundary. The opener and client-info service are borrowed. */
-  browserLogin?: { externalUriOpener: any; clientInfoProvider: any };
+  browserLogin?: { clientInfoProvider: any } & (
+    | { externalUriOpener: any; openExternal?: never }
+    | { externalUriOpener?: never; openExternal: (url: string) => unknown }
+  );
   /** Explicit parent configuration layers, evaluated by the original product manager. */
   productProviders?: (services: any) => any[];
   http?: { timeout?: number; proxy?: false };
@@ -258,6 +262,18 @@ export function createDesktopAccountProductHost(
     coordinator.syncResolvedProduct(session),
   );
   const browserUrls = new Subject<string>();
+  const hostOpenerApi =
+    options.browserLogin && !options.browserLogin.externalUriOpener
+      ? createNativeHostExternalUriOpener(runtime)
+      : undefined;
+  hostOpenerApi?.setWorkbuddyExternalUriOpenDelegate(
+    options.browserLogin?.openExternal,
+  );
+  const browserOpener =
+    options.browserLogin?.externalUriOpener ??
+    (hostOpenerApi
+      ? new hostOpenerApi.WorkbuddyHostExternalUriOpener()
+      : undefined);
   const externalLinkApi: any = options.browserLogin
     ? createNativeDesktopExternalLink({
         ...runtime,
@@ -274,8 +290,7 @@ export function createDesktopAccountProductHost(
         clientInfoProvider: options.browserLogin!.clientInfoProvider,
         externalUriOpener: {
           urlSubject: browserUrls,
-          open: (url: string) =>
-            options.browserLogin!.externalUriOpener.open(url),
+          open: (url: string) => browserOpener.open(url),
         },
       })
     : undefined;
@@ -386,10 +401,9 @@ export function createDesktopAccountProductHost(
       await product.sync();
       environment.init();
       if (externalLink) {
-        browserSubscription =
-          options.browserLogin!.externalUriOpener.urlSubject.subscribe(
-            (url: string) => browserUrls.next(url),
-          );
+        browserSubscription = browserOpener.urlSubject.subscribe(
+          (url: string) => browserUrls.next(url),
+        );
         externalLink.init();
       }
       fileStorage.init();
@@ -418,10 +432,10 @@ export function createDesktopAccountProductHost(
           product.proxySyncThrottleTimer = undefined;
         }
         customStorage.storeSessionSubject.complete();
-        product.configuration.complete();
         await experiment.clear("host-close");
         await Promise.all(stoppingLifecycles);
         await drain();
+        product.configuration.complete();
         // A previously accepted refresh can schedule polling while draining.
         await experiment.clear("host-drained");
         await drain();
@@ -429,6 +443,10 @@ export function createDesktopAccountProductHost(
         browserSubscription?.unsubscribe();
         browserUrls.complete();
         externalLinkApi?.setLoginStepCallback(undefined);
+        if (hostOpenerApi) {
+          hostOpenerApi.setWorkbuddyExternalUriOpenDelegate(undefined);
+          browserOpener.urlSubject.complete();
+        }
         if (product.proxySyncThrottleTimer)
           clearTimeout(product.proxySyncThrottleTimer);
         product.onDidChangeEmitter.dispose();
