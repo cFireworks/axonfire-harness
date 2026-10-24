@@ -5,6 +5,15 @@
 
 Entries below are newest first. Older entries retain the boundaries known at that stage; later entries supersede them where new evidence is recorded.
 
+## Original application client-info provider (2026-10-25)
+
+Recovered the complete `WorkbuddyClientInfoProvider` and original registry, asset and protocol helpers. The browser-login account owner now defaults to this provider, reusing recovered machine identity and runtime context, with explicit scoped assets/environment. Borrowed client-info providers remain supported. Original class bodies are unchanged. See [client-info behavior and provenance](native-workbuddy-client-info.md).
+
+Verification passes 17 original regions across two fixed source files and five paired scenario groups (`work/client-info-verify.log`). REA `ev_d31989f83ba70aa0162053f8dffc01d2384d85e77f572fc17ac669b204360ad3` reports two extracted files, 8,785 bytes, 1,199 AST nodes and zero parse failures. Node focused provider/owner tests pass 17/17 (`work/client-info-owner.log`), including a real HTTP login whose URL version comes from the original provider. Windows registry fallback/publication is tested through scoped platform/process boundaries; no actual Windows-host validation is claimed.
+
+Root build and type/syntax checks pass (`work/client-info-build.log`, `work/client-info-check.log`). Electron focused provider/owner tests pass 17/17 (`work/client-info-electron.log`). Full core passes 2,457/2,457 (`work/client-info-core.log`), and default Web bootstrap/real process ownership passes 6/6 (`work/client-info-web.log`). Default Web login/account UI, production browser launch bindings and complete diagnostic services remain open.
+
+
 ## Original host browser opener and immediate-login shutdown (2026-10-25)
 
 Recovered all five original application opener declarations (842 bytes) with the original delegate binding, URL notification order and mock rejection switch. The account owner can now construct this opener from an explicit `openExternal` delegate; supplied opener instances remain borrowed. Original false/rejected-delegate behavior is retained: with a configured delegate the host opener still returns true. See [the opener contract](native-host-external-opener.md).

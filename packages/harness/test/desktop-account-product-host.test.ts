@@ -98,6 +98,8 @@ async function fixture(
       configDirectory: path.join(root, "state"),
       env: {
         ACC_USER_ID: "owned",
+        CLIENT_INFO_MACHINE_ID: "owned-machine",
+        WORKBUDDY_APP_VERSION: "5.3.14",
         ...(customToken ? { CODEBUDDY_AUTH_TOKEN: "owned-token" } : {}),
         CLIENT_INFO_PRODUCT_VERSION: "owned-version",
       },
@@ -592,6 +594,11 @@ test("account owner constructs the original host opener from an explicit browser
       await host.start();
       assert.equal(await host.login(), true);
       assert.equal(opened.length, 1);
+      assert.equal(new URL(opened[0]!).searchParams.get("version"), "5.3.14");
+      assert.equal(
+        (await host.services.clientInfo.get()).machineId,
+        "owned-machine",
+      );
       // The captured host opener reports true even when its delegate reports false.
       assert.equal(host.services.externalLink.lastBrowserOpenSuccess, true);
       assert.equal(
@@ -605,11 +612,6 @@ test("account owner constructs the original host opener from an explicit browser
       openExternal: async (url: string) => {
         opened.push(url);
         return false;
-      },
-      clientInfoProvider: {
-        async get() {
-          return { pluginVersion: "owned-version" };
-        },
       },
     },
   );

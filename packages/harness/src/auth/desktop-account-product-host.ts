@@ -7,6 +7,7 @@ import { Agent as HttpsAgent } from "node:https";
 import { Subject } from "rxjs";
 import { createNativeDesktopExternalLink } from "./native-desktop-external-link.js";
 import { createNativeHostExternalUriOpener } from "./native-host-external-uri-opener.js";
+import { createNativeWorkbuddyClientInfo } from "./native-workbuddy-client-info.js";
 import { createNativeHostedCliLifecycle } from "../terminal/native-hosted-cli-lifecycle.js";
 import { createNativeAuthenticationRuntime } from "./native-authentication.js";
 import { createNativeWorkbuddyAuthBindings } from "./native-workbuddy-auth-bindings.js";
@@ -39,8 +40,8 @@ export interface DesktopAccountProductHostOptions {
   };
   /** Additional original providers may be wired by the parent before start. */
   authenticationProviders?: (services: any) => any[];
-  /** Explicit browser boundary. The opener and client-info service are borrowed. */
-  browserLogin?: { clientInfoProvider: any } & (
+  /** Explicit browser boundary. Supplied opener/client-info services are borrowed. */
+  browserLogin?: { clientInfoProvider?: any } & (
     | { externalUriOpener: any; openExternal?: never }
     | { externalUriOpener?: never; openExternal: (url: string) => unknown }
   );
@@ -262,6 +263,24 @@ export function createDesktopAccountProductHost(
     coordinator.syncResolvedProduct(session),
   );
   const browserUrls = new Subject<string>();
+  const clientInfoApi =
+    options.browserLogin && !options.browserLogin.clientInfoProvider
+      ? createNativeWorkbuddyClientInfo(runtime)
+      : undefined;
+  clientInfoApi?.setWorkbuddyClientInfoAssetResolver((...segments: string[]) =>
+    segments[0] === "cli"
+      ? path.join(options.resourcesRoot, ...segments)
+      : path.join(options.productDirectory, ...segments),
+  );
+  const clientInfo = clientInfoApi
+    ? Object.assign(new clientInfoApi.WorkbuddyClientInfoProvider(), {
+        productManager: product,
+        filePathService:
+          typeof options.dependencies.filePathService.setIDEType === "function"
+            ? options.dependencies.filePathService
+            : undefined,
+      })
+    : undefined;
   const hostOpenerApi =
     options.browserLogin && !options.browserLogin.externalUriOpener
       ? createNativeHostExternalUriOpener(runtime)
@@ -287,7 +306,8 @@ export function createDesktopAccountProductHost(
         productManager: product,
         productEnvService: environment,
         restOperations,
-        clientInfoProvider: options.browserLogin!.clientInfoProvider,
+        clientInfoProvider:
+          options.browserLogin!.clientInfoProvider ?? clientInfo,
         externalUriOpener: {
           urlSubject: browserUrls,
           open: (url: string) => browserOpener.open(url),
@@ -310,6 +330,7 @@ export function createDesktopAccountProductHost(
     authenticationApi: app.authenticationApi,
     externalLink,
     externalLinkApi,
+    clientInfo,
   };
   providers.push(...(options.productProviders?.(services) ?? []));
   const additionalProviders = options.authenticationProviders?.(services) ?? [];
@@ -349,6 +370,7 @@ export function createDesktopAccountProductHost(
     localStorage,
     environment,
     ...(externalLink ? [externalLink] : []),
+    ...(clientInfo ? [clientInfo] : []),
   ]) {
     const names = new Set<string>();
     for (
@@ -400,6 +422,7 @@ export function createDesktopAccountProductHost(
       product.loadFromCache();
       await product.sync();
       environment.init();
+      clientInfo?.initialize();
       if (externalLink) {
         browserSubscription = browserOpener.urlSubject.subscribe(
           (url: string) => browserUrls.next(url),
@@ -443,6 +466,7 @@ export function createDesktopAccountProductHost(
         browserSubscription?.unsubscribe();
         browserUrls.complete();
         externalLinkApi?.setLoginStepCallback(undefined);
+        clientInfo?.clientInfo$.complete();
         if (hostOpenerApi) {
           hostOpenerApi.setWorkbuddyExternalUriOpenDelegate(undefined);
           browserOpener.urlSubject.complete();
