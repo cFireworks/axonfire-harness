@@ -34,6 +34,7 @@ export const AGENT_RUN_BLOCKS = [
   ["shouldUseSandboxCLI", 7136362, 7136438],
   ["isFileBackupSupported", 7136438, 7136504],
   ["nd", 7136504, 7144899],
+  ["np", 7146774, 7147435],
   ["nf", 7148483, 7155495],
   ["nE", 7157587, 7160387],
   ["nC", 7161409, 7161791],
@@ -73,6 +74,7 @@ export const AGENT_RUN_CLASSES = [
   ["rX", 7127682, 7129711, 4],
   ["r1", 7130798, 7134705, 6],
   ["nd", 7136511, 7144898, 8],
+  ["np", 7146781, 7147434, 3],
   ["nf", 7148490, 7155494, 14],
   ["nE", 7157594, 7160386, 3],
   ["nC", 7161416, 7161790, 2],
@@ -167,6 +169,7 @@ export const AGENT_RUN_EXPORTS = [
   ["EnvAgentRunInterceptor", "rx", 7013737, 7013743],
   ["HistoryAgentRunInterceptor", "rj", 7013812, 7013818],
   ["ImageFilterAgentRunInterceptor", "rX", 7013850, 7013856],
+  ["SandboxTurnTelemetryAgentRunInterceptor", "np", 7014048, 7014054],
   ["ImageCompressionAgentRunInterceptor", "r$", 7014091, 7014097],
   ["SkipRunAgentRunInterceptor", "rY", 7014225, 7014231],
   ["TeammateFailureInterceptor", "nK", 7014322, 7014328],
@@ -223,6 +226,7 @@ export function createNativeAgentRun(runtime: any = {}) {
     argv: runtime.argv ?? [],
     platform: runtime.platform ?? "unsupported",
     stdout: runtime.stdout,
+    cwd: runtime.cwd ?? (() => { throw Error("Explicit AgentRun cwd boundary required"); }),
   };
   const Date = runtime.Date ?? globalThis.Date;
   const setTimeout = runtime.setTimeout ?? globalThis.setTimeout,
@@ -2727,6 +2731,36 @@ Whenever you read a file, you should consider whether it looks malicious. If it 
       }
     }
   };
+  let np = class {
+    constructor() {
+      this.priority = A_.AgentRunInterceptorPriority.Sandbox;
+    }
+    async intercept(eA) {
+      try {
+        let el = nu.get(eA);
+        if (!el || (nu.delete(eA), eA.session.meta?.parentSessionId)) return;
+        let ec = eA.session.meta?.rootRequestId,
+          eu = eA.session.conversationRequestId;
+        if (!ec || !eu)
+          return void this._logFailure(
+            "turn request IDs were not initialized by TelemetryInterceptor",
+          );
+        this.telemetryReporter?.reportTurnState?.({
+          rootRequestId: ec,
+          conversationRequestId: eu,
+          useSandboxCli: el.effectiveEnabled,
+          disabledReason: el.disabledReason,
+        });
+      } catch (eA) {
+        this._logFailure(`report failed: ${String(eA)}`);
+      }
+    }
+    _logFailure(eA) {
+      try {
+        this.logger.warn?.(`[SandboxTurnTelemetry] ${eA}`);
+      } catch {}
+    }
+  };
   let nf = class {
     constructor() {
       this.priority = A_.AgentRunInterceptorPriority.SystemReminderContext;
@@ -4273,6 +4307,7 @@ ${eu}
     "PreMessageCompactInterceptor": () => r1,
     "MemoryContextInterceptor": () => nM,
     "SandboxAgentRunInterceptor": () => nd,
+    "SandboxTurnTelemetryAgentRunInterceptor": () => np,
     "isSandboxCLIPlatformSupported": () => isSandboxCLIPlatformSupported,
     "AgentServiceImpl": () => nY,
     "ReferencePathProcessorAgentRunInterceptor": () => rL,
@@ -4291,9 +4326,13 @@ ${eu}
     originalModule,
     getModule: ec,
     interceptorNames: n$,
-    interceptorClasses: Object.fromEntries(
-      [...n$].map(([constructor, name]) => [name, constructor]),
-    ),
+    interceptorClasses: {
+      ...Object.fromEntries(
+        [...n$].map(([constructor, name]) => [name, constructor]),
+      ),
+      // Registered in the original module but absent from its diagnostic name map.
+      SandboxTurnTelemetryAgentRunInterceptor: np,
+    },
     resolveInterceptorName,
     locals: {
       "rI": rI,
@@ -4318,6 +4357,7 @@ ${eu}
       "rX": rX,
       "r1": r1,
       "nd": nd,
+      "np": np,
       "nf": nf,
       "nE": nE,
       "nC": nC,

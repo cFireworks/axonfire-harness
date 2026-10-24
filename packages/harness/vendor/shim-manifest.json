@@ -1,0 +1,54 @@
+{
+  "source": "fixed WorkBuddy sample cli/vendor/shim",
+  "cliSha256": "4120898f1ded86ac545316721d216c827a325c2513a8fae4bcd8c8bbbf211afd",
+  "assets": [
+    {
+      "path": "safe-delete-bulk-guard.cjs",
+      "sha256": "3149fde230e75b186f7c047607b41122f8f879d76be525082c50d6d3bf54f7af",
+      "bytes": 16260,
+      "mode": 420
+    },
+    {
+      "path": "genie-safe-delete.cjs",
+      "sha256": "a842bc040e81a0bbcbf46339101f6e12d83c628b70087dc30fdd4cdd351924fc",
+      "bytes": 29009,
+      "mode": 420
+    },
+    {
+      "path": "sitecustomize.py",
+      "sha256": "518a6d62f53c74594b4cb2c9ae024d294be1796effbd447cf6d8634d77a65e33",
+      "bytes": 25078,
+      "mode": 420
+    },
+    {
+      "path": "safe-bin/rm",
+      "sha256": "4ae8e0e4b145680eb81d3bdc2b751e0a6bbf0126486c2de1c0b3a0468ac32c6f",
+      "bytes": 508,
+      "mode": 420
+    },
+    {
+      "path": "safe-bin/unlink",
+      "sha256": "d558f1d19a29bf8903cace7eb74248dc2ae1bbcf08bda388f22b757263c41aee",
+      "bytes": 544,
+      "mode": 420
+    },
+    {
+      "path": "safe-bin/rmdir",
+      "sha256": "6472a6a2606eac2d1709d827a0a572343b433f50ad6fe94b1e8aa9f8a3885d7e",
+      "bytes": 535,
+      "mode": 420
+    },
+    {
+      "path": "safe-bin/safe-delete-bash-env.sh",
+      "sha256": "78af5a2041c45c3f5ab8f75152c6536d2817ac68c38b05f5f629a0b1cb93cf74",
+      "bytes": 452,
+      "mode": 420
+    },
+    {
+      "path": "safe-bin/safe-delete-common.sh",
+      "sha256": "8e47074f86ca17d0d07af40382f45786eb610d8fb53a03fc1c7d7df0073a986e",
+      "bytes": 19583,
+      "mode": 420
+    }
+  ]
+}

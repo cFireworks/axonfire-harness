@@ -71,10 +71,10 @@ export async function createWebHost(options) {
   async function getRuntime() {
     runtimePromise ??= (options.createRuntime ?? createHarness)({
       ...options.harness,
-      approveTool: async (name, input, session) =>
+      approveTool: async (name, input, session, context) =>
         (await requestDecision(
           "approval",
-          { name, input },
+          { name, input, ...(context ? { context } : {}) },
           session.abortSignal,
         )) === true,
       askUserQuestion: (input, session) =>
@@ -120,6 +120,7 @@ export async function createWebHost(options) {
           name: "axonfire-harness",
           mode: options.demo ? "demo" : "live",
           configured: options.configured,
+          configurationMessage: options.configurationMessage,
           model: options.model ?? "product default",
           csrf,
           busy: Boolean(active),
@@ -226,6 +227,7 @@ export async function createWebHost(options) {
       if (!options.configured) {
         json(res, 503, {
           error:
+            options.configurationMessage ??
             "Set API key, base URL and model in .env; restart the server, or use npm run demo.",
         });
         return;
@@ -271,7 +273,7 @@ export async function createWebHost(options) {
         event(res, "session", { id: session.id });
         controller.signal.throwIfAborted();
         if (url.pathname === "/api/compact") {
-          await core.compact(session);
+          await core.compact(session, { signal: controller.signal });
           event(res, "done", { text: "Context compacted", compacted: true });
         } else {
           let streamed = false;

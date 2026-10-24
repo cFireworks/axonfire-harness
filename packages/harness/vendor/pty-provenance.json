@@ -1,0 +1,321 @@
+{
+  "version": "1.2.0-beta.14",
+  "platform": "darwin-arm64",
+  "sourceBundleSha256": "4120898f1ded86ac545316721d216c827a325c2513a8fae4bcd8c8bbbf211afd",
+  "assets": [
+    {
+      "path": "@lydell/node-pty/index.js",
+      "captured": {
+        "bytes": 2059,
+        "sha256": "4d9d98052d80c995aff7e064fe2c54ca88b3c1911abca89ba159a60b087fcedb"
+      },
+      "npm": {
+        "bytes": 2059,
+        "sha256": "4d9d98052d80c995aff7e064fe2c54ca88b3c1911abca89ba159a60b087fcedb"
+      },
+      "byteIdentical": true
+    },
+    {
+      "path": "@lydell/node-pty-darwin-arm64/lib/index.js",
+      "captured": {
+        "bytes": 1942,
+        "sha256": "17e79806518ab350cd7d729dcc94154c5d770ea03e38e53684c5a8618065f99c"
+      },
+      "npm": {
+        "bytes": 1942,
+        "sha256": "17e79806518ab350cd7d729dcc94154c5d770ea03e38e53684c5a8618065f99c"
+      },
+      "byteIdentical": true
+    },
+    {
+      "path": "@lydell/node-pty-darwin-arm64/prebuilds/darwin-arm64/pty.node",
+      "captured": {
+        "bytes": 105168,
+        "sha256": "b2ac6249b588d11fc15efc0a429930e1d868509a2804649e009482b3437ff4df"
+      },
+      "npm": {
+        "bytes": 86904,
+        "sha256": "72ea0c3d8bdaa7fdb850ab28d09caa900b653f6b3a6db3db243624c671047e37"
+      },
+      "byteIdentical": false,
+      "machOSections": {
+        "identical": true,
+        "captured": [
+          {
+            "segment": "__TEXT",
+            "name": "__text",
+            "length": 21024,
+            "flags": 2147484672,
+            "sha256": "6ed2406299fe186e7dd2399e6bc08edad353d925d62a3323cd0881e4399b9356"
+          },
+          {
+            "segment": "__TEXT",
+            "name": "__stubs",
+            "length": 1164,
+            "flags": 2147484680,
+            "sha256": "16ae7dd73c881436b621509cee5eb7edb3c11c81f0703137b0df9c7431dc521b"
+          },
+          {
+            "segment": "__TEXT",
+            "name": "__stub_helper",
+            "length": 1140,
+            "flags": 2147484672,
+            "sha256": "e2211f473d3a92b885f827ccfa782a5892dadf6d2604aa3152d1fe33e007310a"
+          },
+          {
+            "segment": "__TEXT",
+            "name": "__gcc_except_tab",
+            "length": 3016,
+            "flags": 0,
+            "sha256": "86b14c8422e3118e39b5963e23a60d721bbb4814e7b5cc9dfb32c2d5b7f85861"
+          },
+          {
+            "segment": "__TEXT",
+            "name": "__const",
+            "length": 185,
+            "flags": 0,
+            "sha256": "a5e06af17aa7d1f6352bf031d5c7a1d3f9bcbc3ff4ba0ac672d0932ee72e767f"
+          },
+          {
+            "segment": "__TEXT",
+            "name": "__cstring",
+            "length": 1315,
+            "flags": 2,
+            "sha256": "64f7b3283b13e5a02c43d354566c7c9f9033a2f900e40100d43ce1ea899cab44"
+          },
+          {
+            "segment": "__TEXT",
+            "name": "__unwind_info",
+            "length": 608,
+            "flags": 0,
+            "sha256": "de3c545933193f84d21ddb760a8ee7cfe7008fb46a93cced8a53612f25b647ff"
+          },
+          {
+            "segment": "__DATA_CONST",
+            "name": "__got",
+            "length": 104,
+            "flags": 6,
+            "sha256": "3fd03f0ee149b122c4eb7cc463fe5d66d6193bb3a6a6acaa42d72c04a3e0259d"
+          },
+          {
+            "segment": "__DATA_CONST",
+            "name": "__const",
+            "length": 336,
+            "flags": 0,
+            "sha256": "3ef8d50c03a2e0e8278e3c9b64160e2ce7f115b75fa4c5b9ab100c3a34dab23f"
+          },
+          {
+            "segment": "__DATA",
+            "name": "__la_symbol_ptr",
+            "length": 744,
+            "flags": 7,
+            "sha256": "aa611ea5faa31f3fc3b007f309f253a45723d7d5769c6def3e43f20c36e2d539"
+          },
+          {
+            "segment": "__DATA",
+            "name": "__data",
+            "length": 8,
+            "flags": 0,
+            "sha256": "af5570f5a1810b7af78caf4bc70a660f0df51e42baf91d4de5b2328de0e83dfc"
+          }
+        ],
+        "npm": [
+          {
+            "segment": "__TEXT",
+            "name": "__text",
+            "length": 21024,
+            "flags": 2147484672,
+            "sha256": "6ed2406299fe186e7dd2399e6bc08edad353d925d62a3323cd0881e4399b9356"
+          },
+          {
+            "segment": "__TEXT",
+            "name": "__stubs",
+            "length": 1164,
+            "flags": 2147484680,
+            "sha256": "16ae7dd73c881436b621509cee5eb7edb3c11c81f0703137b0df9c7431dc521b"
+          },
+          {
+            "segment": "__TEXT",
+            "name": "__stub_helper",
+            "length": 1140,
+            "flags": 2147484672,
+            "sha256": "e2211f473d3a92b885f827ccfa782a5892dadf6d2604aa3152d1fe33e007310a"
+          },
+          {
+            "segment": "__TEXT",
+            "name": "__gcc_except_tab",
+            "length": 3016,
+            "flags": 0,
+            "sha256": "86b14c8422e3118e39b5963e23a60d721bbb4814e7b5cc9dfb32c2d5b7f85861"
+          },
+          {
+            "segment": "__TEXT",
+            "name": "__const",
+            "length": 185,
+            "flags": 0,
+            "sha256": "a5e06af17aa7d1f6352bf031d5c7a1d3f9bcbc3ff4ba0ac672d0932ee72e767f"
+          },
+          {
+            "segment": "__TEXT",
+            "name": "__cstring",
+            "length": 1315,
+            "flags": 2,
+            "sha256": "64f7b3283b13e5a02c43d354566c7c9f9033a2f900e40100d43ce1ea899cab44"
+          },
+          {
+            "segment": "__TEXT",
+            "name": "__unwind_info",
+            "length": 608,
+            "flags": 0,
+            "sha256": "de3c545933193f84d21ddb760a8ee7cfe7008fb46a93cced8a53612f25b647ff"
+          },
+          {
+            "segment": "__DATA_CONST",
+            "name": "__got",
+            "length": 104,
+            "flags": 6,
+            "sha256": "3fd03f0ee149b122c4eb7cc463fe5d66d6193bb3a6a6acaa42d72c04a3e0259d"
+          },
+          {
+            "segment": "__DATA_CONST",
+            "name": "__const",
+            "length": 336,
+            "flags": 0,
+            "sha256": "3ef8d50c03a2e0e8278e3c9b64160e2ce7f115b75fa4c5b9ab100c3a34dab23f"
+          },
+          {
+            "segment": "__DATA",
+            "name": "__la_symbol_ptr",
+            "length": 744,
+            "flags": 7,
+            "sha256": "aa611ea5faa31f3fc3b007f309f253a45723d7d5769c6def3e43f20c36e2d539"
+          },
+          {
+            "segment": "__DATA",
+            "name": "__data",
+            "length": 8,
+            "flags": 0,
+            "sha256": "af5570f5a1810b7af78caf4bc70a660f0df51e42baf91d4de5b2328de0e83dfc"
+          }
+        ]
+      }
+    },
+    {
+      "path": "@lydell/node-pty-darwin-arm64/prebuilds/darwin-arm64/spawn-helper",
+      "captured": {
+        "bytes": 68752,
+        "sha256": "6da941e57903144c0f87294f309d65246054cf8050324ebfabd05f2f8594fdf0"
+      },
+      "npm": {
+        "bytes": 50480,
+        "sha256": "926dfd78b6a4967a40f1e2fe85f6978237096ecfd55735c29de1ad38bba34deb"
+      },
+      "byteIdentical": false,
+      "machOSections": {
+        "identical": true,
+        "captured": [
+          {
+            "segment": "__TEXT",
+            "name": "__text",
+            "length": 100,
+            "flags": 2147484672,
+            "sha256": "14fdcad90ffe38a269774ed8968bcd38548cc316444a01066f0a549f4712e835"
+          },
+          {
+            "segment": "__TEXT",
+            "name": "__stubs",
+            "length": 72,
+            "flags": 2147484680,
+            "sha256": "126989e416da98d5f4d6daf9199105707b99cb2f8555bb818f1dff6f0c9ed073"
+          },
+          {
+            "segment": "__TEXT",
+            "name": "__stub_helper",
+            "length": 96,
+            "flags": 2147484672,
+            "sha256": "f173685f0fb7d17b96edb6ca256c191ae7921d8577f207ae92a5eec0262c532e"
+          },
+          {
+            "segment": "__TEXT",
+            "name": "__unwind_info",
+            "length": 88,
+            "flags": 0,
+            "sha256": "614a12f04d6e44719dbf3944262b4a3714aac6c756f66719a641c86c2d57563d"
+          },
+          {
+            "segment": "__DATA_CONST",
+            "name": "__got",
+            "length": 8,
+            "flags": 6,
+            "sha256": "af5570f5a1810b7af78caf4bc70a660f0df51e42baf91d4de5b2328de0e83dfc"
+          },
+          {
+            "segment": "__DATA",
+            "name": "__la_symbol_ptr",
+            "length": 48,
+            "flags": 7,
+            "sha256": "1c24cef34f273604cf9ca705a536fcc685f442b39da3d1dffc5a6277261a432c"
+          },
+          {
+            "segment": "__DATA",
+            "name": "__data",
+            "length": 8,
+            "flags": 0,
+            "sha256": "af5570f5a1810b7af78caf4bc70a660f0df51e42baf91d4de5b2328de0e83dfc"
+          }
+        ],
+        "npm": [
+          {
+            "segment": "__TEXT",
+            "name": "__text",
+            "length": 100,
+            "flags": 2147484672,
+            "sha256": "14fdcad90ffe38a269774ed8968bcd38548cc316444a01066f0a549f4712e835"
+          },
+          {
+            "segment": "__TEXT",
+            "name": "__stubs",
+            "length": 72,
+            "flags": 2147484680,
+            "sha256": "126989e416da98d5f4d6daf9199105707b99cb2f8555bb818f1dff6f0c9ed073"
+          },
+          {
+            "segment": "__TEXT",
+            "name": "__stub_helper",
+            "length": 96,
+            "flags": 2147484672,
+            "sha256": "f173685f0fb7d17b96edb6ca256c191ae7921d8577f207ae92a5eec0262c532e"
+          },
+          {
+            "segment": "__TEXT",
+            "name": "__unwind_info",
+            "length": 88,
+            "flags": 0,
+            "sha256": "614a12f04d6e44719dbf3944262b4a3714aac6c756f66719a641c86c2d57563d"
+          },
+          {
+            "segment": "__DATA_CONST",
+            "name": "__got",
+            "length": 8,
+            "flags": 6,
+            "sha256": "af5570f5a1810b7af78caf4bc70a660f0df51e42baf91d4de5b2328de0e83dfc"
+          },
+          {
+            "segment": "__DATA",
+            "name": "__la_symbol_ptr",
+            "length": 48,
+            "flags": 7,
+            "sha256": "1c24cef34f273604cf9ca705a536fcc685f442b39da3d1dffc5a6277261a432c"
+          },
+          {
+            "segment": "__DATA",
+            "name": "__data",
+            "length": 8,
+            "flags": 0,
+            "sha256": "af5570f5a1810b7af78caf4bc70a660f0df51e42baf91d4de5b2328de0e83dfc"
+          }
+        ]
+      }
+    }
+  ]
+}

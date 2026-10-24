@@ -1,30 +1,29 @@
-# axonfire-harness
+# Axonfire Harness
 
-基于本机 WorkBuddy 5.3.14 样本、逐模块恢复的 Agent Harness。保留 OpenAI Agents SDK 依赖，并提供开箱即用的本地 CLI 与 Web 工作台。
+**An evidence-based reconstruction of the WorkBuddy agent harness, with a local CLI and Web workbench.**
 
-> 这是进行中的代码还原项目，不是官方 WorkBuddy，也不宣称已 100% 还原全部产品逻辑。Web UI 是新增的独立宿主，不是原版界面。已还原部分、证据和剩余边界见 [还原状态](docs/recovery-status.md)。
+Axonfire recovers modules from a fixed WorkBuddy **5.3.14** sample and connects them to runnable hosts. It retains the OpenAI Agents SDK and documents which behaviors come from recovered code, which require adapters, and which remain incomplete.
 
-原生 ACP [协议核心](docs/acp-protocol.md)、[标题/广播/usage 服务](docs/acp-services.md)与[连接/修改版协议 SDK](docs/acp-connections.md)已逐模块恢复。完整原生 [Agent/View 循环](docs/acp-view-host.md)可显式接入已有 SDK 会话，以单一审批归属完成真实 Write/拒绝/Defer、续轮、队列与关闭，不靠 bypassPermissions。
+[Quick start](#quick-start) · [CLI](#cli) · [Architecture](#architecture) · [Recovery status](#recovery-status) · [Documentation](#documentation)
 
-内部会话入口见[入口说明](docs/session-ingress.md)；完整 CLI Manager/Store/取消草稿见[原生会话栈](docs/native-session-stack.md)；完整 AgentService、31 个本地 interceptor 及历史/消息/输入工具链见[原生执行链](docs/native-agent-run.md)。CLI/Web 的 Runner 决策已委托完整原类，见[Runner 创建链](docs/native-runner.md)。[原 HTTP/MVC/CLS](docs/native-http.md)与[原认证核心](docs/native-authentication.md)已恢复；[原 ACP 新会话交接](docs/acp-parent-rendezvous.md)现经真实 ACP/内部 HTTP、原 AcpView/setSession 和完整 InterruptionService 打通真实 SDK Read、续轮、同连接新会话切换及 Write 批准/拒绝/取消/会话 Always Allow，不靠手动 resolve、JSON 测试 view 或 bypassPermissions。生产认证/账户库、完整默认父启动入口及进程级恢复仍待接线；模型 key 不算产品账户。OpenAI SDK 保留原依赖。
+> This is an independent, ongoing reconstruction—not an official WorkBuddy release or a claim of complete recovery. The Web workbench is a new host, not the original product UI. Recovered material does not imply an open-source license grant; see [usage and licensing](#usage-and-licensing).
 
-[原历史回放与父恢复](docs/acp-replay-recovery.md)已恢复完整16函数模块，并验证新服务图从磁盘 load/resume/continue、内部HTTP fork后由ACP load接入、源会话JSONL/meta不被分支续跑改写。保留本版原ACP不实现session/fork、冷恢复权限模式回default等实际行为，不虚构兼容接口。
+![Axonfire local workbench](docs/images/web-demo.png)
 
-[公开父 HTTP 装配](docs/native-agent-http-host.md)已从测试 helper 移入运行时：真实监听、原 MVC/CLS/路由、内部 REST 传输和启动/关闭回收均可复用，已有原 ACP 父链与恢复测试已改接。它借用完整父服务，不等于默认 CLI/Web 已切换到完整原产品 bootstrap。
+## What you can do
 
-[公开原生会话栈装配](docs/native-session-stack-host.md)进一步接入完整原Factory/Manager/Store/Ingress/Controller，统一拥有会话Subject、写盘、RX和调度；原父链/冷恢复已改用此运行时。create不隐式激活/保存，关闭不删除或追加历史。完整AgentService/认证/配置的默认父装配仍在推进。
+- **Run locally:** use the interactive CLI, a single-prompt CLI invocation, or a browser workbench with streaming responses.
+- **Work with tools:** approve tool calls, cancel runs, resume history, compact context, and answer agent questions through the local hosts.
+- **Bring a model endpoint:** configure an OpenAI-compatible Chat Completions service using your own credentials.
+- **Load trusted extensions:** use local plugins, configured marketplaces, scoped settings, hooks, and explicit built-in resource directories.
+- **Inspect the reconstruction:** trace recovered modules through source comparisons, behavioral checks, runtime smoke tests, and documented boundaries.
+- **Embed native services:** compose recovered session, AgentService/Runner, authentication, HTTP, and ACP services through explicit runtime hosts. Authenticated ACP and original CLI model/tool conversations are tested end to end against a local model server.
 
-[公开原 AgentService/Runner 装配](docs/native-agent-run-host.md)已提供原Service、interceptor与Factory/Provider/loop的实例创建及资源收尾；原ACP父链和SDK验证已改接。Provider缓存及SDK对象身份保留，被动跟踪主run和新建专用Runner的一次性完成，不额外消费stream。默认认证/配置/全部服务图和CLI父入口仍待继续接线。
+The default CLI and live Web use the native product graph with the recovered product configurations and prompts staged during the build. The standalone workbench and offline demo retain their separate host boundary. See [recovery status](docs/recovery-status.md) before relying on a particular product behavior.
 
-[公开原认证装配](docs/native-authentication-host.md)已把原Manager/Storage/Provider/HTTP interceptor创建和回收迁入运行时，父链验证已改接，并验证真实Product配置合并→custom-token restore。保留原初始化失败屏障、优先级和超时语义，不读取安装账户、不等同生产登录或完整默认bootstrap。
+## Quick start
 
-[公开原 ACP 协议组件装配](docs/native-acp-protocol-host.md)现提供完整原Agent/View/ToolInterceptor及core factories的运行时创建、Deferred/iterator/订阅与调度回收，原父链和恢复验证已改接。保留真实调用者signal、原ACK/终端超时和单一交接归属；协议传输、后台终端与完整默认父图仍有明确外部边界。
-
-[完整原 AskService / PlanStorage](docs/native-interaction-services.md) 已替换公开兼容入口的行为重写；原 ACP 父链现通过真实扩展 RPC 跑通问答、跳过、取消与计划批准/拒绝/退出，参考侧也使用原类验证。完整默认产品启动链与全部配置/并发分支仍在推进。
-
-## 快速开始
-
-需要 Node.js **22.19+** 和 npm。无需安装原版应用。
+Requires **Node.js 22.19+** and npm. An installed copy of WorkBuddy is not required to build or run the local hosts. The captured native binary assets target **macOS arm64**; full native tool support on other platforms remains unverified.
 
 ```sh
 git clone https://github.com/cFireworks/axonfire-harness.git
@@ -34,90 +33,203 @@ npm run build
 npm run demo
 ```
 
-打开 **http://127.0.0.1:3080**。离线演示无需密钥：经过真实 SDK 与还原 harness，但使用固定模型回复，不访问远端或执行工具。
+Open **http://127.0.0.1:3080**. The offline demo runs through the real SDK and reconstructed harness with fixed model responses. It needs no API key, makes no remote model calls, and executes no tools.
 
-使用自己的模型：
+To use your own model endpoint, create a [native product configuration](docs/native-product-runtime.md) and set its path:
 
 ```sh
 cp .env.example .env
-# 编辑 .env，填写 OPENAI_API_KEY、OPENAI_BASE_URL、CODEBUDDY_MODEL
+# Set AXONFIRE_NATIVE_PRODUCT_CONFIG to your private product JSON path.
 npm start
 ```
 
-模型接口为 **OpenAI-compatible Chat Completions**，必须显式配置地址。不会读取已安装 WorkBuddy 的账户、令牌或聊天记录。密钥只在本地服务端使用，不发送给浏览器。不要把 `.env` 提交到仓库。
+| Setting | Purpose |
+| --- | --- |
+| `AXONFIRE_NATIVE_PRODUCT_CONFIG` | Private product JSON overriding authentication and model endpoint; retains original agents by default |
+| `CODEBUDDY_MODEL` | Optional original model selection override |
+| `AXONFIRE_PORT` | Local Web port; defaults to `3080` |
+| `AXONFIRE_WORK_DIR` | Tool workspace; defaults to the launch directory |
+| `AXONFIRE_STATE_DIR` | Optional custom state directory |
 
-CLI 使用同一核心：
+Credentials stay on the local server and are not sent to the browser. Default state is separate from an installed WorkBuddy; explicitly supplied product and settings configuration is honored. Keep `.env` out of version control.
+
+For configuration and troubleshooting, see [Getting started](docs/getting-started.md).
+
+## CLI
+
+The default CLI runs the recovered product service graph, including its original CLI, authentication, AgentService/Runner, tools, HTTP server and ACP routes:
 
 ```sh
 npm run cli -- --help
-npm run cli -- --cwd /absolute/path/to/project
-npm run cli -- -p "了解这个项目" --cwd /absolute/path/to/project
-# 非交互模式只允许明确批准的工具，例如：
-npm run cli -- -p "读取 README.md" --allow-tools Read --cwd /absolute/path/to/project
-# 显式加载可信本地插件；可重复 --plugin-dir
-npm run cli -- --plugin-dir /absolute/path/to/plugin --cwd /absolute/path/to/project
-# Web 同样支持该参数：npm start -- --plugin-dir /absolute/path/to/plugin
-# CLI / Web 共用原设置加载器，none 排除磁盘作用域但仍应用 CLI JSON：
-npm run cli -- -p "你好" --setting-sources none --settings '{"reasoningEffort":"high"}'
-# Web：npm start -- --setting-sources user,project,local --effort high
-# 可选：使用自己有权使用的可信资源根目录（包含 plugins/workbuddy-builtin）
-npm run cli -- --builtin-assets /absolute/path/to/resources --cwd /absolute/path/to/project
-# Web 同样支持：npm start -- --builtin-assets /absolute/path/to/resources
+AXONFIRE_NATIVE_PRODUCT_CONFIG=/absolute/path/to/private-product.json npm run cli -- -p "Read README.md" --allowedTools Read
+AXONFIRE_NATIVE_PRODUCT_CONFIG=/absolute/path/to/private-product.json npm run cli -- --serve
 ```
 
-Web 工具调用逐次审批，支持流式回复、历史恢复、取消、上下文压缩和 Agent 问答。会话默认保存在工作目录的 `.axonfire/`；CLI 兼容原 standalone 宿主的 `.workbuddy-harness/`。这些目录均被 Git 忽略。
+See [native runtime configuration](docs/native-product-runtime.md) for the product JSON format and verification boundaries. This entrypoint uses original CLI options and defaults to separate state under `~/.axonfire/native`. `npm run native` is an alias for the same native entry. In unattended text-input print mode, sandbox approvals use a short original timeout instead of waiting for an unavailable UI; explicit `CBC_SANDBOX_APPROVAL_TIMEOUT_MS` overrides it. Live Web uses the same native graph through an owned ACP process.
 
-## 仓库结构
+## Workbench CLI
 
-借鉴 [deepseek-harness](https://github.com/deepseek-ai/deepseek-harness) 的应用 / 核心包 / 文档分层；不引入其插件框架、不替换已还原逻辑。
+The previous standalone CLI and Web host remain available as `npm run workbench` and `npm run web:workbench`. They accept `OPENAI_API_KEY`, `OPENAI_BASE_URL` and `CODEBUDDY_MODEL` for their model adapter:
+
+```sh
+# Discover available options.
+npm run workbench -- --help
+
+# Start an interactive session in a project.
+npm run workbench -- --cwd /absolute/path/to/project
+
+# Run a single prompt.
+npm run workbench -- -p "Explain this project" --cwd /absolute/path/to/project
+
+# Explicitly allow a tool in non-interactive mode.
+npm run workbench -- -p "Read README.md" --allow-tools Read --cwd /absolute/path/to/project
+```
+
+Local plugin and settings options are shared with the Web launcher:
+
+```sh
+# Load a trusted local plugin; --plugin-dir can be repeated.
+npm run workbench -- --plugin-dir /absolute/path/to/plugin --cwd /absolute/path/to/project
+npm run web:workbench -- --plugin-dir /absolute/path/to/plugin
+
+# Exclude disk scopes from the merged settings view; still apply CLI JSON.
+npm run workbench -- -p "Hello" --setting-sources none --settings '{"reasoningEffort":"high"}'
+npm run web:workbench -- --setting-sources user,project,local --effort high
+
+# Optionally load a trusted resource root containing plugins/workbuddy-builtin.
+npm run workbench -- --builtin-assets /absolute/path/to/resources
+npm run web:workbench -- --builtin-assets /absolute/path/to/resources
+```
+
+Use `/reload-plugins` in the workbench CLI or Web workbench to refresh plugins locally; this command is not sent to the model. Web sessions default to the workspace's `.axonfire/` directory. The workbench CLI retains the standalone host's `.workbuddy-harness/` directory. Both are ignored by Git.
+
+## Architecture
+
+The repository separates runnable applications, the recovered core, and verification tooling without splitting tightly coupled recovered modules into artificial packages.
 
 ```text
 apps/
-  cli/                   axonfire 启动器：CLI / Web
-  web/                   本地 HTTP + SSE 宿主、静态工作台、宿主测试
+  cli/                   CLI and Web launcher
+  web/                   Local HTTP/SSE host, browser UI, host tests
 packages/
   harness/
-    src/                 还原核心及明确标记的 standalone adapters
-    config/              固定样本配置与原始 prompt
-    test/                核心回归测试
-    scripts/             配置校验 / 原样本 AST 与行为差分
-docs/                    还原报告、历史批次、使用与架构边界
-scripts/                 仓库级验证入口
+    src/                 Recovered modules and marked standalone adapters
+    config/              Fixed-sample configuration and original prompts
+    test/                Core regression tests
+    scripts/             Configuration, AST, and behavioral verification
+scripts/                 Repository-level verification entry points
+docs/                    Evidence, architecture, usage, and recovery reports
 ```
 
-没有把核心拆成大量空包；原模块之间的相对路径、配置读取和依赖版本保持稳定。SDK 版本固定为 `@openai/agents* 0.5.2`、`openai 6.25.0`，不重新实现 SDK。
+The dependency baseline retains `@openai/agents* 0.5.2` and `openai 6.25.0`; Axonfire does not reimplement the SDK. Recovered module paths, configuration access, and dependency versions are preserved where required for behavioral fidelity. The native MCP integration separately pins `@modelcontextprotocol/sdk 1.24.3`.
 
-## 验证
+See [Architecture and host boundaries](docs/architecture.md) for the distinction between standalone adapters and native service composition.
+
+## Recovery status
+
+The runnable local hosts are available today. Original entry/bootstrap, CLI and live Web paths now run through the recovered graph; full product parity remains incomplete. The [recovery ledger](docs/recovery-status.md) is the authoritative record of evidence, verification results, and remaining work.
+
+| Area | Current scope |
+| --- | --- |
+| Sandbox services | Original IPC/process lifecycle, Bash configuration, rule synchronization, Shell service with Pipe/PTY handles and headless terminal, safe-delete helpers and shipped shim assets, security audit, backend routing, and finalization/session-end hooks. Source comparisons, a captured macOS arm64 sandbox, and native CLI/ACP/Web tests verify file denial and escalation. Bash/Node/Python shims are tested against the actual Trash; network/projection and broader OS enforcement remain unverified. |
+| Native startup | Original entry and DI bootstrap activate the recovered service graph; default CLI and Web exercise authentication, model/tool execution and original HTTP/ACP. A real PTY test also covers interactive folder trust, conversation history, Read approval/rejection and keyboard exit. |
+| Shared dependencies | Product-level lookup reaches recovered DI, Express, Backend namespace, CLS and source-map factories through their existing loaders. Request-context hooks are initialized on demand and released by the owning host. |
+| Execution | Recovered AgentService, 32 local interceptor classes, the complete 31-entry default interceptor registry (including Worktree), original component providers, and Runner creation/provider/loop; explicit runtime assembly is available. |
+| Sessions | Recovered Factory/Manager/Store/Ingress/Controller, cancellation drafts, disk persistence, replay, and parent recovery. |
+| ACP | Recovered protocol core, Agent/View loop, connections, services, and modified protocol SDK; explicit protocol and connection hosts support composition. |
+| Parent handoff | Real ACP/internal HTTP paths exercise SDK reads, continuation, same-connection session changes, and write approval/denial/cancellation/session-level allow. |
+| Recovery | Fresh service graphs load, resume, and continue disk sessions; internal HTTP forks can be attached through ACP without rewriting the source history. |
+| Interaction | Original AskService and PlanStorage support question, skip/cancel, and plan approval/denial/exit through the ACP parent path. |
+| Configuration and plugins | Product/environment providers, scoped settings, policy, local and marketplace plugins, persistence, installers and reload are recovered. Native builds stage the original product resources; explicit built-in seed directories remain a standalone-workbench feature. |
+| Prompts | 115 fixed product prompts, 22 Desktop text assets, resource collectors, UserPromptService sections, and explicit Addon/ACP prompt composition are tracked and verified. |
+| Authentication and permissions | Explicit original authentication assembly and native permission/approval/MCP paths are available; default CLI and live Web use original permission decisions; the browser presents ACP permission/question requests. |
+
+Remaining work includes broader native tool/protocol coverage, cross-platform binaries and Desktop-managed resource deployment, production account/login integration, daemon/Electron lifecycle, automatic mode restart, process-level recovery, the real Auto classifier, and additional configuration/concurrency branches. A model API key is not a product account. The verified native flows do not establish full product parity.
+
+Original limitations are documented rather than hidden: for example, this sample's ACP does not implement `session/fork`, and cold recovery resets permission mode to `default`.
+
+## Verification
 
 ```sh
-npm run check
-npm test
-npm run smoke:runtime
-npm run smoke:launchers
-npm run verify:config
-# 可选：需要固定 SHA 的 CLI bundle 与 Desktop main 目录，不随仓库分发
-npm run verify:recovery -- /absolute/path/to/codebuddy.js
-# main 不在原 app 布局时设置 WORKBUDDY_DESKTOP_MAIN=/absolute/path/main/index.js
-# 会话Addon额外样本可用 WORKBUDDY_DESKTOP_INITIALIZE、WORKBUDDY_MODE_COORDINATOR 指定
+npm run check             # Type and JavaScript syntax checks
+npm run build             # Compile the harness
+npm test                  # Core and host regression tests
+npm run smoke:runtime     # Runtime and native-service smoke suites
+npm run smoke:launchers   # CLI/Web launcher checks
+npm run verify:config     # Fixed configuration and prompt verification
 ```
 
-最新验证数据见 [还原状态](docs/recovery-status.md)末尾。原 ProductManager 默认驱动配置合并、动态 provider 与 Agent/命令刷新；原文件/模型 providers、企业策略、PluginManager 的本地插件加载与跨服务刷新现已接入。本地/Git/HTTP/ZIP 市场、配置持久化/修复、更新检查与文件锁已接入；真实 SDK 从远端 ZIP 安装到版本缓存并重启恢复 Agent/命令通过自有服务验证。CLI/Web 可直接执行 `/reload-plugins`，本地命令不发送给模型。独立 Git/npm/subdir 安装器、原插件选项存储与错误收集也已接入。原磁盘 SettingsManager、CLI 设置/作用域加载队列和 PluginPolicy 现为默认路径，支持插件启停/卸载持久化、JSONC 与 ConfigChange Hook；内置资源物化、七级资源解析、PluginController/Validator 和 seed 元数据交接现已接入显式可信资源目录。资源包内的第三方程序不随仓库分发，Cloud product 的账户门槛、用户缓存、退避重试及配置合并现已默认接入，HTTP/认证仍需显式 adapter，不读取原应用账户。会话 Addon/mode 核心及每会话独立后端现有嵌入接口；原资源PromptService、九collector与22份Desktop模板/风格文本现已移植并接入Addon变量/CLI语言；完整UserPromptService与17个section已提供独立ACP组合宿主；Addon新增显式promptAcp入口，已接原meta/首轮核心及ACP→SDK转换；完整SessionManager/RPC/回放控制、daemon/Electron bootstrap与自动模式重启仍待恢复。完整权限服务和原审批控制器通过 `nativePermissions`、`nativeApprovals` 显式使用；`sdkControl` 或 `nativeMcp` 默认启用这两条 native 路径及原生 MCP 宿主。权限/MCP/SDK 设置消费者现已按原 scope 接回 SettingsManager；权限规则与 MCP 批准可重启恢复，SDK 模型选择仍为进程内 CLI 状态；CLI/Web 默认仍保留兼容审批宿主，原环境切换、环境JSON/endpoint providers现已默认接入；真实 Auto classifier、完整登录/鉴权和其余bootstrap仍待恢复。配置中的115个原始product prompt和固定哈希不变；新增22份Desktop文本独立逐字节校验。详细边界见 [还原状态](docs/recovery-status.md)，配置与启动验证见 [使用说明](docs/getting-started.md)。
+Host tests run with two workers to limit concurrent native processes. Captured-binary tests run on macOS arm64; the Python trash subtest also requires `python3` and explicitly skips when it is unavailable.
 
-本地工作台演示：
+Source-level recovery verification additionally needs the matching sample, which is not distributed with this repository:
 
-![Axonfire 本地演示](docs/images/web-demo.png)
+```sh
+npm run verify:recovery -- /absolute/path/to/codebuddy.js
+```
 
-## 范围与安全
+When the Desktop main bundle is outside its original application layout, set `WORKBUDDY_DESKTOP_MAIN=/absolute/path/to/main/index.js`. Additional session Addon samples can be supplied with `WORKBUDDY_DESKTOP_INITIALIZE` and `WORKBUDDY_MODE_COORDINATOR`. Verification expects the documented fixed hashes; see the [reconstruction guide](docs/reconstruction.md) and [latest recovery results](docs/recovery-status.md).
 
-这是有本地文件 / Shell 能力的开发工具，**审批不是操作系统沙箱**。只在可信工作目录运行；不要审批不了解的命令。Web 固定监听 `127.0.0.1`，检查 Host、Origin 和 CSRF token，不提供公网部署、多用户认证或远程访问。不要直接通过反向代理暴露。
+## Documentation
 
-只加载可信插件和设置：插件或作用域配置可以包含自动执行的 Hook；Hook 命令不等同于逐次模型工具审批。默认不扫描已安装 WorkBuddy 的插件或账号；默认内置市场为空，仅根据你显式配置的市场/启用标志/策略安装插件。`--setting-sources none` 排除合并视图中的磁盘 scope，但原权限/MCP显式分 scope 查询仍可能读取磁盘；它不是禁止所有读写的沙箱，也不排除显式 CLI 设置/插件。
+| Guide | Contents |
+| --- | --- |
+| [Getting started](docs/getting-started.md) | Setup, configuration, and troubleshooting |
+| [Architecture](docs/architecture.md) | Core, hosts, adapters, and integration boundaries |
+| [Recovery ledger](docs/recovery-status.md) | Module coverage, evidence, verification, and remaining gaps |
+| [Reconstruction guide](docs/reconstruction.md) | Recovery methodology and historical work; use current repository paths for commands |
 
-仓库不包含安装包、完整原始 bundle、个人凭据和运行记录。配置/还原片段来自分析样本；不能据此认定其全部拥有可重新授权的开源许可证。仅在你有权使用的范围内研究、验证和使用，保留依赖自身的许可证与通知。
+<details>
+<summary>Native runtime and protocol references</summary>
 
-锁定依赖当前有 **17 项 npm audit 告警**（10 中危、7 高危），未做改变还原行为的强制升级。本批按样本新增的 `yauzl 3.2.0` 带有 [NTFS 时间戳解析告警](https://github.com/advisories/GHSA-gmq8-994r-jv83)；只加载可信市场/归档，不能把本项目当作安全解包服务。原生 MCP 独立依赖固定为 `@modelcontextprotocol/sdk 1.24.3`，不替换 OpenAI SDK 自身的传递依赖。
+| Area | References |
+| --- | --- |
+| ACP protocol | [Protocol core](docs/acp-protocol.md) · [Services](docs/acp-services.md) · [Connections and modified SDK](docs/acp-connections.md) · [Agent/View loop](docs/acp-view-host.md) |
+| ACP runtime assembly | [Protocol host](docs/native-acp-protocol-host.md) · [Connections host](docs/native-acp-connections-host.md) |
+| Parent and recovery | [Parent rendezvous](docs/acp-parent-rendezvous.md) · [Replay and recovery](docs/acp-replay-recovery.md) |
+| Sessions | [Ingress](docs/session-ingress.md) · [Native session stack](docs/native-session-stack.md) · [Session stack host](docs/native-session-stack-host.md) |
+| Sandbox services | [Process, IPC and lifecycle](docs/native-sandbox-cli.md) |
+| Process exit | [Metrics aggregation, signals and shutdown order](docs/native-process-lifecycle.md) |
+| Tracing | [Trace service, providers, spans and telemetry configuration](docs/native-tracing.md) |
+| Native application | [DI container, decorators and backend lifecycle](docs/native-di.md) · [Backend namespace](docs/native-backend-namespace.md) |
+| Native Web | [ACP transport, permissions and native session recovery](docs/native-web-runtime.md) |
+| Native product runtime | [Original entry, CLI, HTTP and ACP model/tool execution](docs/native-product-runtime.md) |
+| Native product modules | [Full factory closure and isolated product registration](docs/native-product-modules.md) |
+| Native prompt services | [Product templates, evaluation and Nunjucks rendering](docs/native-prompt-services.md) |
+| Native code ratio | [Code adoption reporting and Git/SVN helpers](docs/native-code-ratio-services.md) |
+| Native Node logging | [FileLogger, file storage and archives](docs/native-node-logging.md) |
+| Native event services | [Reporting, processors and header batches](docs/native-event-services.md) |
+| Native Winston | [Logger rebinding and original initialization](docs/native-winston-services.md) |
+| Native product configuration | [Providers, merging and endpoint routing](docs/native-product-config-services.md) |
+| Native filesystem | [memfs, disk rebinding and Workspace](docs/native-filesystem-services.md) |
+| Native context variables | [Resolver registration and manager semantics](docs/native-context-variable-services.md) |
+| Native Node services | [Paths, COS SDK and proxy/PAC](docs/native-node-services.md) |
+| Native common services | [Headers, utilities and memory lifecycle](docs/native-common-services.md) |
+| Native HTTP server | [Captured Express](docs/native-express.md) · [Decorated HTTP components](docs/native-http-components.md) · [MVC controllers](docs/native-http-controller.md) · [Shared bootstrap foundation](docs/native-backend-foundation.md) · [Original server entrypoint](docs/native-backend-server.md) |
+| Native bootstrap | [Loading order](docs/native-container-bootstrap.md) · [Source maps](docs/native-source-map-support.md) · [Async product registration](docs/native-product-registration.md) |
+| Galileo services | [Service lifecycle](docs/native-galileo-service.md) · [Real SDK binding](docs/native-galileo-service-module.md) · [HTTPS proxy agent](docs/native-https-proxy-agent.md) · [Trace/log exporters](docs/native-galileo-exporters.md) · [Metric exporter](docs/native-galileo-metric-exporter.md) |
+| Telemetry providers | [MeterProvider](docs/native-meter-provider.md) · [Readers](docs/native-metric-reader.md) · [LoggerProvider](docs/native-logger-provider.md) · [TracerProvider](docs/native-basic-tracer.md) |
+| Galileo SDK host | [Public composition, lifecycle and ownership](docs/native-galileo-sdk-host.md) |
+| Galileo initialization | [Product routing policy](docs/native-galileo-config-resolver.md) · [Setup and validation](docs/native-galileo-setup.md) · [Remote configuration](docs/native-galileo-config.md) |
+| Galileo instrumentation | [Native Fetch](docs/native-galileo-fetch.md) · [Node HTTP and SDK integration](docs/native-galileo-http-instrumentation.md) |
+| Galileo assembly | [Logger](docs/native-galileo-logger.md) · [Self-monitor](docs/native-galileo-self-monitor.md) · [Business metrics](docs/native-galileo-meters.md) · [Sampling and batching](docs/native-galileo-trace.md) |
+| Telemetry context | [Resource](docs/native-otel-resource.md) · [Export context](docs/native-export-context.md) · [Environment](docs/native-otel-environment.md) |
+| Telemetry transport | [HTTP and KMS](docs/native-galileo-transport.md) · [OTLP serializers](docs/native-otlp-serializers.md) · [Export lifecycle](docs/native-otlp-export.md) · [HTTP configuration](docs/native-otlp-http.md) |
+| Local shell | [Unified Shell composition, real PTY, snapshots and ownership](docs/native-local-shell.md) |
+| Shell IO | [Encoding, charset detection and executable lookup](docs/native-shell-io.md) |
+| Native startup | Original entry and DI bootstrap activate the recovered service graph; default CLI and Web exercise authentication, model/tool execution and original HTTP/ACP. A real PTY test also covers interactive folder trust, conversation history, Read approval/rejection and keyboard exit. |
+| Execution | [Agent execution chain](docs/native-agent-run.md) · [Runner creation](docs/native-runner.md) · [AgentService/Runner host](docs/native-agent-run-host.md) · [Default interceptor assembly](docs/native-agent-interceptors-host.md) |
+| HTTP | [HTTP/MVC/CLS](docs/native-http.md) · [Parent HTTP host](docs/native-agent-http-host.md) |
+| Authentication | [Authentication core](docs/native-authentication.md) · [Authentication host](docs/native-authentication-host.md) |
+| Interaction | [AskService and PlanStorage](docs/native-interaction-services.md) |
 
-- [启动说明与故障排查](docs/getting-started.md)
-- [核心还原详细说明（历史命令以新目录为准）](docs/reconstruction.md)
-- [逐模块还原状态与未恢复边界](docs/recovery-status.md)
-- [架构与宿主边界](docs/architecture.md)
+</details>
+
+## Usage and licensing
+
+This is a development tool with local file and shell access. **Tool approval is not an operating-system sandbox.** Run it in trusted workspaces and review commands before approving them. The Web host binds to `127.0.0.1` and checks Host, Origin, and CSRF tokens; it does not provide public deployment, multi-user authentication, or remote access. Do not expose it directly through a reverse proxy.
+
+Load only trusted plugins, settings, markets, and archives. Plugin and scoped configuration hooks can execute automatically and are distinct from per-call model tool approval. `--setting-sources none` removes disk scopes from the merged settings view, but explicit native permission/MCP scope queries can still read disk settings; it is not a filesystem sandbox. The default built-in marketplace is empty, and installation follows explicitly configured markets, enablement flags, and policy.
+
+Pinned dependencies have known security advisories. Run `npm audit` for the current report; forced upgrades have not been applied where they would change the reconstruction baseline. Treat archive installation as a trusted-input operation, not a secure unpacking service.
+
+The repository excludes application installers, complete original bundles, personal credentials, and runtime records. Recovered configuration and code fragments come from the analyzed sample; their presence does not establish a right to relicense them. Research, verify, and use this project only within rights you hold, and retain dependency licenses and notices. Third-party programs from external resource packs are not redistributed here.

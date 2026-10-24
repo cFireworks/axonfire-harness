@@ -4,6 +4,8 @@ import { jsonrepair } from "jsonrepair";
 import { createNativeAgentRun } from "./native-agent-run.js";
 import { createNativeAgentRunUtilities } from "./native-agent-run-utilities.js";
 import { createNativeRunner } from "../runner/native-runner.js";
+import { createNativeComponentProviders } from "../di/native-component-providers.js";
+import { createNativeWorktreeContext } from "./native-worktree-context.js";
 
 export interface NativeParentRunnerOptions {
   modelProvider: any;
@@ -27,13 +29,16 @@ export interface NativeAgentRunHostOptions {
     sessionManager: any;
     stateMachine: any;
     agentManager: any;
-    agentRunInterceptorProvider: any;
+    agentRunInterceptorProvider?: any;
     pluginRuntimeRefreshService: any;
   };
   /** Construct and attach original Factory/Provider/loop immediately when available. */
   runner?: NativeParentRunnerOptions;
   sourceFactory?: typeof createNativeAgentRun;
   utilitiesFactory?: typeof createNativeAgentRunUtilities;
+  /** Optional original container-based provider instead of a borrowed provider. */
+  interceptorContainer?: any;
+  providerFactory?: typeof createNativeComponentProviders;
 }
 
 /** Explicit public parent assembly, not original product bootstrap. The unchanged
@@ -49,6 +54,20 @@ export function createNativeAgentRunHost(options: NativeAgentRunHostOptions) {
   if (!options.dependencies.runnerProvider && !options.runner)
     throw Error(
       "Native agent run host requires a runner provider or runner assembly",
+    );
+  if (
+    !options.dependencies.agentRunInterceptorProvider &&
+    !options.interceptorContainer
+  )
+    throw Error(
+      "Native agent run host requires an interceptor provider or container",
+    );
+  if (
+    options.interceptorContainer &&
+    !options.runtime.modules?.[63517]?.ComponentFilterRegistry
+  )
+    throw Error(
+      "Container-based interception requires the parent module 63517 token namespace",
     );
   const admission = new AsyncLocalStorage<boolean>(),
     pending = new Set<Promise<any>>(),
@@ -174,7 +193,26 @@ export function createNativeAgentRunHost(options: NativeAgentRunHostOptions) {
   // of OpenAI SDK. Its module 25301 defaults to the pinned npm dependency above.
   const originalSdk = utilities.getModule(18553);
   modules[18553] = originalSdk;
-  const native: any = (options.sourceFactory ?? createNativeAgentRun)({
+  let native: any;
+  if (!modules[59233]) {
+    // The original namespace loads before local interceptor declarations. Its
+    // priority/utilities are only read on construction/use, after native is ready.
+    modules[59233] = {
+      WorktreeContextInterceptor: createNativeWorktreeContext({
+        getModule: (id: number) =>
+          new Proxy(
+            {},
+            {
+              get: (_target, key) =>
+                (id === 69466
+                  ? native.getModule(id)
+                  : (modules[id] ?? utilities.getModule(id)))[key],
+            },
+          ),
+      }),
+    };
+  }
+  native = (options.sourceFactory ?? createNativeAgentRun)({
     ...ownedRuntime,
     getModule: utilities.getModule,
   });
@@ -249,6 +287,15 @@ export function createNativeAgentRunHost(options: NativeAgentRunHostOptions) {
     key === "sessionManager" ? sessionManager(value) : value,
   );
   Object.assign(service, options.dependencies);
+  if (options.interceptorContainer) {
+    const providers = (
+      options.providerFactory ?? createNativeComponentProviders
+    )({ modules: { 63517: modules[63517] } });
+    service.agentRunInterceptorProvider = new providers.ContainerBasedProvider(
+      native.getModule(69466).AgentRunInterceptor,
+      options.interceptorContainer,
+    );
+  }
   function createInterceptor(name: string, dependencies: Record<string, any>) {
     assertAdmission();
     const Constructor = native.interceptorClasses[name];

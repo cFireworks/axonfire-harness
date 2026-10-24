@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createNativePluginSemver } from "../../src/plugins/native-plugin-semver.js";
 import { EventEmitter } from "node:events";
 import { nativeHttpFixture } from "./native-http-fixture.js";
 import { createNativeHttpRuntime } from "../../src/http/native-http-runtime.js";
@@ -35,6 +36,33 @@ function deferred() {
   return { promise, resolve };
 }
 export const NATIVE_HTTP_CASES: Scenario[] = [
+  {
+    name: "original CLS selector retains Node 8 boundary, lazy loading and export identity",
+    async run(factory = createNativeHttpRuntime) {
+      const results = [];
+      for (const version of ["6.17.1", "7.10.1", "8.0.0-rc.1", "8.0.0", "22.19.0", process.versions.node]) {
+        const loaded: number[] = [];
+        const legacy = { branch: "legacy" }, modern = { branch: "modern" };
+        const modules = {
+          94377: createNativePluginSemver(),
+          get 10066() { loaded.push(10066); return legacy; },
+          get 63192() { loaded.push(63192); return modern; },
+        };
+        const runtime: any = factory({ process: { versions: { node: version } }, modules });
+        assert.deepEqual(loaded, []);
+        const expected = ["6.17.1", "7.10.1", "8.0.0-rc.1"].includes(version) ? legacy : modern;
+        const selected: any = runtime.getModule(61987);
+        assert.equal(selected, expected);
+        assert.equal(runtime.cls, selected);
+        assert.equal(runtime.getModule(61987), selected);
+        assert.ok(loaded.length > 0);
+        assert.ok(loaded.every(id => id === (expected === modern ? 63192 : 10066)));
+        results.push([version, selected.branch]);
+      }
+      return results;
+    },
+  },
+
   scenario(
     "owned HTTP construction failure disables its created hook without touching another parent",
     async (f) => {

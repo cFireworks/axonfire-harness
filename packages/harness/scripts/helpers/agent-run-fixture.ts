@@ -1,4 +1,5 @@
 // Explicit owned component-test DI. No production account, telemetry, bootstrap or installed resource lookup.
+import { createNativeComponentProviders } from "../../src/di/native-component-providers.js";
 import * as sdk from "@openai/agents-core";
 import * as fs from "node:fs";
 import * as io from "node:fs/promises";
@@ -7,7 +8,6 @@ import { createNativeAgentRunHost } from "../../src/agents/native-agent-run-host
 import { createNativeAgentRun } from "../../src/agents/native-agent-run.js";
 import { createNativeAgentRunUtilities } from "../../src/agents/native-agent-run-utilities.js";
 import { createCapturedAcpModules } from "../../src/protocol/captured-acp-modules.js";
-import { WorktreeContextInterceptor } from "../../src/agents/worktree-context-interceptor.js";
 import { MessageQueueManager } from "../../src/sessions/message-queue-manager.js";
 import { ToolNames } from "../../src/tools/tool-names.js";
 import { PermissionMode } from "../../src/permissions/permission.js";
@@ -41,6 +41,7 @@ export async function agentRunFixture(
     env: any = { ...patch.env },
     settings: any = { ...patch.settings };
   let modules: any = { ...f.modules };
+  modules[63517] = createNativeComponentProviders().getModule(63517);
   const common = modules[80699];
   const logger = Object.fromEntries(
     ["info", "debug", "warn", "error", "setContext"].map((key) => [
@@ -54,7 +55,6 @@ export async function agentRunFixture(
   Object.assign(modules, {
     25301: sdk,
     66545: cliTokens,
-    59233: { WorktreeContextInterceptor },
     70857: { EOL: "\n", userInfo: () => ({ username: "owned-user" }) },
     35151: { PermissionMode },
     24618: { PermissionMode },
@@ -154,6 +154,7 @@ export async function agentRunFixture(
       env,
       Date: f.runtime.Date,
       platform: patch.platform ?? "linux",
+      cwd: patch.cwd ?? (() => f.cwd),
       getModule: base.getModule,
       setTimeout: f.timers.setTimeout,
       clearTimeout: f.timers.clearTimeout,
@@ -178,16 +179,18 @@ export async function agentRunFixture(
       sessionManager: f.manager,
       stateMachine: f.manager.stateMachine,
       agentManager,
-      agentRunInterceptorProvider: {
-        sortSync: () =>
-          [...interceptors].sort((a, b) => b.priority - a.priority),
-      },
       pluginRuntimeRefreshService: {
         waitForRefreshSettled: async () => {
           calls.push(["refresh"]);
           await patch.refresh?.();
         },
       },
+    },
+    interceptorContainer: {
+      parent: null,
+      isBound: (token: any) => token === runHost.native.getModule(69466).AgentRunInterceptor || (token === modules[63517].ComponentFilterRegistry && patch.componentFilterRegistry !== undefined),
+      get: () => patch.componentFilterRegistry,
+      getAll: () => interceptors,
     },
   });
   const n = runHost.native,

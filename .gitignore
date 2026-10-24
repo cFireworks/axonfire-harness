@@ -1,5 +1,8 @@
 node_modules/
 dist/
+!packages/harness/vendor/native-assets/dist/
+!packages/harness/vendor/native-assets/dist/wasm/
+!packages/harness/vendor/native-assets/dist/wasm/*.wasm
 coverage/
 *.log
 .DS_Store

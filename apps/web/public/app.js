@@ -89,6 +89,18 @@ function decision(type, data) {
   card.append(title);
   const inputs = [];
   if (type === "approval") {
+    if (data.context?.sandbox) {
+      const explanation = document.createElement("p");
+      explanation.textContent = data.context.bypass
+        ? "Sandbox 已拦截此操作。允许本次会在 sandbox 隔离外重新执行此命令。"
+        : "Sandbox 已拦截此操作，需要你决定是否继续。";
+      card.append(explanation);
+      if (data.context.target) {
+        const target = document.createElement("p");
+        target.textContent = `受影响目标：${data.context.target}`;
+        card.append(target);
+      }
+    }
     const pre = document.createElement("pre");
     pre.textContent = JSON.stringify(data.input, null, 2);
     card.append(pre);
@@ -249,7 +261,8 @@ try {
   $("connection").textContent = location.host;
   if (!status.configured)
     notice(
-      "尚未配置模型。在仓库根目录复制 .env.example 为 .env，填写密钥、接口和模型后重启。也可运行 npm run demo 离线体验。",
+      status.configurationMessage ??
+        "尚未配置模型。在仓库根目录复制 .env.example 为 .env，填写密钥、接口和模型后重启。也可运行 npm run demo 离线体验。",
     );
   else if (status.mode === "demo")
     notice(

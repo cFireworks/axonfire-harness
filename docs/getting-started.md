@@ -1,12 +1,14 @@
 # 启动与验证
 
-从仓库根目录执行 `npm ci && npm run build`，然后 `npm run demo`（离线）或 `npm start`（读取自己配置的 `.env`）。编译产物位于 `packages/harness/dist`，不提交到 Git。
+默认 `npm run cli` 与 `npm start` 现使用完整原生产品入口（Web 通过独立进程的 ACP）；先用 `npm run cli -- --help` 查看原参数，并按[原生运行时配置](native-product-runtime.md)设置 `AXONFIRE_NATIVE_PRODUCT_CONFIG`。原 `--allowedTools` 与独立宿主的 `--allow-tools` 不同。下面的独立宿主说明与历史记录适用于 `npm run workbench`、`npm run web:workbench` 和 `createHarness`；不代表原生入口仍缺少已恢复的认证、bootstrap 或 CLI。
+
+从仓库根目录执行 `npm ci && npm run build`，然后 `npm run demo`（离线）或配置 `AXONFIRE_NATIVE_PRODUCT_CONFIG` 后执行 `npm start`（原生 Web）。原有 OpenAI 环境变量宿主使用 `npm run web:workbench`。编译产物位于 `packages/harness/dist`，不提交到 Git。
 
 Web 的 `--cwd` 指定工具工作目录：`npm start -- --cwd /absolute/path/to/project`。端口可用 `--port 3081` 或 `AXONFIRE_PORT` 配置。状态目录可用 `AXONFIRE_STATE_DIR` 指定。修改模型配置后重启服务；API key 不通过页面输入或浏览器持久化。
 
 默认模型配置沿用样本；接入兼容供应商时应显式指定自己的模型名。`.env.example` 的模型只是配置示例，不代表对供应商当前可用模型的保证。普通聊天只需兼容 Chat Completions 的供应商，产品特定 WebFetch/媒体/IDE/外部 channel 能力仍需要独立适配与配置，不能仅靠一个模型 API key 代替。
 
-`npm run cli -- --help` 不需要密钥或网络。CLI `-p` 为非交互单轮，未明确授权的工具默认拒绝；交互模式逐次询问。Web 与 CLI 的默认状态目录分离，可以通过 CLI `--state-dir` 或 Web `AXONFIRE_STATE_DIR` 显式共用。
+`npm run workbench -- --help` 不需要密钥或网络。CLI `-p` 为非交互单轮，未明确授权的工具默认拒绝；交互模式逐次询问。Web 与 CLI 的默认状态目录分离，可以通过 CLI `--state-dir` 或 Web `AXONFIRE_STATE_DIR` 显式共用。
 
 本机端口被占用时换端口。浏览器请使用打印的 `http://127.0.0.1:端口`，不能替换成 `localhost` 或代理域名；这是 Host 校验设计。页面显示未配置时检查 `.env` 位于仓库根目录且密钥、接口均非空。模型失败只显示安全的通用错误，避免把上游异常中的认证头传给页面。
 
@@ -123,7 +125,7 @@ await harness.agents.waitForRebuildSettled(0);
 
 ## 可信本地插件与刷新
 
-CLI：`npm run cli -- --plugin-dir /absolute/plugin --cwd /absolute/project`；Web：`npm start -- --plugin-dir /absolute/plugin`。参数可重复，路径相对于工作目录解析。嵌入时使用`nativePlugins: { directories: [...] }`，环境变量替换只消费显式`nativePlugins.env`，不自动复制安装应用账号或宿主环境。
+CLI：`npm run workbench -- --plugin-dir /absolute/plugin --cwd /absolute/project`；Web：`npm start -- --plugin-dir /absolute/plugin`。参数可重复，路径相对于工作目录解析。嵌入时使用`nativePlugins: { directories: [...] }`，环境变量替换只消费显式`nativePlugins.env`，不自动复制安装应用账号或宿主环境。
 
 插件目录中应有`.codebuddy-plugin/plugin.json`（也保留`.workbuddy-plugin`、`.claude-plugin`搜索顺序），至少声明`name`。原loader支持默认或manifest指定的Agent/command/skill目录、`hooks/hooks.json`、`.mcp.json`、`.lsp.json`、`output-styles`与`settings.json`。命令名为`/<plugin>:<command>`；插件Agent只认可当前模型id，命令另支持模型显示名转id，行为不同。Hooks和带user_config的配置保留原变量、敏感值隐藏及原Zod3校验。
 
@@ -146,7 +148,7 @@ CLI：`npm run cli -- --plugin-dir /absolute/plugin --cwd /absolute/project`；W
 ### 内置资源物化与注册
 
 ```sh
-npm run cli -- --builtin-assets /absolute/path/to/trusted/resources --cwd /your/project
+npm run workbench -- --builtin-assets /absolute/path/to/trusted/resources --cwd /your/project
 npm start -- --builtin-assets /absolute/path/to/trusted/resources
 ```
 
@@ -360,7 +362,7 @@ SDK initialize的enterpriseEndpoint设置现在按原set默认USER落盘；环�
 默认按USER→PROJECT→PROJECT_LOCAL→CLI合并，路径分别为`<state>/settings.json`、`<cwd>/.codebuddy/settings.json`、`<cwd>/.codebuddy/settings.local.json`；不读取`~/.codebuddy`或安装应用设置。支持JSONC注释/尾逗号，USER叠加原DEFAULT_SETTINGS，写入剔除默认差值并保留注释。数组按原Set并集，hooks/permissions/memory/sandbox递归合并，其他对象后项覆盖。原USER磁盘sandbox读入是浅覆盖默认值，不擅自改为深覆盖。
 
 ```sh
-npm run cli -- -p "你好" --setting-sources none --settings '{"reasoningEffort":"high"}'
+npm run workbench -- -p "你好" --setting-sources none --settings '{"reasoningEffort":"high"}'
 npm start -- --settings /absolute/path/to/trusted-settings.jsonc --effort high
 ```
 

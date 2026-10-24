@@ -5,9 +5,12 @@ try {
   if (args[0] === "web") {
     const { main } = await import("../web/main.mjs");
     await main(args.slice(1));
+  } else if (args[0] === "workbench") {
+    process.argv.splice(2, 1);
+    await import("@axonfire/harness/cli.js");
   } else {
     if (args[0] === "chat") process.argv.splice(2, 1);
-    await import("@axonfire/harness/cli.js");
+    await import("./native.mjs");
   }
 } catch (error) {
   console.error(

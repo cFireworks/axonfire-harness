@@ -2,6 +2,134 @@
 
 此文件区分“目标样本中逐字节保留”“从 bundle 控制流还原”“仅建立接口骨架”三类状态。百分比只描述当前重建工程，不代表原应用总体功能覆盖率。
 
+
+Entries below are newest first. Older entries retain the boundaries known at that stage; later entries supersede them where new evidence is recorded.
+
+## Original interactive CLI exercised through a real terminal (2026-10-24)
+
+A new POSIX PTY regression runs the default launcher and recovered Ink/React interface against a local deterministic model server. Its four cases cover rejecting folder trust without a model request; accepting the original folder-only trust option, entering a second prompt, retaining conversation history and rendering both answers; permitting an actual Read; and rejecting that Read then continuing from a new user prompt. Permitted file bytes must reach the next model request, while rejected bytes must not. Keyboard exit must report code zero and no signal; forced termination is only failed-test cleanup.
+
+Exploration corrected two test assumptions without changing product code. Model completion IDs must be unique across turns because the original terminal deduplicates message identity. Read rejection returns control to the user; the fixture now supplies a follow-up prompt instead of requiring an automatic model continuation. Input waits for React effects after the first frame and for the session to settle before exit. Failed-test cleanup escalates only its own PTY child and bounds temporary-directory cleanup retries.
+
+REA evidence `ev_d3436b31f49cac91a6a9b4013d5a0822f2b39bc10e5d1e5367d04ec00dc03169`: six original terminal/trust/confirmation factories, 7,036 AST nodes, zero parse failures. The pinned PTY package and actual SDK are used; no original factory, SDK, configuration or prompt is rewritten. The Windows PTY deployment case remains explicitly outside this POSIX fixture. Additional permission choices, other interactive tools, resize and richer keyboard behavior remain unverified.
+
+The preliminary host run overlapped exploratory terminal probes and recorded a terminal failure plus two ACP test timeouts; `work/native-interactive-hosts.log` retains that result. Later fixture investigations are retained separately. Final standard-host verification is recorded below. This turn changes tests and documentation; the preceding clean build and 1,988-core baseline apply to the unchanged runtime sources.
+
+## Shared dependency routes completed at the product entry (2026-10-24)
+
+Direct product-level module lookup was incomplete even where original factory bodies already existed. A regression first reproduced an undefined source-map barrel (74064), then an undefined DI core (78842). The foundation now exposes the recovered Backend namespace child modules and CLS dependencies through their existing owners. The product entry routes the full source-map support table to its existing cache. Remaining captured DI and Express IDs resolve through their existing loaders after specialized service routes, preserving established precedence.
+
+A static routing-table audit against the fixed sample found 488 remaining candidate IDs after the explicit namespace/CLS/source-map routes were added; all belonged to the DI or Express tables. The current declared route union includes all 4,566 top-level sample factory IDs. This is route coverage only: it does not establish execution of every factory, full behavioral coverage, cross-platform support or complete product parity. Evidence is recorded in `work/shared-route-inventory.json`.
+
+The shared context host supports deferred initialization. Package metadata and CLS implementation selection create no async hooks; loading the original BaseContext creates its namespace, and the owning host releases its hook on close. Deferred configuration failure releases hooks and closes the unusable host. Existing eager embedders retain their default initialization path. Regression tests check these lifecycle boundaries, DI/namespace/source-map export identity, a real generated/consumed source mapping, forwarded-address parsing and duration parsing through product lookup.
+
+REA evidence `ev_52b50f905ce8bbdb2e719a2339ef25b040b38eb94b2cd74a3b1c0938adbc4b9f` covers 13 relevant original factories, 7,166 AST nodes and zero parse failures. No original factory body was changed; these are host routing and ownership changes. HTTP, Backend foundation and source-map source-paired verifiers passed.
+
+The first full core run recorded 1,987 passes and one failure: the original product child completed health/OpenAPI checks, then its ACP initialize fetch failed. An immediate isolated rerun passed both product tests. The original failure omitted the nested fetch cause; the test helper now reports nested error details without retrying requests. Follow-up full-suite verification is recorded below; the initial failure is retained rather than treated as a passed run.
+
+Final validation: fresh build passed; the unchanged full core command passed all **1,988 tests** with zero skips on rerun; all **34 CLI/Web host tests** passed with zero skips; launcher smoke and the updated Backend foundation source-paired check passed. The initial ACP fetch failure remains unexplained, so the passing rerun is not presented as a diagnosed transport fix. The full 131-command source-verifier aggregate was not repeated for these host-only routing changes. Current logs use the `shared-fallback-*` prefix under ignored `work/`.
+
+## Original CLS selector and legacy factories restored (2026-10-24)
+
+The HTTP runtime previously replaced original factory 61987 with a fixed alias to modern CLS factory 63192. It now executes the complete original version selector, with actual Node version metadata and the existing recovered semver adapter supplied by the owned host. The public CLS accessor and original WebContext follow the same selector.
+
+Twelve complete factories have been added, including the selector and legacy CLS/async-hook-jl/stack-chain implementations and package metadata. HTTP fidelity now checks 51 complete factory ASTs, 35 classes/75 members, 37 declarations, two constants and six configuration bindings. All 33 behavior comparisons and two real SDK source-paired scenarios pass. The added selector scenario covers Node 6/7, the Node 8 prerelease/release boundary, Node 22.19 and the current version, including lazy selection and export identity. Legacy implementations remain inert in these boundary tests; obsolete async_wrap hooks were not activated on modern Node, and the supported runtime remains Node 22.19+.
+
+REA evidence `ev_729a907fba57e34f8dc5c6aa7e4a391aba5be2f244249e9b455cfbae2750e161`: 12 inert files, 4,007 AST nodes, zero parse failures. Fresh compilation and 53 affected compiled tests pass, including modern request isolation, Agent HTTP, multipart Node services and the native product HTTP/authenticated ACP model/tool child process. All 34 CLI/Web host tests pass with zero skips, and launcher smoke passes. These targeted checks include the preceding multipart restoration; the historical 131-command aggregate and 1,984-core baseline were not rerun for this change.
+
+## Missing lazy multipart factory restored (2026-10-24)
+
+The factory-inventory audit found a live missing branch: bundled node-fetch factory 88654 lazily requests factory 26952 in multipart `Response.formData()`. A new regression failed before the change with `Explicit Node services parent required: 26952`. The complete original factory is now recovered in Node services; existing FormData/File dependencies are reused and the foundation picks up the new table entry automatically.
+
+Node-services fidelity now covers 373 complete factory ASTs. Source-paired behavior checks include one-byte multipart stream chunks, duplicate UTF-8 fields, binary file bytes/name/type, missing-boundary rejection and URL-encoded forms. REA evidence `ev_4648c3a2c4f0e7b4228131b24edcc8777602c22abc8ce0f584cead42bad7ae10`: one inert file, 1,420 AST nodes, zero parse failures.
+
+Fresh build passed, the expanded source-paired verifier passed, and three compiled regressions passed: Node services, product module navigation/bindings, and the full native HTTP/authenticated ACP model/tool child process. The prior full 131-command/1,984-core/34-host baseline predates this addition; only affected verification scopes were rerun here. Legacy pre-Node-8 async-context branches remain under audit.
+
+
+## Complete registered source-verifier run (2026-10-24)
+
+`npm run verify:recovery -- <fixed codebuddy.js>` completed with exit code zero. All 131 registered source-verifier commands ran in the expected package-script order, including the original Desktop companion samples resolved from the captured application layout. The run finished with the 2,153-product-factory verifier and three original-entry behavior comparisons. Product-factory coverage includes complete AST comparisons, not just exported names; its finite behavior scenario is a separate, narrower check.
+
+The ignored work evidence consists of `native-aggregate-verification.log` and a command-list/log-hash summary in `native-aggregate-verification-summary.json`. No bundle bootstrap was needed for this aggregate run; verifiers execute selected inert extractions and owned fixtures as documented individually. The separately completed runtime baseline remains 1,984 core tests and 34 host tests, with build/check/config/launcher smoke passing.
+
+The old module-registration inventory was also audited against the fixed top-level factory index. It is not itself a complete source-coverage proof: additional bootstrap/source-map/backend/entry modules are recovered elsewhere, and some optional legacy async-hook/stack-chain factories plus the multipart factory 26952 need a dedicated lookup-path audit. These unverified paths are not counted as completed merely because the registered verification suite passes. README status descriptions were reconciled with the newer sandbox and resource evidence.
+
+
+## Consolidated native-host validation and Python trash (2026-10-24)
+
+The original Python `sitecustomize` wrapper now has a real native-helper regression alongside Bash and Node. It intercepts `os.unlink`, preserves the owned file contents in macOS Trash, and records the original Python audit event. The Python subtest explicitly skips when `python3` is absent; it ran and passed on this host. No original shim or factory bytes changed.
+
+Fresh validation on macOS arm64 / Node 23.9.0:
+
+- `npm run build`: passed, including staged resource hashes and executable permissions.
+- `npm run check`: passed; the launcher approval-policy module is now included in syntax checks.
+- `node --test dist/test/*.test.js` from `packages/harness`: 1,984 passed, zero failures or skips.
+- `npm run test:hosts`: 34 passed, zero failures or skips. Host concurrency is fixed at two workers to bound simultaneous native processes.
+- `npm run verify:config`: passed.
+- `npm run smoke:launchers`: passed for native CLI help, explicit workbench CLI help and offline SDK/Web round trip.
+
+These results supersede the earlier core-test baseline and aggregate the recent resource, parser, sandbox, ACP/Web approval, print-mode and Trash changes. The aggregate source verifier discovers 131 commands; a new full aggregate source-verifier run has not yet been completed at this checkpoint. This validation does not establish production login, Electron/daemon lifecycle, network/projection coverage or cross-platform native support.
+
+
+## Original safe-delete entrypoints and real Trash (2026-10-24)
+
+Build staging now restores execute bits for the original rm/unlink/rmdir entrypoints; extracted source scripts remain byte-identical. A macOS arm64 regression uses the recovered environment builder and staged native helper, verifies the three Bash operations plus Node.js unlink interception against actual Trash objects and original audit records, and cleans only exact paths created by the test. A direct helper probe also verified byte-preserving trash placement.
+
+Original desktop-only activation is preserved. Ordinary CLI/Web is not relabeled as desktop to turn it on. OS-temp paths are permanently deleted by the original shims, so the regression uses an owned ignored repository workspace. The native Trash test and 12 existing safe-delete regressions passed. Fixed-source verification passed seven modules, eight assets, eleven source-paired comparisons and one real-process pair. Python-to-native-helper behavior and complete desktop-host tool integration remain unverified. Existing REA path evidence includes factory 35568 under `ev_7308374313ca6012c9d77f02eec670e33880a7e8ad295e6504edb5d26632896f`; no factory body changed.
+
+
+## Non-interactive CLI sandbox approval settlement (2026-10-24)
+
+The launcher now uses the existing `CBC_SANDBOX_APPROVAL_TIMEOUT_MS` control, defaulting it to 100 ms only for `-p`/`--print` without `--serve`/`--acp`/streaming JSON input, and only when the user has not set it. Original sandbox approval queue cleanup and denial remain unchanged. Interactive/ACP defaults are preserved. This resolves the previously observed unattended CLI wait without changing recovered factory bodies.
+
+The actual native CLI regression exercises a model-requested Bash read blocked by a real sandbox rule, verifies the file bytes never reach the model, and requires both the tool-result model turn and final answer. It passed. Original denial wording still says “REJECTED BY USER” for timeout; documentation explicitly distinguishes this from a human decision.
+
+REA evidence for original approval factory 6350: `ev_52d562259d487dcea755428bff58cfbb7887a9cf8567b9d1032aff1995af56b1`, one parsed file, 131,489 AST nodes, zero parse failures. The factory's configurable timeout and queue cleanup, rather than a new approval resolver, supply the behavior.
+
+
+## Native Web sandbox escalation context (2026-10-24)
+
+The Web adapter now forwards the original sandbox interception/bypass/target metadata into an optional approval context. Its approval card explains isolation bypass before the user permits a rerun and displays the affected target using text-only rendering. Original factories, approval option selection and shell execution are unchanged.
+
+Two macOS arm64 HTTP/SSE regressions pass through the actual Web host, native ACP, original Bash services and captured sandbox. They verify the browser-facing context, rejection without file contents, allow-once with contents and original bypass warning, and final streamed responses. These are server-bridge tests, not pixel/layout browser tests. Standalone Web regression coverage remains applicable because ordinary approvals omit the new optional context.
+
+
+## Default-product Bash sandbox routing via ACP (2026-10-24)
+
+Two real native-process regressions now cover model → original Bash tool → SandboxAgentRunInterceptor/rule synchronization → captured sandbox file denial → original ACP escalation. Reject returns denial text to the model and `PARTIAL_SUCCESS`; one-time approval reruns outside isolation, returns the owned file bytes with the original bypass warning, and yields `SUCCESS`. Both branches passed with temporary app/workspace state.
+
+REA inspected inert factories 66545 and 43522: `ev_366ddb4233ad515888c0cce6ce749b3979a87af7163e35461e6b4767e016a663`, two parsed files, 49,955 AST nodes, zero parse failures. Original factory bodies were unchanged. This extends the prior explicit-parent binary test into the default native service graph.
+
+The exploratory non-interactive CLI denial stalled at the queued sandbox approval until SIGTERM; it is recorded as an unresolved behavior, not a successful smoke test. Browser escalation metadata presentation, network/projection/helper branches and trash integration remain open.
+
+
+## Real captured sandbox file-isolation regression (2026-10-24)
+
+The original process manager resolves the staged versioned vendor binary directly; platform-package resolution is only a fallback. This corrects the earlier narrower inference from factory 43121. No path override or original-code edit is needed for this lookup.
+
+A new macOS arm64 host test starts the captured binary through the recovered lifecycle, with a temporary app home and real Node IPC/process boundaries. It applies a `no_access` rule to an owned file, observes the real `/bin/cat` process fail with a canonical file-block record and no stdout, clears the rule, and observes the same read return the exact file contents. It verifies native PID registration and shutdown cleanup. The existing deterministic fixtures remain separate from this actual-binary evidence.
+
+Validation: all 15 selected sandbox tests passed, including the new native-binary test, 13 deterministic cases and the owned protocol-peer integration. The fixed-source verifier again passed four classes / 88 members, 13 source-paired comparisons and one real-process pair, without executing the bundle bootstrap. Full default-product Bash routing, network isolation, projection/helper branches and trash integration remain open; this does not establish complete sandbox equivalence.
+
+
+## Native parser and captured binary resources (2026-10-24)
+
+The original TreeSitterParserStrategy now initializes from build-staged files without changing its factory. The original root-directory selection skips the captured `dist/wasm` directory; byte-identical root aliases satisfy that lookup. A real WASM regression verifies compound commands, quoted arguments and malformed input.
+
+The resource manifest now includes the captured macOS arm64 ripgrep executable/addon, trash helper, sandbox executable/rules, icon and ripgrep notice. Build output restores executable permission bits. A CLI integration uses original Grep against an owned file with builtin ripgrep enabled, in addition to the existing Read permission/HTTP checks. Parser/resource and extended CLI tests passed. Other platforms' binaries are not captured here, and native binary source is not reconstructed.
+
+REA evidence for binary path factories 43121, 73487 and 35568: `ev_7308374313ca6012c9d77f02eec670e33880a7e8ad295e6504edb5d26632896f`, three parsed files, 6,535 AST nodes and zero parse failures. The sandbox executable starts IPC even when passed `--help`; that exploratory process was terminated. Wiring its platform package/rules and verifying actual isolation, plus trash integration, remain open. See [resource verification](native-product-runtime.md#resource-and-compaction-verification).
+
+
+## Native product resource staging and original compaction (2026-10-24)
+
+The native launcher now resolves its product root to the build-staged original configuration layout. The build copies all five recovered product JSON variants, checksum-verifies original CLI metadata, sandbox configuration and parser WASM, and stages recovered safe-delete shims. No installed application is needed. Original factories and configuration bytes are unchanged.
+
+An ACP regression retains the distributed agents and prompts rather than substituting a test agent: approved Write → reconnect/load → original compact agent with no tools → CLI agent continuation containing the summary and no old tool messages. The ordinary Web missing-command regression now explicitly clears global commands, because the recovered product supplies those commands independently of custom agents.
+
+REA inspected the inert path-resolution and parser factories 44237 and 41936: evidence `ev_137bf5c3a88ab5f0d0a636364ebb885e57d93cafd714bd40156d6133855c9a46`, two parsed JavaScript files, 5,010 AST nodes, zero parse failures. Resource hashes are in `packages/harness/vendor/native-assets/manifest.json`. Validation: build, TypeScript check, original configuration verification, launcher smoke, and all 24 CLI/Web/ACP host tests passed. The prior 1,984 core-test baseline was not rerun for this asset/host change; recovered TypeScript factory bodies are unchanged. Native binary packaging and parser initialization remain open; see [native runtime boundaries](native-product-runtime.md#resource-and-compaction-verification).
+
+
 ## 已固化证据
 
 - WorkBuddy：`5.3.14`
@@ -1239,3 +1367,623 @@ REA最终证据 `ev_cee61bcad4e2ef0ab96bd12072a1c8fd935c6fd6c576edcfbe5e86789502
 下一步继续实际Product/配置与ACP连接/全部interceptor的默认父图、CLI入口和独立OS进程/daemon恢复，再推进生产REST/账户库、跨cwd/全部模式、Desktop HistoryStore及其他外围/并发前沿。普通CLI/Web仍可运行，但完整原生默认bootstrap尚未切换，整体目标继续进行中。
 
 最终门槛：check/build、1598项编译JS smoke、全部67组源码/行为验证通过；最终订阅退休改动后已重新跑完全部67组，不仅复用此前结果。暂存代码干净检出重新npm ci/check/build后，全部1677编译核心+11Web、原配置校验与CLI/Web seed/reload实际启动通过；12个改动代码/manifest文件与最终检出逐字节一致，无原应用/bundle/旧node_modules依赖。SDK和6 JSON/115 product prompts/22 Desktop资源（304358字节）未变；776文件发布审计在已检查规则内无发现，不是安全证明。npm ci仍报告既有17项依赖告警（10中危/7高危），未升级样本依赖隐藏差异。
+
+## 2026-10-24：公开 ACP 连接装配与英文项目主页
+
+新增[公开连接宿主](native-acp-connections-host.md) `createNativeAcpConnectionsHost`，把原 Stream/Transport Factory/Manager、Agent registry、Server/Context/Controller、Guard/SecurityMiddleware 的创建和依赖接线从组件测试 helper 移入 src。完整原10类84成员、16函数、4 initializer、6 statics、4 routes及协议SDK未改；默认CLI/Web和另一套完整ACP/AgentService父图尚未切到本连接装配，不把组件接线当作默认产品bootstrap已完成。
+
+保留原SDK实例prototype/constructor、方法receiver/原Promise和单一transport订阅；独立namespace overlay不改父protocol，显式DI bindings不擅自注册或伪造Agent。原Server.stop只清注册表、原stream.close不结束SDK输入，宿主显式管理自己的输入EOF及未完成HTTP响应。父beforeClose先停止准入/结束借入Agent工作，stdio输入由父owner结束；接受中的transport创建先完成，再关闭输入/响应，等待原SDK closed/history flush/Agent remove，最后清Subject/token/timer与观察descriptor。共享auth/settings/session/listener/stdout不被关闭。原组件暴露给父DI，调用者必须停止raw dispatch；不是可撤销facade。
+
+新增11项专项，覆盖身份/原订阅、幂等关闭、已删除state的SDK输入、慢history flush/借入receiver、父取消顺序、heartbeat/token清理、失败继续回收、未启动关闭、迟到transport创建、detached observer失败及两种SSE背压。复查发现先drain再关闭响应会死锁；现按创建/写入分阶段收尾，未完成响应显式disconnect；已被原close删state或替换的响应仍按未完成writeSseEvent Promise独立计数，避免并发写提前退休。这些是明确宿主生命周期适配，不重写原协议业务，不额外消费SDK流。
+
+REA 6.7.0对固定SHA样本原连接完整声明做静态分析，证据 `ev_0b774793860a023361df92e449ffe9000df42630725e129dfe7853ddda53b0de`：8202 AST nodes、1 parsed、0 skipped/parse failures；750 semantic及150 unknown（全局/单文件）、45秒预算下partial/truncated。输入保留UTF-16偏移和原SHA provenance；未执行原bootstrap。原声明AST/29连接行为+10 SDK行为成对验证通过；静态图和有限对照不证明完整产品等价。
+
+README改为英文，按能力、快速开始、CLI、架构、还原矩阵、验证、文档导航与使用/许可边界组织；保留样本来源、原SDK、默认入口尚未完整原生化及许可不确定性，移除过时的固定audit数量。README本地链接检查无缺失。此次npm ci实际报告16项告警（10 moderate/6 high），未修改依赖锁或升级样本依赖。
+
+后续继续完整默认native服务图/配置/全部interceptor与CLI父启动入口，独立OS进程/daemon恢复、生产REST/账户库、跨cwd/模式、Desktop HistoryStore等。原有CLI/Web可编译使用，但整体最大化还原目标继续进行中。
+
+最终本批门槛：npm ci后的check/build通过；最终编译JS核心1688项、Web11项全通过，连接专项53项全通过，固定样本原连接29+SDK10成对比较通过，原配置/115 product prompts/22 Desktop资源逐字校验及CLI/Web实际启动、离线流式回答、builtin seed与原生reload通过。未运行本批无关的全部67组源码verifier，也不复用历史全量结果冒充本次运行。首次手工从仓库根目录运行全部编译测试因已有测试按包cwd定位config而失败；改为packages/harness下执行后上述最终1688项通过，未改测试或配置来绕过失败。依赖锁、原类体、Prompt和产品配置未改。
+
+## 2026-10-24：原始 Provider 与全部默认 interceptor 注册装配
+
+新增[默认 interceptor 宿主](native-agent-interceptors-host.md)，从原模块59233/66545的装饰器恢复实际31项 AgentRunInterceptor token 注册（30 local + Worktree）、包含AgentService的86项属性注入、2项PostConstruct。原诊断name map不等于默认注册表：ChannelEvent为self Component，Continue没有token注册；此前漏掉的SandboxTurnTelemetry完整类现恢复，与Sandbox共用原nu WeakMap，原诊断map保持原样。原Agent-run边界现在是33类172成员、46 declarations、9 factories、38 export getters及1 namespace loader；不是33项默认interceptor注册。
+
+恢复原63517/6720/99600完整模块以及68809 registry、98025 creator类，替换组件fixture中的手工排序。保留原优先级>0过滤、order fallback、稳定降序、第一次发现和排序数组缓存、可选parent遍历与typed/generic过滤。修复执行宿主新container路径的Symbol身份问题：必须显式提供parent的63517 namespace，不另造Symbol后静默遗漏父过滤器。既有skipRun测试原本靠修改数组删除已缓存interceptor，改为同一实例显式切换测试行为，符合真实缓存语义。
+
+WorktreeContext从行为重写切换为完整原声明，包括可选manager/options、日志和原提示。原Sandbox process.cwd调用补足显式runtime.cwd边界。新宿主在启动前检查全部必要DI，不伪造缺失服务；只执行原2个init，显式attach原Provider。独立拥有Sandbox session-ready退订及接受中callback等待，关闭时仅恢复仍由自己附着的provider，不关闭借入sandbox/session/execution。默认CLI/Web尚未切换完整原生产品bootstrap；组件测试的显式边界不代表31条生产业务已全链打通。
+
+REA 6.7.0对原Provider inert片段分析证据 `ev_628f20cb1e329723acb5b7fd030534d972f3ae9b2d3d46ea888489d1c6124e15`：745 AST nodes、1 parsed、0 skipped/parse failures；2000 semantic/300 unknown（全局与单文件）、45秒预算；semantic coverage为unknown、truncated=false，不能解释为完整等价。原样本SHA和UTF-16 offsets继续记录于源码及verifier，未执行原bootstrap。
+
+本批原样本验证：Provider完整factory/class AST与8行为对；注册31/属性86/生命周期2逐项AST验证，Worktree完整声明AST与9行为对；Agent-run52行为对+4真实SDK对通过。新增6项宿主测试与8项Provider测试，覆盖完整装配、缺失依赖、过滤/缓存、父token身份、Sandbox回调排空及provider归还；恢复的SandboxTurnTelemetry另增加5项成对场景。README英文还原矩阵和导航同步更新。
+
+最终本批门槛：check/build通过，packages/harness cwd下1707项编译JS核心测试与11项Web测试全通过；上述3组源码/行为verifier通过；原6 JSON/115 product prompts/22 Desktop资源校验、CLI help、Web真实SDK离线流式回答、builtin seed与native reload实际启动通过。未重新运行全部69组源码verifier，不将历史全量结果列为本批结果。README本地链接与git diff whitespace检查无缺失/错误。未改依赖锁、SDK版本和原产品配置/Prompt，未提交或推送；整体最大化还原目标继续进行中。
+
+## 2026-10-24：Sandbox CLI 原进程、IPC 与会话生命周期
+
+新增[原Sandbox CLI服务](native-sandbox-cli.md)：完整SandboxCLIClientImpl、SandboxCliStdioCapture、SandboxCLIProcessManagerImpl、SandboxCLILifecycleImpl共4类88成员，连同共享timeout WeakSet/判别函数、常量声明组、AV类身份和4项原静态超时值逐项恢复。恢复70353/74674/68331三个完整惰性协议模块（46 commands、FileAction/NetAction、默认配置、IPC envelopes/validator/error）以及41695原SandboxTurnConfig token+class声明；不执行原decorators/bootstrap。主类模块aliases已与原require逐项复核。
+
+createNativeSandboxServices提供显式同步装配与原token bindings/namespaces，原client/process init和全部业务方法不变。父容器的41695 namespace必须复用，修复独立复查发现的“借入实例但另造token”问题，真实进程验证已检查原namespace和同一可变实例。宿主不自动开启Sandbox、不代替应用生命周期owner；父方须管理准入、接受中的原Promise、late-start cleanup、文件/进程/network边界及关闭。Shell/rules/telemetry/PID registry产品服务和native executable仍是显式外部依赖，没有以空实现声称默认已完成。
+
+原行为保留：500ms进程存活门槛、TERM/KILL、stdout/stderr UTF8 head/tail、版本选择/GC、配置env过滤、PID/exit listener、IPC framing/反向请求/timeout、readiness coalescing与失败重试、异常退出后restart、projection切换、flush合并/周期与退出前文件同步。原sessionReady callback完成后败选的5秒计时器未清除，这是样本行为；测试先断言该定时器仍存在再推进其到期，不改短超时或删类体掩盖。
+
+REA 6.7.0对原惰性声明组证据 `ev_0daf2a51a670a9c255f0f71671eb94acdd42908ea71c82f5e6bda1a11a76b978`：8598 AST nodes、1 parsed JS、0 skipped/parse failures；750 semantic/150 unknown（全局与单文件）、45秒预算下partial/truncated。保存固定SHA与UTF-16 offset provenance；静态证据不等于执行或完整等价。
+
+原样本成对比较覆盖13组件场景，包含hard-timeout后迟到成功清理、原flush timeout/按session合并、反向请求与fire-and-forget、semver/GC等；另6协议/config场景。新增真实OS子进程+Unix socket一对：完整原三类创建明确owned Node协议peer，OpenSession、请求回应、SIGKILL、原ensureAlive重启、关闭前Query/SyncFileChanges、原stop以及PID/listener/socket回收。未启动安装应用、macOS helper或生产sandbox binary；该peer只证明原进程/IPC链，不证明native OS保护行为。Windows真实进程场景明确skip，macOS helper/Windows pipe分支尚无运行证据。
+
+后续沿原SandboxRuleSyncService、BashSandboxManager、shell/finalization与产品启动父图继续接通；独立产品daemon/Electron、生产账户、完整模式及默认CLI原生化仍未完成。README英文还原矩阵/文档导航同步更新。
+
+最终本批门槛：check/build通过，1727项编译JS核心与11项Web全通过；新2组源码verifier通过（13+6组件对、1真实进程对）；配置/原Prompt逐字校验、CLI help、Web真实SDK离线流式回答和builtin seed/native reload实际启动通过。未重新运行全部71组源码verifier；没有使用历史全量结果替代本批验证。README/新文档本地链接及git diff whitespace检查通过。依赖锁、SDK版本及原产品配置/Prompt未改，未提交/推送。完整默认产品bootstrap尚未完成，目标保持进行中。
+
+## 2026-10-24：Sandbox 每轮规则与默认安全配置
+
+继续上一批原进程链，恢复64187原SandboxRuleSyncService完整24成员、6个lexical helper、原token与allowlist声明，以及42017/20852/3246/78918四个完整惰性默认/安全模块。保留文件与网络规则顺序、strict/fullAccess分支、Windows modify_backup/no-backup path边界、home/codebuddyHome展开、directory/glob标记、safe-delete默认写入规则、网络通配域名、默认权限配置/备份上限，以及原安全分类/allowlist precedence。原decorators不执行，固定SHA与UTF-16位置经AST verifier逐项检查。
+
+createNativeSandboxServices新增显式rules配置，要求父BashSandboxManager.getConfig，复用同一lifecycle和TurnConfig，返回RuleSync/BashSandboxManager实际token bindings；复用parent模块64187/20852/42017及原namespace，不重新发明父token或enabled配置。没有默认CLI启用或新增隐式hook；仍由原Sandbox interceptor/父方在对应时点调用。保留文件下发失败后继续网络下发、分别catch/log的原语义，配置获取/build错误继续抛出。
+
+15组原样本行为对照覆盖规则、配置、路径、安全分类以及状态变化；新增1组真实进程成对对照通过原Client发送SetFileRules/SetNetworkRules，验证restart前后原服务接线、共享permissionMode切到fullAccess后的wire payload。使用明确owned测试协议peer，没有执行生产sandbox binary/安装应用；不把测试peer视为OS权限执行证明。原client/process/lifecycle成对验证继续保留。
+
+REA证据 `ev_e096f544310ab2dd0647cafaa882de2c3f50b5115d4193ac99b8691bb983cef2`：3329 AST nodes、1 parsed JS、0 skipped/parse failures；750 semantic/150 unknown（全局和单文件）、45秒预算下partial/truncated。原factory、helpers/class整体AST与有限行为对照补充静态证据，非全产品等价证明。后续继续BashSandboxManager配置来源、Shell/finalization及完整默认产品父启动链；整体目标仍在进行中。
+
+最终本批门槛：check/build通过，1743项编译JS核心与11项Web全通过；RuleSync verifier通过15组件对+1真实进程对并核对4项原属性装饰器注入；原SandboxCLI verifier继续通过13组件对+1真实进程对。配置/Prompt逐字检查与CLI help、Web真实SDK离线流式回答、builtin seed/native reload启动通过。最终追加的verifier元数据检查后再次check/build，不重复运行未变业务的全量核心测试；未重跑全部72组source verifier。README/文档链接及whitespace检查通过。未改依赖锁、原SDK/产品配置/Prompt，未提交或推送，完整默认bootstrap仍未完成。
+
+## 2026-10-24：原 BashSandboxManager 配置与规则链接通
+
+恢复原16394中BashSandboxManager完整18成员、配置/托管策略/路径helper、command-root静态集合，以及67198/38792/93289/69897/50158/71445六个完整惰性utility factory（原shell parser、deep equality与security translator）。不执行产品bootstrap/decorators；大型9151 re-export只映射实际调用的translator，不声称已还原其全部命名空间；原Linux nf/nm/nE引擎是显式runtime.legacy边界，未伪造引擎或默认成功。
+
+保留settings合并/默认路径叠加、home/project/tmp展开、配置/log denyWrite、managed V3/V2/env-file优先级与网络/command/file/data安全覆盖、Windows native-directory glob、策略序列化去重、shell前缀/变量/管道命令根解析、socat/bwrap依赖检查、Linux初始化/重配置与非Linux委派分支。getConfig返回enabled来自共享useSandboxCLI，而loadConfig/legacy状态使用原settings.enabled，未改写这些不同的原路径；错误保留shallow默认fallback。
+
+createNativeSandboxServices新增bash选项，用父SettingsManager和可选execPolicy/sensitive detector创建原manager，并与RuleSync共享同一TurnConfig和原BashSandboxManager token；禁止同时指定owned与borrowed两个manager。原services仍是同步装配，不隐式init Linux引擎或更换CLI默认入口。12组件行为对照+1完整原三类/规则/配置manager真实子进程对照通过；真实IPC pair依次使用同一owned临时root，直接比较包含路径的wire规则，不删除/重写路径字段来对齐。peer不执行命令，只处理协议，不代表native OS sandbox验证。
+
+REA证据 `ev_986d909eda840a551c835e4545f9703526cb94a0367ce0c8730eec57d194798f`：3992 AST nodes、1 parsed JS、0 skipped/parse failures；750 semantic/150 unknown（全局/单文件）、45秒预算下partial/truncated。源码class/helpers/statics/module AST和有限行为对照补充静态证据，非完整产品等价。后续继续原SandboxShellService/finalization、legacy Linux backend与完整默认父服务/CLI bootstrap；英文README和Sandbox文档同步更新。
+
+最终本批门槛：check/build通过，1756项编译JS核心与11项Web全通过；Bash manager、RuleSync、Sandbox CLI三组固定源码verifier全部通过（12/15/13组件对，每组各1真实进程对）。原配置/Prompt校验、CLI help、Web真实SDK离线流式回答及builtin seed/native reload启动通过。未重跑全部73组source verifier，不复用历史全量结果冒充本批结果。README/文档本地链接与whitespace检查通过。未改依赖锁、原SDK、原产品配置/Prompt，未提交/推送；完整默认产品bootstrap仍未完成，目标保持进行中。下一批原Shell三类精确offset/member研究已保存work/sandbox-shell-research.json供继续核验。
+
+## 2026-10-24：原 Sandbox Shell、Pipe/PTY 与真实 IPC 接通
+
+恢复原SandboxShellServiceImpl、SandboxPipeExecutionHandle、SandboxPtyExecutionHandle三个完整类共58成员，9组声明及原SAFE_DELETE_COMMANDS静态集合；恢复11个完整utility factory：62922（原headless terminal）、6453（shell utils）、2752（终端序列化）、83044（TruncateBuffer）、70543（PowerShell/OSC）、38736/79436/91371（ANSI）、19702/3927（shell constants/number utils）、70064（Windows Bash）。保留AX自引用、双次safe-delete bootstrap注入、Windows暂存脚本和单次stale sweep、UTF-8分片/尾部flush、stdout/stderr与截断、真实终端buffer/颜色/alternate模式、原按键差异、abort/timeout/kill、反向事件/audit/telemetry、失败回退、denial结果丰富和规则增量聚合错误。完整声明/factory/statics AST按固定样本UTF-16范围核验；不运行原产品bootstrap/decorators，同时核对10个原属性注入及init PostConstruct。
+
+createNativeSandboxServices新增可选shell，复用实际Bash manager、RuleSync、TurnConfig和父protocol namespace；调用原init并绑定74674.SandboxShellService，保留19702父namespace/token身份。仍然是显式组合，不替换CLI/Web默认入口。原init/反向注册忽略unsubscribe，disposeAll不会解除生命周期/client订阅，也不保证未完成wait结算；父host关闭所有权仍需恢复，不通过改写原方法掩盖缺口。35568安全删除、48973审计、93130/23238编码、5516可执行查找和80699公共服务仍为显式依赖。测试这些边界使用标明的double，未冒充生产实现。
+
+15组原版/还原组件行为对照通过，包含原headless terminal而非fake renderer；另1组真实owned子进程/Unix socket成对验证在重启前驱动Pipe，重启后驱动PTY，收到输出/退出、wait结算并清空句柄跟踪。两个版本依次使用相同owned root，直接比较结果和协议请求。peer只发送协议事件，不执行请求命令，不代表原native binary或OS sandbox权限验证；Windows跳过真实进程pair。
+
+REA证据 `ev_e205556d0223073f7fc871897a316540f0a1ffe7f7c741d072f36bc8ec9757ac`：52604 AST nodes、1 parsed JS、0 skipped/parse failures；全局/单文件750 semantic nodes、150 unknown及45秒分析预算，semantic coverage partial/truncated。有限配对行为及完整AST检查补充静态证据，不声称全产品等价。英文README/Sandbox文档更新能力、运行方式、实际边界和证据。
+
+最终本批验证：check/build通过；1772项编译JS核心测试、11项Web测试全部通过；Shell verifier通过15组件对+1真实进程对；Bash manager回归verifier通过12组件对+1真实进程对。配置/115 Prompt/22 desktop模板逐字检查通过；CLI help、Web真实SDK离线流式回答、builtin seed/native reload启动通过。最终补充原装饰器元数据核验后再跑Shell verifier及check/build；未重复未变业务的全量核心测试，未重跑全部74组source verifier。文档链接与whitespace检查通过。未改依赖锁/原SDK/原产品配置/Prompt，未提交推送。目标继续active，下一批优先安全删除/审计实依赖、Shell关闭所有权/finalization、legacy Linux引擎和默认产品父启动图。
+
+最终独立复核补强：真实IPC pair的返回值增加RunExecutable/ProcessWrite完整journal记录，比较实际executable/args/env/cwdDir/stdoutMode/data，不只比较command名称；补强后再次Shell成对verifier及build通过。此改动仅加强验证观察值，未修改执行实现。
+
+## 2026-10-24：原安全删除 helper、shipped shim 与 security audit 恢复
+
+恢复35568安全删除完整factory及8616/75753/61462三个完整support factory，复用同源93289/69897/50158完整shell-quote实现，共7个原factory；保留host判定缓存、桌面模式settings/严格threshold、资源root探测/缓存、Node执行路径选择、env去重、Posix bootstrap、PowerShell项目/session上下文、report JSONL读取/删除/原结果附加、bulk marker/信号文件/批准拒绝、Windows recycle metadata/输出/命令目标解析、helper分类及fail-closed escalation。createNativeSafeDelete要求显式process、__filename/__dirname、Node createRequire和Node/path/resource namespaces，不从安装应用隐式加载默认依赖。
+
+在原包cli/vendor/shim定位并按字节复制8个资源共91969bytes，保存在packages/harness/vendor/shim，manifest记录hash/size/mode；原路径并非cli/dist/vendor/shim。包括bulk guard、Node preload、Python sitecustomize、rm/unlink/rmdir和2个shell support文件。提取文件均0644，已有证据目录未发现可核验的archive/header，因此不声称已恢复原archive executable flags，亦未自行chmod掩盖未知。仅发现darwin-arm64 genie-trash binary，未复制或启动；部署权限/native删除backend及跨平台执行仍未证明。明确保留standalone guard DEFAULT_THRESHOLD=20与35568 DEFAULT_SAFE_DELETE_BULK_THRESHOLD=50的原差异。
+
+另恢复完整48973 security audit factory，显式crypto/fs/path/PathUtils与process/Date边界；保持env值严格为1才写入、home/audit-log/spool目录、JSONL补换行、默认字段、redaction与原command hash分离、preview截断、action mask优先级、异常吞掉、ungated test reader、原sandbox block忽略blockType并归为network事件等行为。构造不写audit，实际调用才读写owned/parent roots。
+
+11组SafeDelete原版/还原组件配对通过；原bulk guard在owned fixture文件上真实计数、确认、批准、拒绝并消费信号，文件保留；原Node preload通过helper产生的NODE_OPTIONS在owned child中加载，检查实际fs patch但不执行删除。8资源与原包逐字/hash/mode校验通过。另1组真实子进程/socket原版全图配对，把实际safe-delete与audit namespace接入Shell/CLI/rules/bash链，在重启前Pipe及重启后PTY上比较完整RunExecutable/ProcessWrite env/payload和实际audit条目。peer只提供协议事件，不执行shell命令，不冒充OS sandbox或trash后端。audit另6组件对照及完整factory AST通过。
+
+REA安全删除证据 `ev_d8f60a0c0532e599b51340c650772cc61d2931f686883a2abdc0216be6de363f`：8863 AST nodes、2 parsed JS、0 skipped/parse failures；audit证据 `ev_5d3f861bc4da84615505d45525fd2bb0e2ee75dd9b445375cdd163e135d738bb`：1760 AST nodes、1 parsed JS、0 skipped/parse failures。均750 semantic/150 unknown全局与单文件、45秒预算，semantic partial/truncated；有限原版配对与整体AST/资源逐字检查补足证据，非全产品等价证明。
+
+最终本批门槛：check/build、1790项编译JS核心、11项Web全部通过；SafeDelete（11组件+1真实进程）、audit（6组件）、Shell（15组件+1真实进程，现含actual safe/audit）与Bash manager回归（12组件+1真实进程）source verifier通过；115 prompts/22 desktop模板和配置逐字校验、CLI help、Web真实SDK离线streaming/builtin seed/native reload启动通过。未重跑全部76组source verifier。英文README/Sandbox文档、local links、whitespace检查通过；未改依赖锁/原SDK/原配置/Prompt，未提交推送。完整默认父服务bootstrap与关闭所有权仍未完成，目标active。后续优先连接原sandbox agent lifecycle/finalization与Shell关闭所有权，并恢复剩余真实LocalShell/encoding/which父依赖；原shim对OS temp路径有native-delete例外，任何后续删除行为验证必须保留该原语义，使用明确owned资源并区分拦截、允许、失败与native backend。
+
+### 2026-10-24：Shell 路由与 Sandbox 收尾钩子
+
+- 新增 `native-sandbox-finalization.ts`，恢复 DelegatingShellService、FinalizationFileProjectionSyncHook、FinalizationModifyBackupHook、SandboxCLISessionEndHook：4 个完整类、17 个成员、4 个完整声明组及 38195/57126 两个完整 factory。固定原始 bundle SHA256 仍为 `4120898f1ded86ac545316721d216c827a325c2513a8fae4bcd8c8bbbf211afd`；源码文件记录 UTF-16 起止范围。
+- 原样保留 Linux legacy / 其他平台 Sandbox CLI / disabled 或配置失败 local 分支；白名单路径仍参与 projection；backup 不按 cancelled 跳过；projection 200 UTF-16 与 backup 16 Unicode codepoint 的不同消息截断；clear/resume 才 stop，其他 SessionEnd 原因只 flush；stop 失败仍恢复 cwd。
+- 显式 Sandbox composition 返回三项 hooks 集合、共享 lifecycle/TurnConfig，交给 parent Hook provider 调度；只有提供真实 local/legacy parent 时才建立 delegator 和 ShellService token 绑定。没有自行添加退出顺序或默认成功的 fallback。
+- 完整 AST 对照与 11 组原版/恢复行为配对通过；额外真实 owned child + Unix socket 配对使用完整原版/恢复 CLI/rules/bash/shell/safe-delete/audit/finalization 链，强制重启后执行 projection/backup commit 协议请求，检查 shutdown 不停止、clear 停止及资源释放。peer 不执行命令、不投影文件；phase/history 是显式测试适配器，不宣称完整产品等价。
+- REA evidence `ev_6a9669fc186124e6bdfe6c780b28769904ebfe44beca057663f6c4f733e486de`：2,825 AST nodes，1 parsed JS，0 skipped，0 parse failures；750 semantic nodes/150 unknowns（per-file/global）、45 秒预算下 partial/truncated。只分析惰性原始片段，未执行 bundle bootstrap。
+- 后续仍需完整恢复 local/legacy Shell、root exit owner、默认产品 DI/bootstrap；英文 README 和 Sandbox 文档已同步这一边界。
+- 本批最终回归：`npm run check` / `npm run build` 通过；编译后 core 全量 **1,801/1,801**、Web host **11/11**；finalization 11 component pairs + 1 real-process pair、Shell 15 component pairs + 1 real-process pair 通过；115 prompts / 22 Desktop assets 配置校验和 CLI/Web 实际启动 smoke 通过。新增 `verify:sandbox-finalization`，源码 verifier 总数为 77（不含 config）；本批未重跑全部历史 verifier。日志保存在 ignored `work/finalization-*.log`。
+
+### 2026-10-24：原版进程退出与 SafeExit
+
+- `native-process-lifecycle.ts` 恢复原版 76360 的全部模块体（UTF-16 `[9852690,9858421)`），`native-safe-exit.ts` 恢复完整 36648 factory（`[13359185,13359526)`）；固定 bundle hash 未变。显式安装原版模块体，import 不安装 handlers，附加 return 仅暴露现有 closure。未执行原始整个应用 bootstrap。
+- 保留 startup/version/Node/Git Bash checks、SIGQUIT/SIGTERM/SIGHUP、异常与同步日志、30 秒 orphan TTY 检测、debug crash gate、process.exit 同步 Sandbox kill 包装。原版退出顺序为 telemetry flush → snapshot/Shell → gateway → team → SessionEnd → telemetry shutdown → SafeExit；本地 catch 与外围 catch 的不同短路行为、5 秒 unref fallback、重复 exit 立即返回均未改写。SafeExit 原样恢复 raw-mode/cursor。
+- 全模块语句 AST（仅排除 adapter return）/完整 SafeExit factory AST 对照通过；11 lifecycle component pairs、4 SafeExit cases、1 真实 owned Node child SIGTERM 配对。真实子进程接收 SIGTERM 后 exit code 0、清理调用顺序一致；服务仍为显式 fixture adapters，不宣称默认生产服务图已完成。宿主 process 未修改。
+- REA evidence `ev_8f9e0646a750119adfbedc7d733e4465546933d22237078ee30b5fb107a24967`：1,371 AST nodes、2 parsed JS、0 skipped、0 parse failures；750 nodes/150 unknowns per-file/global、45 秒预算，partial/truncated。
+- 文档 `docs/native-process-lifecycle.md` 明确 install-once 与无 teardown 的原版边界。尚未默认激活；后续继续 local/legacy Shell、telemetry helpers、session/container graph，不能以进程 fixture 等同产品整体退出验证。
+- 本批最终回归：check/build 通过；编译后 core **1,814/1,814**、Web host **11/11**；源码配对 11 lifecycle + 4 SafeExit + 1 real-process pair 全通过；115 prompts/22 Desktop assets 校验及 CLI/Web launcher smoke 通过。新增 `verify:process-lifecycle`/`smoke:process-lifecycle`，source verifier 共 78 项（不含 config），本批未重跑所有历史 verifier。日志为 ignored `work/process-lifecycle-*-final.log`。
+
+### 2026-10-24：完整 LocalShell 模块与 legacy wrapper
+
+- `native-local-shell.ts` 恢复完整 43522（含原版 DI registration、LocalShell、PTY/ChildProcess handles、OutputSpiller、ShellSnapshot、DelegatingShell、完整 PowerShell script/format helpers）及完整 35179/38590 helpers；另恢复完整 legacy class declaration。固定 bundle hash 未变，UTF-16 ranges 写入源码 metadata。
+- 新增显式 `createNativeLocalShellServices`，构造 snapshot/local 并执行原版 init，返回原始 token bindings；有 BashSandbox parent 时构造 legacy wrapper。完整 43522 执行原版 decorator statements，decorator 实现仍由 parent 提供；独立 legacy class 采用显式注入。没有把默认 CLI/Web 切换到尚未齐全的 parent graph。
+- 完整 3 factories + legacy declaration AST 对照及 6 组 source/recovered 配对通过。包含真实 owned Node raw-command 子进程：stdout/stderr、退出码 7、active handle 清理；使用真实 fs/child_process、实际恢复的 safe-delete（配置 disabled），共享已恢复 shell/terminal utility。DI、encoding/executable lookup 仍有明确 fixture 边界；snapshot concurrency 用替代 creation 隔离 promise ownership，不宣称实际 profile capture 已验证。
+- 保留 local dispose 等待句柄、legacy dispose 空操作/count=0、2 秒 unref warmup 不由 dispose 取消、snapshot clearCache 不取消 pending creation 等原版所有权。未把这些边界改成更易通过的行为。
+- REA evidence `ev_c8cf521a1bb328f8096f62319f9171e583996095d42c4fb58449a33ea22acfc1`：8,897 AST nodes、4 parsed JS、0 skipped、0 parse failures；750 nodes/150 unknowns per-file/global、45 秒预算 partial/truncated。原片段仅惰性静态分析。
+- 待继续：PTY、真实 snapshot generation、output-spill/error/timeout branches、Windows/PowerShell、legacy platform engine 和默认产品服务图；新英文文档 `docs/native-local-shell.md` 及 README 链接明确区分完整源码恢复与有限运行验证。
+- 本批最终回归：check/build 通过，compiled core **1,820/1,820**、Web host **11/11**；6 组源码配对（含真实 raw child）通过；115 prompts/22 Desktop assets 配置校验及 CLI/Web launcher smoke 通过。新增 `verify:local-shell`/`smoke:local-shell`，source verifiers 共 79（不含 config）；本批未重跑全部历史 verifier。日志保存于 ignored `work/local-shell-*.log`。
+
+### 2026-10-24：真实 ShellSnapshot、超时与 PTY 执行补证
+
+- 原版执行代码未改写。新增 5 组 source/recovered 对照，LocalShell 共 11 组：真实 Bash 从 owned `.bashrc` 生成并验证 snapshot，后续 local command 恢复 function/alias，过滤单下划线 completion function，clearCache 删除文件并释放 exit listener；真实 snapshot validation 拒绝 stdout/语法错误、creation script 失败传播；OutputSpiller UTF-8 byte count/close/cleanup；真实 raw child timeout SIGTERM process-group 回收；真实 PTY backend/headless terminal 输出且断言未走 fallback。
+- 捕获应用 package.json 固定 `@lydell/node-pty@1.2.0-beta.14`。补入相同直接依赖与其上游 optional platform packages；package-lock 仅新增该依赖族，原 SDK pins 未变。原先缺失依赖导致的 getPty import fallback 得到实际修复。
+- 原生 provenance 不能用版本号替代：新增 `vendor/pty-provenance.json`，两个 JS entrypoint byte-identical；darwin-arm64 pty.node/spawn-helper 整体 hash 不同。只读 codesign 显示 captured addon 腾讯 Developer ID 签名、npm addon ad-hoc/linker 签名；独立 Mach-O section parser 比较 addon 11 / helper 7 个 sections 的 name/size/flags/content hash 全部一致，未据此推断全部 load commands/loader/signature 行为等价。源码 verifier 重核 4 files 的双方 hash 和 section 数据。未修改捕获文件或其 `0644` 提取模式；真实执行使用 npm prebuild 的可执行包装。
+- 仍未验证其他平台 native artifact、PTY input/resize/abort 全分支、真实 legacy engine 与默认服务图。先前 REA 原始模块证据适用，源码没有变化；新增运行证据不冒充完整产品等价。
+- 本批最终回归：check/build、11 source/recovery pairs（其中真实 PTY 严格断言 backend 与 handle 类型）、4-file provenance、compiled core **1,825/1,825**、Web host **11/11**、115 prompts/22 Desktop assets 校验、CLI/Web launcher smoke 均通过。没有执行 npm audit fix 或升级其他依赖。日志为 ignored `work/local-shell-extended-*.log`。
+
+### 2026-10-24：Shell 编码、检测与可执行查找真实依赖闭包
+
+- 新增 `native-shell-io.ts`，完整恢复 93130/23238/5516 根入口的 71 个原始 factories（包括编码 tables、detector models、stream adapters、which/isexe）；6 个 Node builtin 作为显式边界。初始提取 72 个中包含 fs/promises 的 require wrapper，该内建被正确归到外部边界，未用空实现替代。源码记录每个 UTF-16 range 与固定原 bundle hash。
+- 新增 `createNodeShellIO` 使用 createRequire 提供原始 CommonJS Node builtin 语义。实测 ESM module namespace 缺失 hasOwnProperty，不能直接充当原版 require(buffer) 返回值；修正发生在边界装配，没有修改原 factory。未猜测 npm 版本或替换 bundled encoding/detection/which 实现。
+- 全部 71 factories AST 对照、7 source/recovered 场景配对通过：多编码 roundtrip、BOM/alias/unknown codec、跨 chunk multibyte stream、检测结果/置信度、真实 owned executable 权限及 PATH、异步 null 与同步 ENOENT 差异、Bun all-path 去重。
+- LocalShell 11 组原版配对现已使用实际恢复的 encoder/detector/which，包含真实 raw child、snapshot、timeout、PTY；不再依赖这些接口的测试占位。其他明确使用 adapters 的 Sandbox component fixture 未声称自动转换。DI decorators 仍为明确 parent 边界。
+- REA evidence `ev_7bf4fe902a6f118889e9c0cd2e659a9bc2ddd559d734407f0e2591f1fb569ebb`：104,591 AST nodes、71 parsed JS、0 skipped/invalid UTF8/parse failures；750 nodes/150 unknowns per-file/global、45 秒预算 partial/truncated。未运行原始应用 bootstrap。
+- 新增英文 `docs/native-shell-io.md`，同步 README/LocalShell 文档。默认产品服务图仍未接入完整，不能把有限输入的 encoding/lookup 验证扩大为全产品等价。
+- 本批最终门槛：check/build、71-factory AST/7 IO 配对、LocalShell 11 配对及 4-file PTY provenance、compiled core **1,832/1,832**、Web **11/11**、115 prompts/22 Desktop assets 配置校验、CLI/Web launcher smoke 全通过。新增 `verify:shell-io`，source verifiers 共 80（不含 config）；未重跑全部历史 source verifier。日志位于 ignored `work/shell-io-*.log`。
+
+### 2026-10-24：统一 Local/legacy/Sandbox Shell 服务装配
+
+- 扩展 `createNativeSandboxServices.local`，在已拥有的 Bash manager 之后构造原版 LocalShell/Snapshot/legacy wrapper，把同一个 LocalShell 注入 Sandbox fallback 和 legacy；finalization 使用同一组 delegates 构造原版 Shell router。Local/Snapshot/Legacy bindings 与 19702/35179/57126 namespaces 返回给 parent，Sandbox Shell 复用 Local 的 19702 Symbol namespace。
+- owned local 与 borrowed shell.localShellService / finalization.delegates 的冲突在构造前拒绝。既有显式 borrowed 路径保留。原始 class/factory 代码未改动，没有创造另一套句柄或退出策略。
+- 新组合测试验证实际 token/instance identity、hook/lifecycle 共享，经 disabled-Sandbox router 运行真实 owned Node 命令并清理本地句柄；Linux legacy route 使用明确 pass-through engine boundary 跑同一 owned command，legacy count 保持 0、只有 Local 拥有句柄。不宣称该 adapter 执行了真实 Linux sandbox enforcement。
+- 原版 finalization 源码 11 component pairs + 1 real child/socket pair 回归通过；该已有配对覆盖 Sandbox restart/projection/session-end。新的统一图测试没有把两组独立证据说成一个完整原生 Sandbox E2E。
+- 文档补充统一 graph 用法及 original ownership 边界。仍是显式 API；默认 CLI/Web bootstrap、真实 legacy engine 和全图关闭 ownership 尚未证明完成。此批是装配改动，复用已核验的 REA/source evidence，不重复宣称新增原始模块。
+- 本批最终回归：check/build、2 项组合图测试、finalization 11 source pairs + 1 real IPC pair、compiled core **1,834/1,834**、Web **11/11**、115 prompts/22 Desktop assets 配置校验、CLI/Web launcher smoke 均通过。源码 verifier 数仍为 80（不含 config），未重跑所有历史 verifier。日志位于 ignored `work/shell-graph-*.log`。
+
+### 2026-10-24：原版 telemetry exit helper
+
+- 新增 `createNativeTelemetryExit`，完整恢复 93441 factory（UTF-16 `[7887746,7889212)`，固定 bundle hash 未变），可作为 process lifecycle 的实际 93441 namespace。
+- 保留 metrics 80% remaining deadline、trace 并发 forceFlush、outer/unref timeout、错误吞并、不取消底层 promise、flush 可重复/shutdown 缓存首次 promise（包含非正预算 no-op）、原 test reset。没有擅自调用 TraceService.shutdown。
+- 完整 factory AST 与 6 组 source/recovered 配对通过；其中一组将实际 helper 注入已恢复的原版 process exit，验证两阶段 1500ms budget 对应 metrics 1200ms 并清理所有测试计时器。metrics/trace 服务仍是显式 adapters，不能声称真实 export/delivery 已完成。
+- REA evidence `ev_4b7c428fdc64b4dea1a4a6d7fd744a17cdb2d59023d1d41cf7416e188206ca80`：381 AST nodes，1 parsed JS，0 skipped/parse failures；coverage=unknown、truncated=false，未将其表述为完整语义覆盖。源码与行为对照作为独立证据。
+- 已进一步定位 8395 `[7875230,7882707)` 含完整 AgentMetricsAggregatorImpl，当前仅提取到 ignored work 供下一步恢复；真实 aggregator/Galileo/TraceService 与默认 bootstrap 仍待接入。
+- 本批验证：check/build、telemetry 6 source pairs、process lifecycle 11 source pairs + 4 SafeExit cases + 1 real child pair、compiled process-lifecycle/telemetry 定向测试 **19/19** 全通过；改动未激活默认 runtime，未重复运行全量 core/Web/launchers（最近全量结果仍为上一批 1834/11）。source verifiers 共 81（不含 config）。日志为 ignored `work/telemetry-exit-*.log`。
+
+### 2026-10-24：完整 AgentMetricsAggregator
+
+- `native-agent-metrics.ts` 完整恢复 8395 `[7875230,7882707)` factory、Symbol、class、30s constant、Autowired 与 ApplicationLifecycle registration。固定 bundle hash 不变，原 class/factory 未改写。Galileo 与 logger 仍由 parent 注入。
+- 6 组 source/recovered 配对及完整 factory AST 对照通过：request/tool/task/cache/callback/token metrics、window guard/reset、MCP server promotion、500 UTF-16 error truncation、last model fallback、interval unref/clear、started/unstarted shutdown、export failures。新增 actual aggregator + actual telemetry-exit helper 联测，验证 budget 800/400、window flush 与 timers 清理；Galileo/trace exporters 仍为 explicit adapters，不宣称真实发送已还原。
+- 特别保留 cache-only/generated-call-only 不触发 flush、无 active timer 的 flushAndShutdown 不 flush window、caught emission failure 后丢弃窗口等原始行为；没有按常规预期“修正”它们。
+- REA evidence `ev_defb1f41c8ae9ee80eb457c4c4f0cb4c3a957a88e1e8112e8bbf2382640b6557`：1,747 AST nodes、1 parsed JS、0 skipped/parse failures；750 nodes/150 unknowns per-file/global、45 秒预算 partial/truncated。未执行应用 bootstrap。
+- 新增 `verify:agent-metrics`，原 lifecycle smoke 纳入指标测试；英文 README/process lifecycle 文档说明 token 共享与 parent 依赖。真实 Galileo/TraceService、默认 bootstrap 及完整服务图仍未完成。
+- 本批最终门槛：check/build、metrics 6 source/recovered pairs、compiled core **1,846/1,846**、Web **11/11**、115 prompts/22 Desktop assets 校验、CLI/Web launcher smoke 通过。source verifiers 共 82（不含 config），未重跑全部历史 verifier。日志保存于 ignored `work/agent-metrics-*.log`。进一步核实 40602 只导出 Galileo Symbol，实际 Galileo 实现位于另一父模块；已保存定位证据，避免将 token 模块误当发送端实现。
+
+### 2026-10-24：TraceService / TracerProvider 与 span 辅助模块
+
+- 新增 `createNativeTracing`，完整恢复 79645/801/1423/94668/97584/63984/11484/86504 共 8 factories，含 DI registrations、trace cache、global/standalone provider、span/empty span、deterministic IDs、logging exporter、env parsers。固定 bundle hash 与全部 UTF-16 ranges 写入 metadata；未执行 bootstrap。
+- 8 组 source/recovered 对照与所有完整 factory AST 通过。验证 disabled、standalone init/restart/resource/endpoint/header、Galileo global forceFlush/不 shutdown、100-entry FIFO duplicate-ID eviction、root/child option precedence、remote parent/B3/status、env flags/warnings/percent decoding、logging exporter forwarding，以及 actual TraceService + actual telemetry-exit helper 两阶段联测。
+- SDK/API/exporter/DI/header constants 仍为明确 adapters；构造参数观测只投影配置值，不比较每次独立构造的 class/function identity。没有把此测试说成真实 OTLP transport、全局 SDK 注册或 backend delivery；未发送任何遥测。
+- REA evidence `ev_3119af25ddaba2ebe428496f513c912ccec19e8012c0fce61c465a995ceb4c9f`：3,553 AST nodes、8 parsed JS、0 skipped/parse failures；750 nodes/150 unknowns per-file/global、45 秒预算 partial/truncated。
+- 新增英文 `docs/native-tracing.md` 与 README 链接；新增 `verify:tracing`，source verifiers 共 83（不含 config）。真实 Galileo、OpenTelemetry parents 与默认产品装配仍待完成。
+- 本批验证：check/build、8-factory AST/8 source pairs、编译后 process lifecycle/metrics/telemetry/tracing 定向测试 **33/33**（含已有真实 SIGTERM child）全通过。默认 runtime 未激活新 tracing；本批未重复全量 core/Web/launchers，最近全量结果仍为上一批 1846/11。日志为 ignored `work/tracing-*.log`。
+
+### 2026-10-24：GalileoServiceImpl 服务层及退出联测
+
+- 从 92763 恢复 4 个完整原始 statements：GalileoServiceImpl 全类、DI decorators/static flag、isGalileoOtlpRequest、decorator helpers。UTF-16 ranges 与固定 SHA-256 写入 metadata，4-region AST 与 7 组 original/recovered 行为对照通过。不是 92763 全 factory（该模块还内嵌 SDK）。
+- 覆盖 disable/invalid config、setup/provider capture、identity dimensions、histogram/counter cache、flush/shutdown failure ordering、fingerprint hot rebuild、proxy URL/options overloads、timeout 不取消底层任务与 0-budget 调用行为。
+- 实际恢复的 Galileo + metrics + TraceService + telemetry-exit 两阶段联测通过；SetupGalileo、SDK Logger/OTel、产品配置解析/DI/认证/OS 仍为明确 adapters，无远程上报或 host HTTPS patch。默认产品装配尚未启用该服务。
+- REA evidence `ev_5fd83489d4143a42ab7c5765f253df396ae12602211fbe39f07d067853225685`：2,690 AST nodes，1 parsed JS，0 parse failures；750/150 限额、45 秒预算，partial/truncated。
+- 新增英文 `docs/native-galileo-service.md` 与 README 索引；新增 `verify:galileo-service`，source verifiers 共 84（不含 config）。
+- 本批验证完成：`npm run check`、`npm run build`、4-region AST / 7 source pairs、编译后全量 core **1861/1861**、Web **11/11**、CLI help 与 Web → real SDK → recovered harness 流式离线启动全部通过；`git diff --check` 通过。日志 `work/galileo-{check,build,verify,core,hosts,launchers}.log`。真实 SDK 发送与默认 native DI graph 仍未完成，不以启动 smoke 等同原应用完整还原。
+
+### 2026-10-24：Galileo encrypted HTTP transport 与真实本机 KMS
+
+- 恢复 92763 中 21 个完整 statements：transport/DEKManager、RSA KMS exchange、AES/Base62、gzip、routing/headers/retry helpers；metadata 保留固定 hash 与 UTF-16 ranges。未宣称整个 SDK factory 恢复。
+- 6 组 source/recovered 对照通过：真实 loopback HTTP/plain/gzip/503 retry/400 failure、AES framing/header、DEK cache 时序、真实 KMS JSON/error、routing/backoff、真实 RSA-2048 KMS → gzip/Base62/AES → HTTP delivery，两次发送仅一次 KMS 请求。测试在当前 Node 使用实际 crypto/http/zlib，不联系产品遥测服务。
+- 保留 Retry-After:0 → -1 → Node TimeoutNegativeWarning；保留缓存 key 后后台 refresh 逻辑。cache 调度单测替换 refresh，独立本机集成用真实 fetchDEK。其他 Node/OpenSSL 版本未验证。
+- REA evidence `ev_2d6d637d025c9e209754f6bd22c79a95494c11c92a94253bc7ac8fbe78a036e5`：2,035 AST nodes，1 parsed，0 parse failures，750/150 limits、45秒预算，partial/truncated。
+- 新增英文 transport 文档与 README 索引；source verifiers 共 85（不含 config）。Exporter wrappers/serializers/SetupGalileo/SDK logger/default native assembly 仍待衔接。
+- 本批最终 check/build、21-region AST / 6 source pairs、编译后的 transport tests **6/6** 与 diff whitespace 检查通过。新 helper 的类型错误已修正后复验；未重复无关全量回归，最近全量仍为上一批 core1861/Web11/CLI+Web启动通过。日志 `work/galileo-transport-*.log`。
+
+### 2026-10-24：OTLP trace/metrics/logs JSON serializers
+
+- 恢复 92763 的 42 个完整 statements 与 41437/77047/11447 三个完整 helper factories，固定 SHA-256/UTF-16 provenance 与全范围 AST 对照通过。
+- 5 组 source/recovered 对照验证 resource identity/scope 分组、精确纳秒字符串/hex IDs、四种 metric 点结构、structured log、binary/time helper/response failures，以及真实 loopback serializer → gzip transport → HTTP JSON/response 解析。SDK records 为明确 fixtures，32047 使用 Node performance，70000 未用 env import 为显式空 namespace。
+- REA evidence `ev_db014820fbe2b1b9d135e95e68bd4a151e9f40e8ec94db8fc7ce7bdd3c7b43c4`：4316 AST nodes、4 parsed JS、0 parse failures，750/150 limits、45 秒预算，partial/truncated。
+- check/build、42-region/3-factory AST 与 5 source pairs 通过；source verifiers 共 86（不含 config）。Exporter wrappers/delegates/SetupGalileo/SDK logger/default native graph 尚待完成。英文 README/serializer 文档已更新。
+- 编译后 transport + serializers 联测 **11/11** 通过，包含真实 RSA/KMS 与真实 HTTP。diff whitespace 检查通过；本批未重复全量 core/Web/launchers，最近全量仍为 core1861/Web11 与启动 smoke。日志 `work/otlp-serializers-*.log`。
+
+### 2026-10-24：OTLP exporter delegate / bounded queue
+
+- 恢复 92763 的 8 个完整 statements 与 36275 enum 完整 factory：base/delegate、bounded promise queue、partial-success handler、error type。固定 hash/UTF-16 metadata、全部 AST 和 6 source pairs 通过。
+- 覆盖 concurrency overflow、flush/shutdown wait、transport result/rejection、serializer null/synchronous throw、partial-success/malformed response success-with-warning、queue rejection cleanup；真实本机联测 actual exporter base/delegate → actual log serializer → actual transport，验证接收 JSON 和 flush/shutdown。
+- 共享声明导入的 10 个未用 parent namespaces 在 fixture 为显式空 adapters；diagnostics 也为明确 adapter。没有把这些 imports 说成完整 SDK parent 恢复。
+- REA evidence `ev_ef6294fffac7714d6de7ff6b119528219cab32f858116529bbbbebf4e770c4ce`：2177 AST nodes、2 parsed、0 parse failures，750/150 limits，45秒预算，partial/truncated。
+- check/build、8-region/1-factory AST、6 source pairs 通过；source verifiers 共87（不含config）。具体 Galileo exporter constructors/HTTP option resolution/provider setup/SDK logger/default assembly 待继续。英文 README/文档已更新。
+- 编译后 export/serializers/transport 联测 **17/17** 通过，含真实 HTTP 与 RSA/KMS；diff whitespace 检查通过。本批未重复全量 core/Web/launchers，最近全量为 core1861/Web11/启动 smoke。日志 `work/otlp-export-*.log`。
+
+### 2026-10-24：OTLP HTTP options 与 baggage helpers
+
+- 恢复 92763 的 26 个完整 statements 与 44874/20662/3250 三个完整 factory。固定 SHA-256/UTF-16 metadata、全部 AST 与 5 source pairs 通过。
+- 覆盖 user/signal/general/default 优先级、invalid env fallback、显式 URL/timeout throws、percent decode errors、默认 headers 最后覆盖、动态 headers 保留旧键、keepAlive mutation 和 baggage immutable operations。72912 仅为 recovered baggage namespace bridge，未恢复其无关 reexports；DiagAPI 为明确 adapter。
+- REA evidence `ev_4afda3d19a4c8e3325c06abc5b5a6f2f07b6dbde4878b18b214614cb3187be0e`：2445 AST nodes、4 parsed JS、0 parse failures，750/150 limits、45秒预算，partial/truncated。
+- check/build、26-region/3-factory AST 与 5 source pairs 通过；source verifiers 共88（不含config）。英文 README/HTTP配置文档更新；具体 exporter constructors 与默认 SDK/native graph 待衔接。
+- 编译后 HTTP configuration/export/serializers/transport 定向回归 **22/22** 通过，包含已有真实 HTTP/RSA/KMS；diff whitespace 检查通过。本批未重复全量 core/Web/launchers，最近全量仍为 core1861/Web11/启动 smoke。日志 `work/otlp-http-*.log`。
+
+### 2026-10-24：Galileo trace/log exporter constructors
+
+- 恢复 92763 的 4 个完整 statements（trace/log constructors、HTTP helper、shared header declaration）与 15086/15183 两个完整 constants/enums factories。保留 SDK 0.3.17-beta.1。固定 hash/UTF-16、全部 AST 与 2 source pairs 通过。
+- 连接实际 recovered config/delegate/serializer/transport modules，本机 trace/log exporter → gzip → HTTP 完整路径验证 endpoint、headers、User-Agent、OTLP JSON、flush/shutdown；另测 signal env、timeout/concurrency、disabled encryption、invalid constructor。SDK records 是 fixtures，底层原有 diag/performance/unused-import 边界仍明确。
+- REA evidence `ev_0b7742626831b2cd8d7ccfb7e9a34d5cd68e9eb222f47a55c7fc2d4b3971c5a6`：1002 AST nodes、3 parsed JS、0 parse failures，750/150 limits、45秒预算，unknown/not truncated。source verifiers 共89（不含config）。
+- Metric exporter 的聚合/temporality base、provider/SDK logger/SetupGalileo/default native graph 仍待恢复与装配。英文 README 索引拆为 service/exporters 与 transport 两行，增加对应文档。
+- 本批 check/build、4-region/2-factory AST 与2 source pairs通过；编译后全量 core **1885/1885**（确认包含新增 constructors 两例）、Web **11/11**、CLI help 与 Web→real SDK→recovered harness 流式离线启动全部通过。diff whitespace 检查通过；日志 `work/galileo-exporters-*.log`。这不等同默认原生 DI/完整 SDK 已恢复。
+
+### 2026-10-24：Galileo metric exporter 与 aggregation closure
+
+- 恢复 92763 的 39 个完整 statements：metric exporter/base、temporality selectors、instrument descriptor、drop/sum/last-value/histogram/exponential histogram aggregation 与 local helpers。固定 hash/UTF-16 metadata、39-region AST 与 5 source pairs 通过。
+- 验证全部 instrument 的累计/增量/低内存选择、显式 override、默认 aggregation、sum reset、histogram merge/diff、signed exponential histogram，以及实际 recovered aggregator 生成 metric → 具体 metric exporter → serializer/HTTP 的真实本机接收与 flush/shutdown。
+- 70000 getEnv 与 diagnostics 仍为明确 adapters；未使用的 shared crypto import 提供真实 Node crypto；其他组件为已恢复实现。MeterProvider/readers/SDK logger/SetupGalileo/default native graph 仍待衔接。
+- REA evidence `ev_af2873aaa6e7b30cc818b49ef725779af8eadf1fda87fcda630d99378de42469`：9,214 AST nodes、1 parsed JS、0 parse failures，750/150 limits、45秒预算，partial/truncated。source verifiers 共90（不含config）；英文 README 与 metric exporter 文档更新。
+- 本批最终 check/build、39-region AST/5 source pairs、编译后 exporter/config/serializer/transport 回归 **29/29** 通过；共享 fixture 增加默认 factory 后复验通过，未改原始实现。diff whitespace 检查通过。本批未重复全量；最近全量 core1885/Web11/CLI+Web启动通过。日志 `work/metric-exporter-*.log`。
+
+### 2026-10-24：OpenTelemetry environment 真实依赖
+
+- 完整恢复 70000（原字面量7e4）/55733/79232/6023 四个 factory，无未恢复的模块依赖。显式 process boundary，固定 hash/UTF-16、全 factory AST 与4 source pairs通过。
+- 覆盖原默认值/enums、boolean/number/list/log/string coercion、无效值fallback、live env reads、浅拷贝默认array identity；没有将解析行为改为更严格的现代规则。
+- Metric exporter fixture 的 getEnv 桩已替换为实际 recovered module，5组 metric source pairs 在新依赖下重验通过。provider/default app graph仍待完成。
+- REA evidence `ev_fa357def9492ca7155057bc5bdf6c517e6207147b70b248dbfe7f02c819f5269`：983 AST nodes、4 parsed、0 parse failures，coverage partial，truncated true，750/150 limits、45秒预算。source verifiers共91（不含config）。README/英文文档已更新。
+- 本批 check/build、4-factory/4 source pairs与5 metric source pairs、编译后遥测导出相关回归 **33/33** 通过；diff whitespace检查通过。未重复全量core/Web/launchers，最近全量仍为core1885/Web11/启动smoke。日志 `work/otel-env-*.log`。
+
+### 2026-10-24：MetricReader / PeriodicExportingMetricReader
+
+- 恢复完整共享 reader declaration（含 ancillary predicate/selector helpers）与 60002/61549 两个完整 factory；固定 hash/UTF-16、全 declaration/factory AST 与5 source pairs通过。ancillary helpers保留源码但未独立行为覆盖。
+- 验证 producer绑定/合并、interval unref注册、forceFlush/shutdown顺序、空scope跳过、export失败、shutdown timeout后可重试且底层未取消；实际reader→聚合结果→metric exporter→HTTP接收通过。计时器为controlled handles，不以此宣称真实周期触发；delivery通过forceFlush触发。
+- 复用实际metric aggregation/timeout helpers；diagnostics/internal export context bridge与SDK producer仍为明确adapters。context suppression/MeterProvider/SDK logger/SetupGalileo/default app graph待补。
+- REA evidence `ev_0c20069ce6b63c01fa25e2e47edcf544f8269e7c571d92fb0b5059c56c695722`：3855 AST nodes、3 parsed、0 parse failures，coverage partial，truncated true，750/150 limits、45秒预算。source verifiers共92（不含config）；README和英文reader文档更新。
+- 本批最终 check/build、reader AST/5 source pairs、metric exporter AST/5 source pairs回归、编译后相关测试 **38/38** 通过。修正测试末项访问的类型断言后重验通过；原始实现未改。diff whitespace检查通过。本批未重复全量；最近全量core1885/Web11/CLI+Web启动通过。日志 `work/metric-reader-*.log`。
+
+### 2026-10-24：原始 export context / ALS / registry
+
+- 恢复72912原始_export函数和65890/33835/57717/98902/1801/70647/58583/87819/79232九个完整factory，含context suppression/API、immutable values、ALS/绑定、registry/version/diagnostics。固定hash/UTF-16、全AST/4 source pairs通过。47763仅桥接实际使用的ROOT_CONTEXT/context，不宣称整个API namespace已恢复。
+- 真实Node async_hooks/events与owned registry验证异步export suppression、caller restoration、函数this/args、EventEmitter/removeListener/once、duplicate registration/diagnostic filtering。未修改host OTel registry，未恢复替代AsyncHooks manager。
+- Reader直接export adapter已替换actual context bridge，5 source pairs重验，export内断言suppressed；保留已有真实HTTP metric delivery。producer/diagnostic sink仍为明确fixture。
+- REA evidence `ev_ee78f09d636d8541a33e5e2da22c3e1fcbb7bbaae27ab2174ed2abeac19abf03`：3455 AST nodes、10 parsed、0 parse failures，coverage partial，truncated true，750/150 limits、45秒预算。source verifiers共93（不含config）；README/英文文档更新。
+- 本批check/build、context AST/4 source pairs、reader AST/5 source pairs与编译后相关回归 **42/42** 通过；diff whitespace检查通过。未重复全量，最近全量core1885/Web11/CLI+Web启动通过。日志 `work/export-context-*.log`。
+
+### 2026-10-24：真实 MeterProvider/instruments/storage/collector
+
+- 恢复92763的15个完整statements与36182完整no-op meter factory，含views、sync/observable instruments/storage、meter shared state、collector/provider lifecycle。固定hash/UTF-16、全AST/5 source pairs通过。
+- 测试真实counter/updown/gauge/histogram、observable/batch callbacks、view rename/attribute filter、scope reuse、shutdown/no-op；真实createCounter.add→provider→reader→context/exporter→HTTP链验证接收OTLP计数，无SDK producer桩。
+- 复用已恢复的reader/aggregation/time/context helpers；诊断为明确sink。Resource仍是显式边界，测试传plain resource并mergeResourceWithDefaults:false；未宣称默认resource/merge、全部storage edge cases、SDK logger/SetupGalileo/default app graph完成。
+- REA evidence `ev_38dccc37ab71727e7e0a6da3593d6c1c6d6b9cd37729ae718b6af8af2b5da608`：11719 AST nodes、2 parsed、0 parse failures，coverage partial，truncated true，750/150 limits、45秒预算。source verifiers共94（不含config）；README与英文文档更新。
+- 本批check/build、provider AST/5 source pairs、reader及metric exporter源码回归、编译后遥测相关测试 **47/47** 通过；diff whitespace检查通过。测试按原API为removeBatchObservableCallback传入instrument列表后重验，未改原始实现。未重复全量；最近全量core1885/Web11/启动smoke。日志 `work/meter-provider-*.log`。
+
+### 2026-10-24：Resource defaults/async/merge 真实依赖
+
+- 完整恢复78766/42152/80221/39858/92321五个factory，含Resource、semantic constants、SDK_INFO(OTel1.30.1)、defaultServiceName、const map。固定hash/UTF-16、全factory AST/4 source pairs通过。
+- 覆盖默认/empty singleton、async settle/reject/pending diagnostics、sync/async左右合并优先级；MeterProvider fixtures替换plain资源并启用默认merge，5 source pairs重验；真实HTTP断言用户service.name与captured telemetry.sdk.version同时存在。
+- process/diagnostic仍显式输入，无resource detection或import activation；SDK logger/SetupGalileo/default app assembly仍待完成。
+- REA evidence `ev_c75f8f2bac6695f05383aaf0a19a3fea3c38c2f0f0dab3af5e3af7ba1a79c55b`：2992 AST nodes、5 parsed、0 parse failures，coverage partial，truncated true，750/150 limits、45秒预算。source verifiers共95（不含config）；README和英文文档更新。
+- 本批check/build、Resource AST/4 source pairs、MeterProvider AST/5 source pairs、编译后相关回归 **51/51** 通过；diff whitespace检查通过。未重复全量，最近全量core1885/Web11/CLI+Web启动通过。日志 `work/otel-resource-*.log`。
+
+### 2026-10-24：LoggerProvider / LogRecord / BatchLogRecordProcessor
+
+- 恢复92763的6个完整statements与14个完整parent factories，含记录/Logger/Provider/config/processors、severity/noop/merge/bind/timeout/attribute/span-context/error/timer辅助。固定hash/UTF-16、全部AST/4 source pairs通过。
+- 验证实际logger emit生成record、scope cache、attributes limit/truncation/dropped/readonly、有效trace context、batch/singleflight shutdown、async Resource等待、真实HTTP body/scope/SDK identity。已不依赖手工LogRecord模拟；实际timers与transport经flush/shutdown清理。
+- context/env/Resource/time为已恢复组件，trace绑定真实span-context helpers（未宣称完整TraceAPI provider）；Console exporter保留源码但未独立输出验证。Galileo outer logger/self-monitor/SetupGalileo/default graph待补。
+- REA evidence `ev_a701da5971e484b5dd308c2743e2d0714faa2e7b9c75c7ef29cb4344898cab69`：7727 AST nodes、15 parsed、0 parse failures，coverage partial，truncated true，750/150 limits、45秒预算。source verifiers共96（不含config），README/英文文档更新。
+- 本批check/build、6-region/14-factory AST/4 source pairs、编译后全量core **1916/1916**（含新增实际logger/HTTP cases）、Web **11/11**、CLI help与Web→real SDK→recovered harness流式离线启动全部通过。README将遥测索引按services/providers/context/transport分行，避免长链接堆叠；diff whitespace检查通过。日志 `work/logger-provider-*.log`。
+
+### 2026-10-24：Galileo outer Logger
+
+- 恢复92763的完整logger class、parseLevel/enums（三个完整statements），以及stringifyHandler/stringifyPlus/isCurrentRequestSampled（三个完整declarators）。固定hash/UTF-16与全部AST对照通过，source verifiers共97（不含config）。
+- 一组综合source pair使用真实LoggerProvider→BatchProcessor→Galileo exporter→HTTP接收端，验证level过滤、sampled override、字符串attributes整组校验、user-agent/trace传播、start/success计数及循环对象序列化。测试self-meter仍为明确记录fixture；console仅owned对象安装，未宣称call-site排除行为独立验证。
+- REA evidence `ev_92cfa7fb92829ddb8b35c5dd5151460771e999c5a99462703b70055d903e71fa`：1299 AST nodes、1 parsed、0 parse failures，coverage partial/truncated，750/150 limits、45秒预算。英文文档与README索引同步。
+- check/build、AST/source pair与编译后遥测回归通过；本批未重复全量core。最近全量1916/1916、Web11/11和CLI/Web启动通过。自监控provider初始化、SetupGalileo与default graph仍未完成。日志 `work/outer-logger-*.log`。
+
+### 2026-10-24：Galileo self-monitor provider 真实组装
+
+- 恢复registerSelfMeterProvider/getSelfMeterProvider两个完整declarators及compression enum完整statement；复用已恢复SumAggregation/Views/MeterProvider/PeriodicReader/Resource/MetricExporter。固定hash、UTF-16与三个区域AST对照通过，source verifiers共98（不含config）。
+- 原版/还原版综合pair验证独立provider、固定资源identity、Production→Formal环境映射、30秒/20秒reader配置与真实unref timer、gzip HTTP、两次delta计数2/3。真实outer logger调用self-monitor factory，过滤info+发送warn得到start=2/end=1，无self-counter桩；collector constants仅在测试中重定向loopback，未访问原始endpoint。
+- REA evidence `ev_68cfc13745f0aa6a10297332681b503f6baabbf3d47faaea5c90c43649103cfd`：217 AST nodes、1 parsed、0 parse failures，coverage unknown、truncated false，750/150 limits、45秒预算。metric exporter的39区域/5 source pairs回归通过，新增英文文档和README入口。
+- SetupGalileo、完整trace/instrumentation初始化与default native service graph仍未完成；未宣称30秒定时触发独立验证。测试显式flush/shutdown所有provider；相关日志 `work/self-monitor-*.log`。
+- 本批最终check/build、self-monitor AST/source pair、metric exporter AST/5 pairs与编译后遥测回归 **57/57** 通过，diff whitespace通过。未重复全量；最近全量core1916/Web11/CLI+Web启动仍为上一批证据，不将本次局部回归等同全量验证。
+
+### 2026-10-24：Galileo business metrics / MetricsAPI
+
+- 恢复getEndBuckets/registerMeterProvider两个完整declarators、compression完整statement和37366完整MetricsAPI factory；固定hash/UTF-16、三个区域及factory AST/2 source pairs通过，source verifiers共99（不含config）。
+- 实际组装六个views（client/server started/handled counter与handled-duration histogram），保留最后非空匹配远程分桶、一次读取remote配置、delta/gzip/30秒interval/20秒timeout/concurrency30。真实counter/histogram存储经HTTP接收端验证4个sum与2个histogram的bounds/count/sum。
+- 全局注册使用真实MetricsAPI与隔离context registry；验证duplicate registration保留原provider但返回新provider、disable回到noop。Node HTTP真实；remote配置与reader定时为明确fixture，测试flush/shutdown并断言无剩余fixture timer。
+- REA evidence `ev_56dc8950b10d48ac4da343af533515fb22ac4d11f65b1a51739ee2f6767e3350`：507 AST nodes、2 parsed、0 parse failures，coverage unknown/not truncated，750/150 limits、45秒预算。README将Galileo assembly独立成行，新增英文文档。SetupGalileo、trace provider/instrumentation/remote config与默认native图仍待补齐。
+- 本批check/build、AST/2 source pairs、编译后全量core **1920/1920**、Web **11/11**、CLI help与Web→real SDK→recovered harness流式离线启动全部通过；diff whitespace通过。全量覆盖最近新增outer logger/self-monitor/business metrics测试。日志 `work/galileo-meters-*.log`。
+
+### 2026-10-24：Galileo sampling / BatchSpanProcessor
+
+- 恢复完整registerTracerProvider与compression enum两条statements，以及69700/14515/62207/84992/72544/11440六个完整factories（sampling decisions、always on/off、parent/ratio samplers、BatchSpanProcessor）。固定hash/UTF-16、全部AST/3 source pairs通过；source verifiers共100（不含config）。
+- 验证ratio归一化/无效trace ID、local/remote parent flags、Galileo disable/filter/parent/remote/random优先级，及queue100/batch20/delay5秒/timeout10秒配置。真实BatchSpanProcessor筛选sampled span fixtures，经exporter/serializer/gzip HTTP发送，export内suppression及caller恢复通过；使用真实Node timer并flush/shutdown。
+- BasicTracerProvider目前为显式parent，注册测试为constructor/register recorder；span为显式fixtures，未宣称真实tracer/span创建与global TraceAPI注册。接下来恢复BasicTracerProvider及依赖，再接SetupGalileo/default graph。
+- REA evidence `ev_6d35cf70c5fe134c2c41b193581590e362c3f0f25ff941c36ff4fad97ebdc063`：2405 AST nodes、7 parsed、0 parse failures，coverage partial/truncated，750/150 limits、45秒预算。README/英文文档同步。
+- 本批check/build、2-region/6-factory AST/3 source pairs、编译后遥测回归 **62/62** 与diff whitespace通过。未重复全量；最近全量core1920/1920、Web11/11与CLI/Web启动为上一批证据。日志 `work/galileo-trace-*.log`。
+
+### 2026-10-24：真实 BasicTracerProvider / Tracer / Span / propagation
+
+- 恢复19个完整factories，含BasicTracerProvider/MultiSpanProcessor、Tracer/Span、TraceAPI/proxy/noop、limits/config/random ID、span enums、PropagationAPI与composite/W3C trace/baggage。固定hash/UTF-16、19-factory AST/3 source pairs通过，source verifiers共101（不含config）。
+- 实际创建parent/child spans，验证active scope、scope cache、attribute截断/丢弃、event limit、status/duration与suppression noop；验证注册前proxy在注册后获得真实tracer，以及W3C traceparent/baggage roundtrip。依赖使用已恢复context/env/resources/samplers/batch/helpers；registry为独立测试所有。
+- Galileo registerTracerProvider现可传实际BasicTracerProvider；集成使用真实ALS/异步active span、真实Span.end→BatchSpanProcessor→Galileo exporter→gzip HTTP，验证父子关联和显式时间戳。paired输出排除随机ID，独立场景使用固定ID generator；不再以Span fixture支撑此集成。
+- REA evidence `ev_4b95ea0db3ce1dea83a7212602360b6e606b6e93ffb3ad3265cc6f94ac18d2ee`：8128 AST nodes、19 parsed、0 parse failures，coverage partial/truncated，750/150 limits、45秒预算。英文文档和README同步修正trace provider边界。
+- 本批check/build、全部AST/3 source pairs、编译后遥测回归 **65/65** 与diff whitespace通过。未重复全量；最近全量core1920/Web11/CLI+Web启动为此前记录。SetupGalileo、instrumentation、remote配置与默认native graph仍待恢复。日志 `work/basic-tracer-*.log`。
+
+### 2026-10-24：SetupGalileo 原始初始化入口
+
+- 恢复完整SetupGalileo statement、配置/profiling校验、machine/header/user-ext/profiler-url helpers及instrumentation注册（5完整statements+6完整declarators），并恢复64270完整LogsAPI/proxy factory。固定hash/UTF-16、11-region/1-factory AST/3 source pairs通过，source verifiers共102（不含config）。
+- 集成使用真实self-monitor/trace/business metric providers及真实Span/metric storage/ALS/batching/transport，验证remote pull→providers→instrumentation注册顺序、provider wiring、选定HTTP hooks与实际span/counter HTTP payload。远程Config及HTTP/Fetch constructors是明确fixture，未宣称真实自动patching；TRPC/profiler分支源码保留但未独立运行验证。
+- 保留原始Setup返回undefined、不提供rollback/关闭handle；独立验证enableRemoteConfig:false在self/trace创建后因null remote.getMetricsConfig失败。测试外部清理部分初始化的providers。配置显式同时disable HTTP/TRPC会拒绝，即使Fetch启用。LogsAPI使用owned registry，验证注册前proxy在注册后emit。
+- REA evidence `ev_0f270cf6328caf8f4eae15043c5909c2e96984bdbd2ce9b8c1a07fddbac3e0c9`：3769 AST nodes、2 parsed、0 parse failures，coverage partial/truncated，750/150 limits、45秒预算。英文文档/README与trace provider边界同步。
+- 本批check/build、AST/3 source pairs、编译后遥测回归 **68/68** 与diff whitespace通过。未重复全量；最近全量core1920/Web11/CLI+Web启动仍为此前证据。继续恢复remote config、实际instrumentation与默认native图。日志 `work/galileo-setup-*.log`。
+
+### 2026-10-24：真实 Galileo remote Config / embedded HTTP closure
+
+- 完整恢复86097及其依赖闭包共77个factories，包含原始Config、嵌入Axios、redirect/proxy/form/MIME/support与Node builtin import wrappers。所有factory保留hash/UTF-16并通过AST；CommonJS loader缓存module对象以保留exports reassignment。source verifiers共103（不含config）。
+- 两组source pairs使用真实Node HTTP：307保留POST/body、gzip JSON、初次pull与60秒配置的受控轮询更新、503保留旧值、成功空响应清null及stopPull。测试未等待真实60秒，未宣称全部embedded client路径覆盖。
+- 新集成以真实Config替换Setup fixture，通过原始POST获取histogram buckets并接入实际业务MeterProvider，最终HTTP payload验证remote bounds/counts。Setup的HTTP instrumentation仍是明确adapter；remote配置流量已非替身。环境与collector为owned，未接触原始telemetry服务器。
+- REA evidence `ev_58b650179a923635807883dd3d94a53e59800b2edc519787a8b42c23f48d47f4`：28371 AST nodes、77 parsed、0 parse failures，coverage partial/truncated，750/150 limits、45秒预算。英文README/文档更新；继续恢复真实instrumentation与default native graph。
+- 本批check/build、77-factory AST/2 source pairs、编译后全量core **1931/1931**、Web **11/11** 与CLI/Web启动全部通过；diff whitespace通过。全量涵盖最近sampling/basic tracer/Setup/config集成。日志 `work/galileo-config-*.log`。
+
+### 2026-10-24：真实 Galileo Fetch instrumentation
+
+- 恢复8009完整FetchInstrumentation及instrumentation base/module hooks/semver等依赖闭包共88个完整factories；复用已恢复OTel APIs/context/enums/time。固定hash/UTF-16与88-factory AST/source pair通过，source verifiers共104（不含config）。
+- 在owned global surface包装Node原生fetch，真实JSON POST(Request)、HTTP500、ignore和服务器断开socket路径产生真实spans/propagation/metrics，经loopback exporter验证3 spans/3 client starts、请求body/trace headers及ignored bypass；保留host global fetch。module hooks为真实实现，测试跟踪后unhook，禁用fetch并shutdown providers。
+- 原始Fetch constructor/enable/disable及base保持源码；Setup自身Fetch分支尚待直接接入，现使用Setup fixture的真实providers后实例化Fetch。HTTP模块自动patching/TRPC/profiler/default native图仍待补齐。仅完整保留辅助CommonJS/ESM hooks代码，不宣称全部加载变体独立验证。
+- REA evidence `ev_9a2b068abcb9296df259363e3649468bf54976c0eb2873a02cf7996c38f5b01d`：32512 AST nodes、88 parsed、0 parse failures，coverage partial/truncated，750/150 limits、45秒预算。README新增instrumentation行，英文边界/验证文档同步。
+- 本批最终check/build、全部AST/source pair（真实socket failure）、编译后遥测回归 **71/71** 与diff whitespace通过。未重复全量；最近core1931/Web11/CLI+Web启动为上一批证据。日志 `work/galileo-fetch-*.log`。
+
+### 2026-10-24：真实 Node HTTP 插桩与 Setup HTTP/Fetch 全链路
+
+- 恢复9808/43408/46077三个完整factory（HTTP instrumentation/module definition/RPC context），共享已恢复Fetch instrumentation base/module hooks与OTel parents。固定hash/UTF-16、3-factory AST/source pair通过，source verifiers共105（不含config）。
+- 真实SetupGalileo使用真实remote Config及HTTP/Fetch constructors，原生http.get与fetch请求owned app server后，collector收到4个真实spans；验证两对client/server同trace且parentSpanId正确、传播头和响应body。collector hostname exclusion与incoming collector ignore防止遥测递归。
+- Node HTTP实际patch，Fetch在owned global surface实际包装。cleanup禁用instrumentation/unhook CJS与ESM hooks/stop Config/shutdown providers，并断言HTTP request/get/Server.emit精确恢复、host fetch未改。HTTPS源码保留但本批未做TLS handshake；TRPC/profiler/default native图仍待完成。
+- REA evidence `ev_294efc714409d94a9edf89dcd0488545db99fe88d66334ef388b9c3f2f1d4f83`：14698 AST nodes、3 parsed、0 parse failures，coverage partial/truncated，750/150 limits、45秒预算。README与相关英文文档更新，消除Setup/Config/trace provider仍未恢复的旧边界描述。
+- 本批check/build、全部AST/source pair、编译后全量core **1933/1933**、Web **11/11**、CLI/Web启动及diff whitespace通过。日志 `work/galileo-http-instrumentation-*.log`。
+
+### 2026-10-24：公开 Galileo SDK composition host
+
+- 新增src层createNativeGalileoSdkHost，组装全部已恢复context/env/Resource/OTLP transport/exporters/log/metric/trace providers、Config、HTTP/Fetch、Setup与outer Logger，不导入test helpers，不提供provider/network doubles。提供SetupGalileo/Logger/forceFlush/close/getModule/API供后续GalileoService装配。
+- 该宿主为明确新增owned composition，不宣称原bootstrap逐字还原；核心captured bodies未改。exporter wrapper增加constantsOnly入口，先读取原SDK_VERSION再构造transport，避免循环依赖未就绪；原4-regions/2-factories source verifier复核保持原语义。
+- 宿主记录配置请求/轮询、providers、instrumentations、module hooks及context manager，cached close等待setup/config请求、阻止新setup/logger、继续best-effort cleanup并聚合失败；不移除借入context/propagator。应用自身in-flight请求仍由调用方drain；TRPC/profiler仍是外部模块/支持信息边界，未宣称默认native DI完成。
+- 三项真实宿主集成验证HTTP/Fetch spans+outer logs+自定义metrics、关闭期间等待held remote response、重复关闭、关闭失败继续恢复HTTP、保留既有context/propagator。真实Config和timers全部stop，原生HTTP方法精确恢复。
+- REA对新增宿主编译后JS做额外静态分析（非原包extraction）：`ev_f3940eff8e01c8c3bbad1d8f2b4386c8fb766157768bb4d8aac6a5138dacdd0a`，1812 AST nodes、1 parsed、0 parse failures，coverage partial/truncated，750/150 limits、45秒预算；目录未包含imports，组件fidelity仍由原source verifiers证明。source verifiers数保持105（不含config）；新增公开宿主文档与README入口。
+- 本批最终check/build、exporter AST/2 source pairs、编译后遥测回归 **75/75**（含3个公开宿主测试）与diff whitespace通过。未重复全量；最近core1933/Web11/CLI+Web启动为上一批证据。日志 `work/galileo-sdk-host-*.log`。
+
+### 2026-10-24：Galileo 产品配置路由原始解析器
+
+- 完整恢复73620 factory `[15619235,15620763)`，公开`resolveGalileoConfig`与factory入口；与远端SDK Config轮询保持独立。严格enable、origin校验、OTLP/Aegis资格区别、aegis fallback及fingerprint字段顺序均保留原始行为。
+- SHA-256固定样本、完整factory AST及2组source/port输入矩阵通过；2项original GalileoService集成验证真实resolver接受缺project ID配置并生成三类OTLP路径，以及拒绝disabled/invalid配置。服务测试仍用显式SDK/DI fixtures，不冒充公开SDK宿主已完成服务接线。
+- REA `ev_53d291864818a1d44dc79db4bdbc60ff5a3807ee4319911f1393b3fbbbb7a854`：1 parsed、417 AST nodes、0 parse failures，semantic coverage unknown、未截断；没有执行bundle bootstrap。新增英文文档与README索引，source verifier增加1项。
+- check/build、完整factory源码对照、遥测回归 **79/79**及diff whitespace通过。日志`work/galileo-config-resolver-*.log`。未重复全量core/Web/启动检查。
+- 下一步服务装配所需父模块已定位：44708原node:https、48161原node:os、64007为独立HttpsProxyAgent实现（尚未接入）。公开SDK宿主与原Service的完整生命周期装配、默认native DI/bootstrap依然未完成。
+
+### 2026-10-24：原始 HTTPS proxy agent 与 GalileoService 真实 SDK 接线
+
+- 完整恢复64007 HttpsProxyAgent及其20-factory闭包（agent-base、CONNECT parser、debug/helpers、Node builtins）；新增公开factory、逐factory AST verifier及3组source/port对照。真实HTTP CONNECT验证认证与headers，真实HTTPS proxy→TLS destination验证双层TLS，分片/重复header/提前EOF/非法header覆盖响应解析。
+- REA `ev_65398ccdbe91b2a438c7a484fdfc9cda66998c05386447f9f78a0dfb90fe455d`：20 parsed、5459 AST nodes、0 parse failures，semantic coverage partial/truncated（750/150、45s），未执行原bootstrap。
+- 新增src层createNativeGalileoServiceModule，以真实SdkHost、原resolver、原proxyagent及Node OS/HTTPS装配原Service class；DI/token/product/auth仍显式借入。新增集成测试断言真实provider身份并在loopback接收startup span/log/counter/histogram，服务onStop/shutdown释放订阅，再由SdkHost close回收轮询/剩余providers。未用SDK/provider doubles；原始未匹配KMS origin的plaintext fallback保持不变。
+- 新装配是明确新增composition，不修改原Service/SDK bodies，不冒充默认native application bootstrap已完成。原Service全局HTTPS代理patch不自动恢复，多服务及配置切换的完整生命周期仍需上层装配处理。新增两份英文文档并更新README及相关组件文档链接。
+- 本批check/build、20完整factory AST及3组source pairs通过；编译后全量core **1944/1944**、遥测 **83/83**、Web **11/11**、CLI/Web launchers及diff whitespace全部通过。日志`work/galileo-service-sdk-{check,build,core,telemetry,hosts,launchers}.log`与`work/https-proxy-agent-verify.log`。默认服务图/bootstrap、TRPC/profiler及上层服务所有权边界继续推进，未标记整体完成。
+
+### 2026-10-24：原始 DI 框架、核心绑定模块与 BackendApplication
+
+- 新增createNativeDi，完整恢复80699框架闭包及78842原始核心binding module，共370 factories；包括Inversify、Reflect metadata、Component/Autowired/Optional/Value/providers、配置表达式、生命周期与状态服务。默认独立Reflect metadata surface，保留标准Reflect方法，不污染宿主Reflect。AST verifier覆盖全部370factory，3组source/port验证singleton/alias/optional/provider、生命周期错误隔离和state waiters。
+- 新增createNativeBackendApplication，完整恢复93772与96000两factory，通过真实DI及原78842核心binding module实例化；保留原start顺序、标记signal handler替换、信号exit(0)、stop状态拼写`stoped`，测试使用显式EventEmitter process，不退出宿主进程。2factory AST和1组source/port通过。
+- Galileo真实SDK集成改由原容器解析服务，断言class/token/ApplicationLifecycle别名与原属性注入；仍实际发送startup span/log/metrics。应用product/auth/diagnostic inputs保持显式fixture。该步骤替换了此集成路径的no-op DI decorators；尚未把全部产品组件装入默认CLI/Web图。
+- REA最终DI evidence `ev_e322348db9d4609a52f50176810091f9ca188b310513578e975c4390e1a6512c`：370 parsed、82200 AST nodes、0 parse failures，partial/truncated；Backend evidence `ev_af605857a9fb4dc8bc4784362c1bad70470ca3ab641d0a44804cce4b27c4765a`：2 parsed、588 nodes、0 parse failures，unknown/not truncated。均750/150 limits、45s预算，静态分析未执行bootstrap。
+- 新英文Native DI文档/README入口说明实例化、元数据隔离、核心binding加载顺序和原生命周期边界。顺带移除proxy wrapper从生成模板误带的无关constantsOnly分支；其20factory bodies未改并复核source verifier。
+- 已定位原container bootstrap 50984 `[30147,32093)`：先安装25844，再加载78842/67759，顺序异步加载25个模块。该源码已提取到work，尚未执行；下一步需按真实加载次序恢复产品binding入口，而非假定现有独立宿主等价于默认图。
+- 最终check/build、DI/backend/proxy源码对照、编译后DI专项 **5/5**、全量core **1948/1948**、Web **11/11**、CLI/Web launchers及diff whitespace全部通过。日志`work/native-di-{check,build,verify,tests,core,hosts,launchers,proxy-verify}.log`与`work/backend-application-verify.log`。总体目标继续保持未完成。
+
+### 2026-10-24：原始容器 bootstrap 与同步注册入口
+
+- 核对固定样本真实入口链29570→86355→50984，确认容器loader属于CLI启动路径而非无关library入口。完整恢复50984及25个同步注册factory，共26factory；公开createNativeContainerBootstrap，显式start且保留单次module cache、原core同步加载和25阶段顺序promise链。
+- 原异步入口8588：其依赖92378异步产品聚合模块，仍由调用方显式提供。source-map-support安装25844及各产品component namespace同样显式借入，不以空模块冒充恢复。绑定入口66892的__dirname由configBasePath供给；文档列出全部25阶段与父模块编号。
+- 源码对照覆盖26完整factory与3组source/port：真实原DI容器中的import/decorator注册顺序、缓存、REST factory、FileSystem覆盖（保留ES namespace/default形态）、ProductConfigBasePath、held final async module、同步安装throw及异步catch/log/resolve undefined。产品namespace与installer为明确fixture，未宣称默认native全图已可启动。
+- REA `ev_162c3874d18bccc0919d07503a74c442f17dc628f987dbb71a7f9eb8a287c4c7`：26 parsed、1889 AST nodes、0 parse failures、partial/truncated（750/150、45s）；未执行全包入口。verifier分别标记bundleBootstrapExecuted=false、recoveredContainerBootstrapExecuted=true，避免将隔离loader测试与原全包启动混淆。
+- check/build、26factory源码对照、编译后DI/Backend/Galileo/bootstrap专项 **8/8**及diff whitespace通过。日志`work/container-bootstrap-{check,build,verify,tests}.log`。README/英文bootstrap审计文档已更新。未重复全量core/Web，最近全量1948/Web11/CLI+Web启动为上一批证据。
+
+### 2026-10-24：原始异步模块运行时与最终产品注册
+
+- 新增installNativeModuleRuntime，完整恢复原Rspack helper序列 `[22118069,22120807)`，包含async dependency queues、exports/error/deferred symbols、interop/namespace/live getters及module metadata helper。无自写Promise-all替代原异步语义；完整序列AST对照与3组source/port验证nested/held/rejected依赖、延迟namespace及getter。
+- 新增createNativeProductRegistration，完整恢复8588及92378两个factory；保留聚合模块16个组件namespace imports、3个awaited async parents、实时导出、最终autoBind、ProductConfigBasePath动态重绑定、OriginalModelProvider lazy cached alias。创建不激活，load/getModule使用原runtime和独立module cache；源代码及公共出口已纳入index。
+- 3组product source/port验证真实DI下等待/拒绝/live exports/model alias，并将真实产品注册接入原50984 bootstrap最后一阶段，held dependency未释放前container不完成，释放后验证最终路径覆盖。产品namespace/process installer仍明确fixture，未宣称整个默认native图已启动；各父namespace列表及共享resolver组合方式见英文文档。
+- REA `ev_1cce9ffd75ab7ae131af3b5dc6288bf62fb2ce362ad854eee1775c23bc8296b2`：3 parsed、11940 AST nodes、0 parse failures、partial/truncated，750/150 limits、45s；未执行原全包entrypoint。原26factory bootstrap verifier随fixture导出变更复核通过。新增英文文档并更新README/bootstrap边界说明。
+- 最终check/build、runtime完整region及product完整factory源码对照、DI专项 **14/14**、编译后全量core **1957/1957**、Web **11/11**、CLI/Web launchers与diff whitespace全部通过。日志`work/product-registration-{check,build,verify,bootstrap-verify,tests,core,hosts,launchers}.log`与`work/module-runtime-verify.log`。继续恢复真实component namespaces、source-map安装及服务器/启动所有权边界，整体目标未完成。
+
+### 2026-10-24：原始 source-map 安装器与 bootstrap 首阶段
+
+- 新增createNativeSourceMapSupport，完整恢复25844及consumer/generator/source-node依赖，共15factory；显式require/process/Error边界，创建不安装，保留install对Error.prepareStackTrace/process.emit的原始修改及未处理异常print/exit逻辑。没有新增卸载语义或合成module.require兼容行为。
+- 15factory AST及4组source/port通过：原bootstrap调用真实installer；真实临时JS/inline map及独立VM Error栈映射/source excerpt；重复安装和已处理/未处理异常；retrieval override/reset及非法环境。测试只修改独立VM Error与EventEmitter process，真实宿主Error formatter不变。恢复原regex flag顺序以满足完整AST，不放宽比较。
+- REA `ev_95437730825da5fa5f0de1b5fb7a7563c3127b296a6f812f5a6294d2d02ede44`：15 parsed、10437 AST nodes、0 parse failures、partial/truncated（750/150、45s）；未执行全包entrypoint。bootstrap 26factory源码对照随fixture installer注入扩展复核通过。新增英文source-map文档，README区分DI与bootstrap入口。
+- 后续Backend namespace 15062已提取：6579重导出93772/96000；69066重导出30805 Context（已在native-http-runtime完整恢复，可复用owned HTTP host的module identity）；81840重导出35306 crc32→77598 node:crypto。尚未把这些重导出入口装配为默认namespace，不把已提取视为已完成接线。
+- 最终check/build、source-map/原bootstrap源码对照、DI专项 **18/18**、编译后全量core **1961/1961**、Web **11/11**、CLI/Web launchers及diff whitespace全部通过。日志`work/source-map-support-{check,build,verify,bootstrap-verify,tests,core,hosts,launchers}.log`。完整默认产品服务图与原服务器启动装配继续推进，整体目标未完成。
+
+### 2026-10-24：Backend namespace 接入原容器启动阶段
+
+- 新增createNativeBackendNamespace，完整恢复15062/6579/69066/81840/35306/77598六factory。load/getModule延迟执行并缓存，93772/96000借入同一原BackendApplication实例，30805借入已有native-http-host的原BaseContext module，避免复制CLS namespace或改变类身份。
+- 原bootstrap的67759阶段实际载入该namespace，真实DI取得Application并推进ready→原拼写stoped；两路并发请求验证与HTTP host共享Context身份及隔离。真实父Application/HTTP上下文，其他产品namespace与installer明确为fixture。关闭移除应用tagged signal handlers并等待HTTP owned cleanup。
+- 6factory AST与2组source/port通过，crc32 helper保留node:crypto委托行为（包括当前运行时不支持算法时的原错误），未新增fallback。bootstrap verifier随fixture parent路由扩展复核通过。
+- REA `ev_441dd2cf7f4d087ae337ed539d8bc1ae32815fa33493367c59b338288f80286b`：6 parsed、787 AST nodes、0 parse failures、partial/truncated（750/150、45s）。新增英文Backend namespace文档，更新README/bootstrap入口。
+- check/build、namespace/bootstrap源码对照、编译后装配专项 **20/20**及diff whitespace通过；日志`work/backend-namespace-{check,build,verify,bootstrap-verify,tests}.log`。未重复全量，最近全量core1961/Web11/CLI+Web launcher为上一批证据。
+- 下一步原服务器factory86355 `[125764,126462)` 已提取；其Express入口47704→74880的闭包已静态提取到`work/express-closure.json`（169 modules、544693 chars），尚未作为src恢复或执行。76021中看似外部iconv-lite require为诊断字符串，并非真实外部调用；实际builtin imports已列入inventory。完整产品默认图与原服务器启动仍未完成。
+
+### 2026-10-24：内嵌 Express 与原服务器入口
+
+- 新增createNativeExpress，完整恢复47704入口及169-factory闭包（保留原路由/body parser/static/encoding/MIME等实现，未替换为npm Express）。factory创建不监听；Node builtins显式require。完整AST及2组source/port实测gzip JSON、route/query参数、400/413解析错误、500 middleware、all('*')、静态range/HEAD、router mergeParams。
+- 新增createNativeBackendServer，完整恢复86355及39654两个factory；显式start保留原container.then→ContainerProvider.set→Application.start→Express all('*')→listen→逐个ServerAware→log顺序。保留原端口环境变量0回退规则和serve打印配置端口；不新增ready Promise、server导出或shutdown/error处理。
+- server source/port实际等待held container，再以真实DI/BackendApplication/Express/Dispatcher/HandlerExecutionChain/Context服务两路并发请求及500错误路径；应用route/error dependencies是明确fixtures，未宣称所有产品端点已可用。ServerAware捕获真实server，清理server、tagged signals及owned HTTP context。
+- REA `ev_c0728407f0b4e6794338d7105c2039ae14a152c141fe656864ad3f6142c87242`：171 parsed、64496 AST nodes、0 parse failures、partial/truncated（750/150、45s）；未执行原全包entrypoint。新增英文Express/server文档及README入口，bootstrap文档指向已恢复服务器阶段。
+- 最终check/build、Express/server完整源码对照、装配专项 **23/23**、编译后全量core **1966/1966**、Web **11/11**、CLI/Web launchers与diff whitespace全部通过。日志`work/backend-server-{check,build,verify,tests,core,hosts,launchers}.log`及`work/express-verify.log`。完整默认产品组件图仍未装配完，目标保持进行中。
+
+### 2026-10-24：完整装饰器 HTTP 组件与真实 DI 请求链
+
+- 新增 createNativeHttpComponents，完整恢复247个factory，保留HTTP Dispatcher、middleware、cookies/session、trace、health、error、validation、pipe与REST组件原始装饰器；116个共享父模块复用原DI/Express，Backend Context显式借入。创建惰性，load/getModule保留module identity及原Rspack helpers。
+- 显式globals承载验证库全局metadata，避免无意写入宿主globalThis。真实DI直接解析Dispatcher及其HandlerMapping/MiddlewareProvider，不再手工赋值依赖；原server实际处理两路并发JSON、trace header、健康检查UP及默认404。测试只提供应用route adapter及ServerAware观察器，完整默认产品图仍未完成。
+- 247完整factory AST与1组source/port网络场景通过；REA `ev_fc5cfa9903e6ec5c4b865328fddb1e464bae9b56bf63469fd47c003b311548c0`：247 parsed、113183 AST nodes、0 parse failures、partial/truncated（750/150、45s）。未执行原bundle入口。
+- 英文HTTP components文档与README入口已更新。后续原bootstrap前三个异步阶段21280→78824 REST、39066→27371 PathResolver、62309→47005 HTTP可接入该组件加载器，需保留分阶段装饰器注册/autoBind顺序，不能预先load全部再假定等价。
+- 最终check/build、247factory源码对照、编译后装配专项 **24/24**、全量core **1967/1967**、Web **11/11**、CLI/Web launchers及diff whitespace通过。日志`work/http-components-{check,build,verify,tests,core,hosts,launchers}.log`。目标保持进行中。
+
+### 2026-10-24：共享 Backend foundation 接入原 bootstrap
+
+- 新增 createNativeBackendFoundation 宿主装配层，惰性共享 BackendApplication、Backend namespace、Context、Express、完整 HTTP modules 与 DI。getModule 对未接入产品模块返回 undefined，保留调用方继续路由，不创建空服务或伪造默认产品图；closeContext 只清理自有上下文，应用/服务器/DI由调用方管理。
+- 原50984与26个注册factory真实接入15062→78824→27371→47005，保留每阶段autoBind边界。纠正文档中27371的分类：它是PathResolver namespace，参数验证管道在HTTP图中。原RestOperationsFactory注入后创建singleton客户端，实际访问原服务器/原health middleware，返回200/UP；PathResolver及Dispatcher亦从真实容器解析。
+- 新增captured/recovered bootstrap装配对照，26factory完整AST与网络场景通过；其余产品namespace与本场景source-map安装仍为明确fixtures。沿用已有REA静态证据，本轮宿主装配代码不冒充新提取factory。
+- check/build、backend-foundation源码对照、编译后装配专项 **25/25**通过。日志`work/backend-foundation-{check,build,verify,tests}.log`。英文foundation文档、README和bootstrap说明更新。本轮未重复全量：最近全量core1967/Web11/CLI+Web启动为上一轮证据。完整默认产品图仍未完成，目标保持进行中。
+
+### 2026-10-24：原 MVC 控制器、视图与 bootstrap 注册
+
+- 新增 createNativeHttpController，完整恢复37819 namespace及81个factory（84767 JS chars），其余134个依赖复用已恢复HTTP/Express模块。保留原Controller/HTTP method/参数/Header/Catch装饰器、RouteBuilder/Matcher、MvcHandlerAdapter、参数与响应resolver、JSON/Mustache/File视图及文件依赖。__dirname由显式basePath提供，不自行猜测原安装路径。
+- 共享Backend foundation增加惰性MVC路由，原94015注册阶段执行真实namespace和autoBind。更新foundation场景，原bootstrap可解析MVC图并继续启动原服务器。组件创建不提前注册装饰器，不用人工HandlerAdapter替代MVC调用链。
+- 81完整factory AST及source/port真实HTTP场景通过：并发POST的Param/Query/Body、异步Context身份、Header、Json、Catch TypeError、Mustache HTML escaping、真实文件流与临时目录清理。通过原singleton REST客户端调用原server；其他产品namespace及该场景source-map安装仍明确为fixtures。
+- REA `ev_81291dbeadf16f76bde57b4189825a186af39296c0c9a52689706fcd165ed56f`：81 parsed、23234 AST nodes、0 parse failures、partial/truncated（750/150、45s）。未执行原bundle entrypoint。新增英文MVC文档并更新README和foundation装配说明。
+- 下一阶段65903→51147公共namespace已核对16个重导出入口，涉及FilePath/FileName/UserHome、内存清理/监控、上传及AgentEditContext；仅完成入口提取，尚未声称该产品服务图已恢复接线。
+- 最终check/build、MVC 81factory与foundation 26factory源码对照、编译后装配专项 **26/26**、全量core **1969/1969**、Web **11/11**、CLI/Web launchers及diff whitespace通过。日志`work/http-controller-{check,build,verify,foundation-verify,tests,core,hosts,launchers}.log`。完整默认产品图仍未完成，目标继续进行。
+
+### 2026-10-24：公共服务 namespace 与原请求头/内存组件
+
+- 新增 createNativeCommonServices，完整恢复51147及64个factory（114670 JS chars），8个依赖共享已有HTTP/Express缓存。保留SampleEncryptor、FileNameService、Env/Object/Hash/Patch工具、CommonHeaderHttpInterceptor、MemoryCleanupService、EnhancedMemoryCleanup、MemoryMonitor、SmartMemoryMonitor、SubscriptionManager及服务tokens；接口token存在不代表对应产品实现已接线。
+- Backend foundation惰性路由原65903注册阶段，原ApplicationLifecycle实际安装原REST request interceptor。原服务器/MVC接收真实请求，验证显式request ID优先、trace ID继承、自动ID生成及proxy=false；同一原bootstrap容器解析编码、命名、hash与patch行为。
+- 独立globals/Error与受控timers保留内存副作用语义；验证增强清理四个interval的dispose、memory pressure cleanup、Smart monitor baseline/warning/critical/recovered顺序、cleanup统计及原aggressive cleanup的未追踪延迟GC。dispose不取消该延迟GC这一原行为保留，未用新增卸载语义掩盖。
+- 64完整factory AST与source/port场景、foundation原26factory对照通过；REA `ev_e1cf95eac536ec0b3cc3ca66992cea94038ea594908acf522187a81b36d77880`：64 parsed、30905 AST nodes、0 parse failures、partial/truncated（750/150、45s）。未执行原全包bootstrap。英文公共服务文档、README与foundation说明更新。
+- 后续10352→67846 namespace入口已提取，重导出56490/51157/20760/41885/82005/60559/13393；尚未恢复其完整依赖与注册图。
+- 最终check/build、common 64factory与foundation 26factory源码对照、编译后装配专项 **27/27**、全量core **1970/1970**、Web **11/11**、CLI/Web launchers及diff whitespace通过。日志`work/common-services-{check,build,verify,foundation-verify,tests,core,hosts,launchers}.log`。完整默认产品图仍未完成，目标保持进行中。
+
+### 2026-10-24：Node 服务、COS SDK、代理与 PAC RPC
+
+- 新增 createNativeNodeServices，完整恢复67846及372个factory（1205817 JS chars），25个父依赖共享已有HTTP/Express/common modules。包含FilePathServiceImpl、UserHomeServiceImpl、FileUploadServiceImpl、COSFileUploader及完整原COS SDK、stream/filesystem helpers、ProxyResolver/system detection/PAC RPC。保留原module id/loaded、exports-bound调用和require.c cache，显式filename供原__filename使用。
+- Backend foundation接入10352→67846真实注册阶段，原容器解析common tokens对应的路径和上传实现。测试验证用户/IDE目录组合、Downloads、无支持uploader结果、通过本地真实REST获得COS info并完成empty upload；不冒充已验证生产多文件上传。
+- Source/port场景验证配置/env/PAC优先级、explicit DIRECT、bypass规则、loopback补齐；原PAC客户端实际通过临时Unix socket携带token请求。原COS SDK用本地custom Domain实际发送PUT body，接收端确认字节内容；无外部COS上传，临时文件/socket/server均清理。
+- 372完整factory AST与原bootstrap网络场景通过；REA `ev_79f49e8fbd31c97f640e80b16d7ed0b43bf2461d7a568f3e78e45a172f9f5710`：372 parsed、283267 AST nodes、0 parse failures、partial/truncated（750/150、45s）。其余产品namespace与本场景source-map安装仍为明确fixtures；未执行原全包入口。
+- 英文Node services文档、README及foundation注册顺序更新。下一阶段53879→66915入口提取用于后续依赖核对，尚不计入恢复完成。
+- 最终check/build、Node services 372factory与foundation 26factory源码对照、编译后装配专项 **28/28**、全量core **1971/1971**、Web **11/11**、CLI/Web launchers及diff whitespace通过。日志`work/node-services-{check,build,verify,foundation-verify,tests,core,hosts,launchers}.log`。完整默认产品图仍未完成，目标保持进行中。
+
+### 2026-10-24：上下文变量服务与原空 namespace
+
+- 新增 createNativeContextVariableServices，完整恢复66915及23个factory（6540 JS chars）：tokens、原ContextVariableManagerImpl、转换工具、related-file/knowledge-base enums与原type-only modules。Backend foundation接入53879→66915真实注册阶段，共用DI metadata，不自行补造产品resolver。
+- source/port通过原bootstrap真实解析manager，验证正优先级选择、priority异常归零、resolve异常日志后继续、missing/empty跳过、动态collection resolver覆盖、输入不变与重复name最后值覆盖。保留原batch调用getResolver时不传context、仅resolve接收context的源码行为。
+- 下一阶段92712依赖80558已确认为原包空factory `80558(){}`，直接加入原bootstrap本地captured factories，当前bootstrap共27factory。去除fixture对80558的虚构component注册，完整AST与顺序/失败场景复核通过；没有把缺失模块自动替换为空。
+- REA `ev_72f99dbfc813b98ac90e160c1f1e89430d24adda7c6ec3650c61551ae156755d`覆盖23个context factory+80558：24 parsed、1743 AST nodes、0 parse failures、partial/truncated（750/150、45s）。英文文档、README及bootstrap/foundation说明更新。
+- 后续61488/97619文件系统阶段入口已提取：79814与54463服务namespace、61000原memfs入口（数字键原写为61e3）、72018/98776 FileSystem token、79896真实node:fs wrapper。尚未恢复整组文件系统装配。
+- 最终check/build、context 23factory与bootstrap/foundation 27factory源码对照、编译后装配专项 **29/29**、全量core **1972/1972**、Web **11/11**、CLI/Web launchers及diff whitespace通过。日志`work/context-variable-services-{check,build,verify,bootstrap-verify,foundation-verify,tests,core,hosts,launchers}.log`。完整默认产品图仍未完成，目标保持进行中。
+
+### 2026-10-24：原 memfs、真实文件系统覆盖与工作区服务
+
+- 新增 createNativeFilesystemServices，完整恢复79814/61000/54463及118个factory（193962 JS chars），8个依赖共享HTTP/Express。包含memfs、原Workspace/FileSystem tokens与实现、URI/Rx依赖、MemoryLocalStorage、Notifier/Opener/Previewer/Userinfo默认实现及SystemInfoContextVariableResolver。
+- 提取时确认22186是自带内部loader的URI bundle，其内部ec(975)不是外层bundle module；按外层factory是否接收require参数区分闭包，保留完整嵌套factory，未错误拼入其他数字同名模块。
+- Foundation接入61488/97619两阶段，源码场景用真实DI/原注册factory验证先绑定原memfs对象、再覆盖为真实node:fs的ES namespace（保留default及named method身份）。独立volume隔离、memory/disk分别写读、临时目录清理通过。
+- 原ContextVariableManager现可解析真实systemInfo resolver，验证默认Desktop、更新Workspace URI后的路径及平台shell；原MemoryLocalStorage事件、false/true/undefined host默认返回和Notifier单次占位符替换均保留。没有将这些原默认行为替换为自造宿主功能。
+- 118完整factory AST与source/port、foundation 27factory对照通过；REA `ev_313acc887a4007b5d7d903eceb1653b14077c26f5e7378eb8f0b365a295399ec`：118 parsed、54071 AST nodes、0 parse failures、partial/truncated（750/150、45s）。英文文档、README、bootstrap/foundation说明同步更新。
+- 最终check/build、filesystem 118factory与foundation 27factory源码对照、编译后装配专项 **30/30**、全量core **1973/1973**、Web **11/11**、CLI/Web launchers及diff whitespace通过。日志`work/filesystem-services-{check,build,verify,foundation-verify,tests,core,hosts,launchers}.log`。后续54387→9151及66892→55762/18629产品配置阶段仍待完整装配，目标保持进行中。
+
+### 2026-10-24：产品配置原始注册、提供者与管理器
+
+- 新增 createNativeProductConfigServices，完整恢复9151/55762及62个factory（417174 JS chars），包括ProductManager/CloudProductManager、默认/客户端/env/cloud/custom-model providers、原merge策略、catalog/capability helpers、feature filters、gzip和endpoint interceptor。共享既有foundation依赖，显式basePath供原__dirname。
+- Foundation接入54387与66892，保留原ProductConfigBasePath绑定、Client缓存与manager PostConstruct同步。测试在独立临时目录/process.env中验证product.json缓存、env优先级及legacy字段剥离、自定义模型真实watcher、availableModels最终过滤、manager重复sync及dispose；未读取现有账号配置。
+- 原CloudProductManager对本地HTTP服务实际fetch，原endpoint interceptor将relative请求路由到本地override并添加SaaS product header；partial Galileo连接字段覆盖保留原disable/reset逻辑。完整后续产品提供者及生产认证/远端服务仍未声明完成。
+- 62完整factory AST与source/port、foundation 27factory对照通过；REA `ev_a8dcb00929b387130581c25c76efb058fba13402a6ed95061cd5e51822df9689`：62 parsed、74885 AST nodes、0 parse failures、partial/truncated（750/150、45s）。英文文档、README与foundation注册顺序同步更新。
+- 最终check/build、product config 62factory与foundation 27factory源码对照、编译后装配专项 **31/31**、全量core **1974/1974**、Web **11/11**、CLI/Web launchers及diff whitespace通过。日志`work/product-config-services-{check,build,verify,foundation-verify,tests,core,hosts,launchers}.log`。后续30135→66467、18707→92735、57100→54834入口已提取但依赖图未装配，目标保持进行中。
+
+### 2026-10-24：原 Winston 注册与共享 logger 生命周期
+
+- 新增 createNativeWinstonServices，完整恢复66467及117个factory（172326 JS chars），15个依赖共享HTTP/Express。保留原Winston、transport/format依赖及30135对DI Logger的transient rebind；foundation提供惰性resolver。
+- 明确验证原fallback初始化细节：未提供RawWinstonLogger且module cache首次创建logger时，init只赋共享eu而未赋this.logger，首实例getLogger为undefined、调用info失败，后续实例取得共享logger。源码未被“修复”；需要与后续原FileLogger替换链继续组合。
+- 真实DI原注册stage中注入真实captured Winston+Writable stream transport，验证transient wrapper、共享raw identity、context及info/warn/error输出并关闭transport。foundation完整bootstrap测试已加载该stage，最终binding显式提供real raw logger，使已有服务器链继续工作；该测试输入不冒充完成后续产品日志图。
+- 117完整factory AST/source-port及foundation 27factory对照通过；REA `ev_a38b5d926fb87d5fcf335e34a164fd763b2aaa3f7b9a128e828c51bf6a985965`：117 parsed、47147 AST nodes、0 parse failures、partial/truncated（750/150、45s）。英文Winston文档、README与foundation边界说明更新。
+- 后续92735 telemetry namespace与54834 node logging namespace入口已核对，包含FileLogger重绑、LoggerStorageService/UploadService、ClientIpDetector、OTLP代理等；尚未把这些完整注册namespace接入默认图，不以已有独立SDK宿主替代其DI注册。
+- 最终check/build、Winston 117factory与foundation 27factory源码对照、编译后装配专项 **32/32**、全量core **1975/1975**、Web **11/11**、CLI/Web launchers及diff whitespace通过。日志`work/winston-services-{check,build,verify,foundation-verify,tests,core,hosts,launchers}.log`。完整默认产品图仍未完成，目标保持进行中。
+
+### 2026-10-24：原事件报告注册、处理器与 HTTP 分批
+
+- 新增 createNativeEventServices，完整恢复92735及162个factory（474357 JS chars），15个父依赖共享已恢复foundation。包含Standard/Model EventService、product/experiment/user/client-IP/Qimei/timezone processors、logging/history接口和startup performance helpers；foundation接入18707真实注册阶段。
+- source/port场景使用真实DI、ProductManager及REST，通过临时product.json和本地HTTP接收端验证同步发送、按排序header key合并批次、extra/per-report header覆盖、processor字段、stripEnv、onReport通知，以及DISABLE_TELEMETRY="0"仍禁用的原语义。原processor timeout race成功后仍保留timer；测试持有并清理这些timer，未修改factory行为。
+- 162完整factory AST/source-port及foundation 27factory对照通过。REA `ev_d1d47807416cf827a0666ab6e799c17b6cff036a71e9e2748babb918705d5b9c`：162 parsed、114583 AST nodes、0 parse failures，语义分析受750/150和45s预算限制。没有执行原全包bootstrap，也没有发送外部遥测。
+- 英文事件服务文档、README索引及foundation注册链同步更新。92735是事件上报namespace，不等于完整Galileo SDK装配；后续54834 Node日志闭包已提取到work供继续恢复，尚未计入已完成原生默认图。
+- 最终check/build、event 162factory与foundation 27factory源码对照、编译后装配专项 **33/33**、全量core **1976/1976**、Web **11/11**、CLI/Web launchers及diff whitespace通过。日志`work/event-services-{check,build,verify,foundation-verify,smoke,core,hosts,launchers}.log`。默认产品图和FileLogger/storage/upload链仍待继续装配，目标保持进行中。
+
+### 2026-10-24：原 Node 日志注册、FileLogger 与存储归档
+
+- 新增 createNativeNodeLogging，完整恢复54834及333个factory（908942 JS chars），包含原FileLogger、LoggerStorageService、Upload API/service、OS事件处理器、IP检测、OTLP proxy injector、archive依赖，以及UploadService导入的86482认证namespace。复用既有DI/Express/event/product/filesystem/HTTP父模块。
+- 闭包提取发现40544使用原参数名__webpack_require__而非ec；改为按factory第三参数追踪依赖，补齐jsonwebtoken等28个factory，原函数体保持不变。333完整AST与同场景source/port对照通过。
+- Foundation接入57100→54834与57740→86482；原FileLogger自然覆盖Winston Logger binding，删除foundation场景显式RawWinstonLogger注入。原bootstrap和真实Application/Dispatcher/REST仍完成health 200/UP；剩余产品阶段继续明确为fixtures。
+- 独立临时product/log目录中使用真实ClientInfoProvider与原注册stage，验证transient FileLogger、过滤前事件通知、日志阈值、异步与同步真实文件写入、workspace header、原ZIP归档、禁用upload结果及真实OTLP proxy agent创建/关闭。外部认证、生产上传与海外IP检测未被本地场景证明。
+- 宿主清理顺序验证发现container解绑时原服务仍会产生日志并重启scheduler；改为解绑后排空日志并flush，再dispose scheduler/interval。两项源码集成测试约0.6s结束，不修改原service生命周期以隐藏此行为。
+- REA `ev_c7b7df713e09391870da89fec318b55b6426659ed835c51067edcd126e85b698`：333 parsed、247491 AST nodes、0 parse failures；语义分析受750/150和45s预算限制。英文Node logging文档、README及foundation/Winston/event边界说明同步更新。
+- check/build、333factory与foundation 27factory源码对照、装配专项 **34/34**、全量core **1977/1977**、Web **11/11**及CLI/Web launchers通过。清理顺序修订后再次编译并复核source/port与装配专项；全量测试在该测试宿主清理修订前通过，产品factory未再修改。日志`work/node-logging-{check,build,verify,foundation-verify,smoke,core,hosts,launchers,teardown}.log`。
+- 后续注册roots已提取到work：3203/3618均为原8字符空factory；14931、23294、83052、24015仍待完整依赖装配。空factory尚未替换对应fixtures；默认原生产品图仍未完成，目标保持进行中。
+
+### 2026-10-24：原代码采纳率注册、Git/SVN 与空 namespace
+
+- 新增 createNativeCodeRatioServices，完整恢复14931/23294及19个factory（21661 JS chars），6个父模块共享DI/product/event/diff/filesystem。包含CodeRatioReporter、deployment/feature gates、diff/statistics、Git commit loader、name-status/unified-diff解析和SVN helpers；foundation接入98759/5112真实注册。
+- source/port通过真实ProductManager、StandardEventService/处理器和本地HTTP验证rejected/unchanged/binary跳过、实际diff与protocol字段、净增行统计及commit重复去重。临时真实Git仓库生成两个commit，原loadCommit解析parent、两行新增/一行删除；不访问外部仓库或遥测服务。
+- 保留原语义差异：CodeChangeEvent.lineCount按文件净增行数计算（本例1），Git commit files保留实际新增行（本例2）及删除行（本例1）；truncateDiff使用JS字符串长度而非字节数，未自行改写算法。
+- 将原3203(){}与3618(){}加入bootstrap本地完整factory，删除其虚构namespace fixture组件。当前bootstrap共29个factory，完整AST/顺序及失败路径对照通过；没有以空factory填补缺失实现。
+- REA `ev_56c4a12ff9ca58d5e52491f186c8cdad2d9abdb8d1a1bcde7a1efe5286fd34ad`覆盖19个code-ratio factory及2个原空模块：21 parsed、5504 AST nodes、0 parse failures；语义分析受750/150和45s预算限制。英文文档、README及foundation/bootstrap说明同步更新。
+- check/build、code-ratio 19factory与bootstrap/foundation 29factory原包对照、装配专项 **35/35**、全量core **1978/1978**、Web **11/11**、CLI/Web launchers和diff whitespace通过。日志`work/code-ratio-services-{check,build,verify,bootstrap-verify,foundation-verify,smoke,core,hosts,launchers}.log`。
+- 剩余83052/24015提示词基础设施与PromptManager闭包已提取到work/remaining-platform-closure.json；新增候选244factory/350986 JS chars在work/prompt-services-owned.json，尚未写入产品实现或计入完成。提取修正首模块80707的左边界为bundle首个花括号；仍使用JS UTF16 offsets。默认产品图与最终产品注册装配继续进行中。
+
+### 2026-10-24：提示词基础设施、原 Nunjucks 与 PromptManager
+
+- 新增 createNativePromptServices，完整恢复83052/24015及244个factory（350986 JS chars），16个父依赖共享现有图。包含prompt/message/model基础类、streaming helpers、ProductPromptProvider、evaluator/renderer/manager、原Nunjucks和完整依赖；显式filename用于原依赖__filename诊断。
+- Foundation接入94666/59747真实注册，至此最终8588之前同步namespace全部由原factory或原样空factory提供。集成场景仍显式保留source-map安装和最终异步产品注册fixture，未将此里程碑描述成完整产品默认启动。
+- source/port场景以真实ProductManager和临时product.json验证缺失模板、tags评分选择、不转义渲染、循环、编译模板cache identity、配置发布后模板替换，以及PromptImpl.copy新建message但共享options原语义。原App启动包含这些注册并完成真实REST health。
+- 244完整factory AST与foundation 29factory对照通过。REA `ev_b6f84d8a23472cd23788fe3c61b72f6d88cce0317915de1909f3735ac04b2abe`：244 parsed、99120 AST nodes、0 parse failures；语义分析受750/150与45s预算限制。未改写任何prompt文本或执行原全包bootstrap。
+- 英文prompt文档、README及foundation边界更新。check/build、装配专项 **36/36**、全量core **1979/1979**、Web **11/11**、CLI/Web launchers及diff whitespace通过。日志`work/prompt-services-{check,build,verify,foundation-verify,smoke,core,hosts,launchers}.log`。
+- 下一阶段聚焦8588/92378最终产品聚合。其19个直接parent factory已提取到work/final-product-roots.json，包含74428主harness aggregate、三个async UI/doctor/resume入口、导航/undo、model provider/record-replay/path等；仅提取供核对，尚未接入真实默认图。目标保持进行中。
+
+### 2026-10-24：完整产品 factory 图、延迟加载与原 Application 激活
+
+- 新增 createNativeProductModules，恢复最终产品聚合所需的2153个完整factory（16570398 source characters），包含主harness、gateways、terminal UI、doctor/resume、model providers、telemetry及依赖；142个父引用复用现有DI/Express/foundation。构造惰性，激活显式；不通过空返回替代缺失模块。
+- 初始直接调用闭包1906factory，经require.bind/require.t/require.t.bind边审计补齐247个延迟模块。新增capturedBundleModuleIndex从原包顶层Rspack table索引4566个唯一module ID；所有2153个范围与顶层table一致，再比较完整AST，避免嵌套bundle数字ID误匹配。2153完整AST/source-port通过。
+- 真实DI场景验证Navigation/Undo/RecordReplay绑定及原PKCE challenge生成/验证。隔离子进程组合真实foundation、最终8588/92378和完整产品模块，成功创建container、验证OriginalModelProvider binding，并以--serve模式执行原Application.start/stop，状态分别为ready与原拼写stoped。原初始化改写console routing，成功状态通过独立fd输出以免误判无输出。
+- 初始MCP未初始化错误经首个factory异常追踪，证实为隔离globals继承Node crypto getter导致ERR_INVALID_THIS的连锁结果；显式Web Crypto修正后消失。后续fetch为包内data: base64 WASM，允许本地解码后完整注册成功；继续拒绝外部网络和subprocess。原telemetry需要替换global fetch，宿主为其提供可写属性。没有修改factory或提前初始化符号来隐藏故障。
+- 子进程使用临时cwd/HOME/config、owned process和其原生Error，退出时清理；独立process/global/fetch边界防止污染父测试进程。该测试仍显式使用source-map安装fixture，尚未启动最终HTTP listener或迁移默认CLI/Web到完整产品图，不能据此宣称完整目标已达成。
+- REA直接闭包 `ev_89bca599e855041a49edf9917c4f87cd91f637dc1f0816c1c912ddae3a156f45`：1906文件、1905 parsed/1 skipped、2854211 AST nodes、0 parse failures（750/150、45s，partial语义覆盖）。延迟闭包初轮45s超时，120s复核成功：`ev_7ce057a6bdb9f6eb2c15fa01ed7f49f212e1cec826b2c3c136d0fcb6c2075805`，247 parsed、355962 AST nodes、0 parse failures；全factory独立AST验证覆盖REA跳过项。
+- 英文product modules文档、README及product registration说明更新。最终check/build、2153factory对照、装配专项 **38/38**、全量core **1981/1981**、Web **11/11**、CLI/Web launchers与diff whitespace通过。日志`work/product-modules-{check,build,verify,bootstrap-tests,smoke,core,hosts,launchers}.log`。
+- 下一阶段移除完整产品启动测试中的source-map fixture，连接原BackendServer实际listener并验证health/ACP入口，随后推进默认宿主整合和实际模型/工具回路；目标保持进行中。最终产品聚合不再仅为namespace fixtures，但默认宿主仍保留既有边界。
+
+### 2026-10-24：原生产品 runtime、真实 HTTP 与 ACP 初始化
+
+- 新增createNativeProductRuntime，统一原container bootstrap、source-map installer、foundation、2153factory product modules、8588/92378以及BackendServer的解析与缓存。提供loadContainer/startServer/getModule/closeContext；不自行替换原server生命周期或把startServer返回伪装成ready promise。Foundation公开共享Express实例供产品模块复用。
+- 完整产品子进程测试移除source-map install fixture，执行原installer并确认Error.prepareStackTrace身份改变。原BackendServer监听临时loopback端口；observer ServerAware仅记录listener，不替代原服务。Application由原server启动并停止，所有注册namespace来自恢复代码。
+- 验证原gateway header middleware：无x-codebuddy-request的health返回403，有header返回200/UP；原/api/openapi.json返回包含sessions的schema。ACP真实connect返回connectionId/sessionToken，带原headers的initialize返回SSE JSON-RPC protocolVersion=1和agentCapabilities.loadSession=true；DELETE成功，随后drain server和Application.stop得到stoped。
+- ACP测试处于loopback，原checkSessionToken在loopback直接放行；本场景不冒充验证外部地址token验证。未关闭原gateway或ACP安全middleware来让测试通过。
+- 独立session/new探测（work/native-session-probe.log）在无认证配置下获得原错误-32000/Authentication required/category auth。已定位93928 initializeSession要求authManager.currentSessionSubject，以及原40544 CustomTokenAuthenticationStorage可从ACC_PRODUCT_CONFIG_V3/V2中CUSTOM_TOKEN配置恢复会话；下一步使用显式本地测试配置与模型服务验证完整turn，不修改原鉴权逻辑。
+- 本轮未新增原factory，复用现有REA/AST证据；foundation 29factory source/port复核通过。check/build、装配专项 **38/38**、全量core **1981/1981**、Web **11/11**、CLI/Web launchers与diff whitespace通过。日志`work/product-runtime-{check,build,tests,smoke,foundation-verify,core,hosts,launchers}.log`。
+- 英文runtime文档、README及product modules/registration/foundation边界已更新。HTTP/ACP入口已接通，但完整认证模型/工具turn、原顶层CLI入口补充、默认CLI/Web宿主迁移与跨平台行为仍待验证；整体目标保持进行中。
+
+
+### 2026-10-24 — Native authenticated ACP model conversation
+
+The full native product child now restores original custom-token authentication from `ACC_PRODUCT_CONFIG_V3`, creates a configured CLI/default agent session over ACP, and completes `session/prompt` through the original AgentService/Runner and ModelProvider. A deterministic local HTTP server receives the streaming Chat Completions request at the exact configured `/v1` URL; ACP forwards the returned assistant text and reports `end_turn`. No authentication subject, AgentManager, Runner or ModelProvider is substituted. Agent configuration uses `models: [id]`, not a singular `model` property.
+
+Internal `/internal/agent` requests require loopback access to the product server itself. The test permits only the two owned ports, blocks external network and subprocesses, and closes pooled connections before stopping Application. This proves a native model conversation, not tool execution or completed default CLI/Web migration.
+
+REA re-analysis of original factories 93928, 69466 and 46307: `ev_387695f4afc78f28b27ccb32612027b65358f50390d831bf79aa3cca86c5bbe0`. REA parsed all three files (27,190 AST nodes, zero parse failures). Existing complete-factory fidelity verifiers remain authoritative; this change adds integration assertions without modifying recovered factory bodies.
+
+### 2026-10-24 — Native tool round trip and executable original CLI
+
+The full native ACP integration now requests the original `Read` tool, reads an owned temporary file, verifies its contents in the next model request, and checks ACP's completed tool event and raw output. The local model supplies only the requested tool call and final completion; the tool schema, permission path, filesystem read, history and execution pipeline are recovered services.
+
+`npm run native` adds an executable process boundary around the complete native runtime. It preserves original CLI arguments and accepts a private product JSON file through `AXONFIRE_NATIVE_PRODUCT_CONFIG` (or original `ACC_PRODUCT_CONFIG_V3`). It defaults product state to `~/.axonfire/native`, supports `AXONFIRE_STATE_DIR` and `AXONFIRE_PORT`, and requires explicit configuration for non-informational invocations. Product prompts are user-supplied configuration, not fabricated recovered assets.
+
+The launcher integration invokes original `--help`, then original `-p` twice: first the original non-interactive permission rule denies Read, then `--allowedTools Read` permits it. The latter returns the actual file contents to the model and prints the final answer. The same executable also starts with `--serve`, passes original health/header checks, and terminates on SIGTERM. No permission bypass or substituted tool implementation is used. This direct native entrypoint advances the default-host migration but does not finish it; `npm run cli` and the Web workbench still use their existing hosts.
+
+REA analysis of original factories 6350 and 74428: `ev_a88040b73cf7c4992bc18860b156613bab0bb14813957d191a7691dc21bf46a9`; two parsed files, 319,075 AST nodes and zero parse failures. The existing complete-factory verifiers still cover body fidelity. Original top-entry platform patches, broader tool coverage, interactive terminal behavior, production endpoints and default Web migration remain open.
+
+Validation for this increment: TypeScript build passed; all 1,981 compiled core tests passed; all 12 host tests passed; the extended native launcher test additionally passed its real `--serve`/SIGTERM checks; existing CLI/Web launcher smoke checks passed. The npm native command displays original help successfully. No recovered factory bodies were changed.
+
+
+### 2026-10-24 — Complete original product entry factory
+
+Recovered factory 29570 (UTF-16 offsets 7518353–7519876) and added `createNativeProductRuntime.start()`. `npm run native` now uses this original entry sequence rather than directly invoking BackendServer. It preloads the existing sidecar readiness module, creates global require from the owned entry filename, applies original Windows child-process wrappers, installs the original warning filters and File fallback, then activates the server. The shared foundation now exposes the already-recovered Buffer namespace 20181 required by this entry.
+
+The source verifier checks the fixed bundle SHA, exact top-level module index and complete factory AST, then runs three behavioral comparisons against the original extracted factory. REA evidence: `ev_084c56faf10eca1f19b5ca97a527193e4663886cee0e0ce95385680ec3652682` (one parsed file, 405 AST nodes, zero parse failures). No original whole-bundle evaluation occurs. Windows fixtures establish wrapper semantics only; full cross-platform deployment, broader sidecar lifecycle, default CLI/Web migration and product asset coverage remain open.
+
+
+### 2026-10-24 — Default CLI migrated to the original product graph
+
+`npm run cli` and the dispatcher’s default/chat paths now execute the recovered product entry and complete native graph. The direct `npm run native` alias remains available. The previous standalone CLI is explicitly retained as `npm run workbench`; its help and documentation use that name. The Web workbench still runs its existing host, so default Web migration remains incomplete.
+
+The native launcher regression now invokes the default dispatcher, not the alternate entry file. It verifies original help, non-interactive permission denial, authorized real Read execution and model-result round trip, original HTTP health/header behavior and SIGTERM termination. README and setup documentation distinguish original CLI flags/product JSON from workbench flags/model environment variables. This changes the default CLI configuration contract intentionally; no existing workbench state is deleted or migrated.
+
+Validation for the entry/default-CLI migration: final TypeScript build passed; 1,984 compiled core tests and 12 host tests passed; original-entry source/AST verification and all three source-paired behavior comparisons passed; default native CLI help, explicit workbench CLI help and Web SDK startup smoke checks passed. Interactive terminal use, default Web migration and broader cross-platform/product-resource coverage are not proven by these checks.
+
+### 2026-10-24 — Default live Web migrated through original ACP
+
+Default `npm start` now runs the browser UI over an owned native product process. The new `native-process`, `native-acp-client` and `native-runtime` host adapters start the recovered entry, initialize the real ACP connection, handle incremental SSE and nested permission requests, and translate existing browser operations into original ACP/REST calls. No AgentService, Runner, authentication subject or tool implementation is substituted. `npm run web:workbench` explicitly preserves the previous standalone live host; offline demo remains a separate SDK fixture.
+
+Original Write approval/denial, cancellation during approval, post-cancel continuation, question/skip, connection replay and cold disk recovery all execute through the real original implementations. The Ask tool requires `_meta["codebuddy.ai"].question`; answer/skip is resolved through `_codebuddy.ai/resolveInterruption`. Original denial terminates the prompt with `cancelled`/`PERMISSION_DENIED` and no second model request. The browser disconnect test confirms pending decisions expire and cannot later write the file.
+
+The native browser history view uses original REST session summaries. Full ACP event presentation, background team notifications, rich MCP/terminal views and product-resource compaction remain incomplete. A missing advertised compact command explicitly fails without making a model request. Original safe-tool policy is retained rather than forcing every tool through the old standalone approval guard. The browser UI remains a new local host, not the original product UI.
+
+REA: `ev_d6c9b3d9ec61c831927199a5c01e89233e7907fdfd3d538fef71a96acf12be72`, factories 30638/93928/74428, three parsed files, 208,240 AST nodes, zero parse failures. See [native Web runtime](native-web-runtime.md) for protocol mappings and limitations. Default CLI/live Web graph migration is now implemented; full product parity remains open.
+
+Validation for native Web migration: all 23 host tests passed (including the default CLI, five direct native ACP cases and six default Web process cases); repository type/syntax checks passed; existing CLI/workbench/demo launcher smoke checks passed. A final native browser approval/cold-recovery case passed after the permission-option selection refinement. Core recovered TypeScript factories were unchanged in this increment; their previously verified 1,984-test baseline is not presented as a newly rerun suite here.

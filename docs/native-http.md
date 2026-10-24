@@ -15,9 +15,9 @@
 | View | ViewResolverProvider、ViewResolverImpl、ViewProvider |
 | 完整依赖 factory | BaseContext、WebContext、Node async_hooks CLS、emitter-listener、shimmer、UrlPattern、compose、Express 转换 helper、Deferred、CustomError、ErrorUtil、UrlUtil、Prioritizeable、metadata helpers、HTTP 类型/枚举/tokens/headers 等 |
 
-主要范围共 **35 类 / 75 成员、37 个完整声明、2 个 CJS 常量赋值、39 个完整 factory**。factory 内的 Context/Namespace 原型方法等由整个 factory 核对，不与 35 类重复计数。保留 `PATH_PARMAS_ATTR` 的原拼写。
+主要范围共 **35 类 / 75 成员、37 个完整声明、2 个 CJS 常量赋值、51 个完整 factory**。factory 内的 Context/Namespace 原型方法等由整个 factory 核对，不与 35 类重复计数。保留 `PATH_PARMAS_ATTR` 的原拼写。
 
-CLS 使用样本中 Node >=8 的完整 `async_hooks` 分支（63192），不是 AsyncLocalStorage 近似；项目要求 Node >=22.19，不恢复 Node <8 分支。聚合模块提供明确的局部投影，并不声称其全部代码已恢复；找不到外部依赖时明确抛错。REST client、DI 容器、完整验证/pipe、Body/Cookie/HTTP Session 服务仍需父 runtime，不以空对象补成产品服务。
+CLS 使用样本中 Node >=8 的完整 `async_hooks` 分支（63192），不是 AsyncLocalStorage 近似；项目仍要求 Node >=22.19。原版版本选择器 61987 及 Node <8 的 CLS/async-hook-jl/stack-chain 分支现已完整保存为惰性 factory；旧分支只验证源码和选择边界，未声称兼容当前 Node 的已移除 async_wrap API。聚合模块提供明确的局部投影，并不声称其全部代码已恢复；找不到外部依赖时明确抛错。REST client、DI 容器、完整验证/pipe、Body/Cookie/HTTP Session 服务仍需父 runtime，不以空对象补成产品服务。
 
 ## 原配置项
 
@@ -88,3 +88,13 @@ REA 6.7.0 对 runtime/host 两份惰性源码的静态证据：`ev_8f8888af45c45
 OpenAI Docs 仅核对 [SDK 应用上下文和模型输入边界](https://developers.openai.com/api/docs/guides/agents/define-agents)；原逻辑和 SDK 版本仍以固定样本/依赖为准，不按现行文档重写。
 
 后续[父交接阶段](acp-parent-rendezvous.md)已用真实原AcpView/setSession替代JSON测试view完成新会话、Read/续轮及同连接切换，并恢复认证业务类。仍需生产认证/账户库、父load/resume/完整native审批、完整公共装配器和默认启动切换；Desktop HistoryStore、daemon 重启、Ask/Plan 回放、request-send 服务和外部 Docs 引擎等未完成，不能据这些阶段称整个 harness 已100%还原。
+
+## Original CLS version selection (2026-10-24)
+
+The host now provides its actual Node version and the existing recovered semver adapter to original selector 61987. Both WebContext and the public `cls` accessor use that selector instead of a hardwired modern alias. Twelve complete original factories were added: 10066, 14953, 41708, 49647, 61987, 65911, 69919, 72086, 73726, 77414, 87815 and 93979.
+
+All 51 HTTP/CLS factory ASTs are compared against the fixed sample. The paired selector regression checks Node 6, 7, the Node 8 prerelease/release boundary, 22.19 and the current runtime using sentinel exports; it checks lazy branch loading and export identity without activating obsolete process hooks. Existing request isolation, cleanup, MVC and real SDK scenarios exercise the modern implementation. The project still requires Node 22.19 or later.
+
+REA evidence `ev_729a907fba57e34f8dc5c6aa7e4a391aba5be2f244249e9b455cfbae2750e161` covers 12 inert extraction files, 4,007 AST nodes and zero parse failures. Neither the complete original bundle bootstrap nor the legacy process patches were executed.
+
+For shared resolver composition, `createNativeHttpHost({ lazy: true })` defers request-context initialization. Pure package metadata and CLS selector lookups through `host.native` leave the hook count at zero. The default remains eager initialization for existing embedders. Deferred configuration failures release owned hooks and close the host; the failed host cannot be reused.

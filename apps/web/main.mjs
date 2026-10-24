@@ -1,12 +1,14 @@
 import { parseArgs } from "node:util";
 import { resolve } from "node:path";
 import { createWebHost } from "./server.mjs";
+import { createNativeWebRuntime } from "./native-runtime.mjs";
 
 export async function main(args) {
   const { values } = parseArgs({
     args,
     options: {
       demo: { type: "boolean" },
+      workbench: { type: "boolean" },
       port: { type: "string" },
       cwd: { type: "string" },
       "plugin-dir": { type: "string", multiple: true },
@@ -19,7 +21,7 @@ export async function main(args) {
   });
   if (values.help) {
     console.log(
-      "axonfire web [--demo] [--port 3080] [--cwd /path] [--plugin-dir /trusted/plugin] [--builtin-assets /trusted/resources] [--settings JSON-or-file] [--setting-sources user,project,local|none] [--effort level]\nLocal-only Web host. Explicit plugins, assets and settings may contain executable Hooks. Model credentials stay in server environment / .env.",
+      "axonfire web [--demo|--workbench] [--port 3080] [--cwd /path] [--plugin-dir /trusted/plugin] [--builtin-assets /trusted/resources] [--settings JSON-or-file] [--setting-sources user,project,local|none] [--effort level]\nDefault live mode uses AXONFIRE_NATIVE_PRODUCT_CONFIG. --workbench selects the standalone host; --demo is offline. --builtin-assets belongs to those standalone modes. Explicit plugins and settings may contain executable Hooks. Credentials stay on the server.",
     );
     return;
   }
@@ -27,6 +29,11 @@ export async function main(args) {
   if (!Number.isInteger(port) || port < 0 || port > 65535)
     throw new Error("Invalid port");
   const demo = values.demo === true;
+  const native = !demo && !values.workbench;
+  if (native && values["builtin-assets"])
+    throw new Error(
+      "--builtin-assets belongs to --workbench/--demo; native Web uses product-managed resources",
+    );
   const apiKey = process.env.CODEBUDDY_API_KEY ?? process.env.OPENAI_API_KEY;
   const baseURL = process.env.CODEBUDDY_BASE_URL ?? process.env.OPENAI_BASE_URL;
   const model = process.env.CODEBUDDY_MODEL;
@@ -79,7 +86,7 @@ export async function main(args) {
         },
         async *getStreamedResponse() {
           const text =
-            "离线演示已运行：此消息经过真实 Agents SDK 与还原 harness。演示不调用远端模型，也不执行工具。配置 .env 后重启 npm start，即可使用自己的模型。";
+            "离线演示已运行：此消息经过真实 Agents SDK 与还原 harness。演示不调用远端模型，也不执行工具。配置原生产品 JSON 后重启 npm start，即可使用自己的模型。";
           yield { type: "response_started" };
           for (const delta of text.match(/.{1,8}/gu) ?? []) {
             yield { type: "output_text_delta", delta };
@@ -108,14 +115,32 @@ export async function main(args) {
   const host = await createWebHost({
     harness,
     demo,
-    configured: demo || Boolean(apiKey && baseURL),
+    configured:
+      demo ||
+      (native
+        ? Boolean(
+            process.env.AXONFIRE_NATIVE_PRODUCT_CONFIG ||
+            process.env.ACC_PRODUCT_CONFIG_V3,
+          )
+        : Boolean(apiKey && baseURL)),
+    ...(native
+      ? {
+          createRuntime: createNativeWebRuntime,
+          configurationMessage:
+            "Set AXONFIRE_NATIVE_PRODUCT_CONFIG to a private product JSON file and restart; see docs/native-product-runtime.md, or use npm run demo.",
+        }
+      : {}),
     model,
   });
   console.log(
     `Axonfire ${demo ? "offline demo" : "local Web"}: ${await host.listen(port)}`,
   );
   console.log(
-    "Tools require individual browser approval. This server is not for network/public deployment.",
+    demo
+      ? "Offline workbench fixture; no remote model or tool execution."
+      : native
+        ? "Native product permissions are presented in the browser. This server is not for network/public deployment."
+        : "Workbench tools require individual browser approval. This server is not for network/public deployment.",
   );
   let stopping = false;
   const stop = async () => {

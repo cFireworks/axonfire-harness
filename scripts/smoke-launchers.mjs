@@ -9,7 +9,10 @@ import { ownedBuiltinAssets } from "../packages/harness/dist/scripts/helpers/bui
 const cwd = fileURLToPath(new URL("../", import.meta.url));
 const env = Object.fromEntries(
   Object.entries(process.env).filter(
-    ([name]) => !/^(CODEBUDDY_|WORKBUDDY_|OPENAI_|AXONFIRE_)/.test(name),
+    ([name]) =>
+      !/^(CODEBUDDY_|WORKBUDDY_|OPENAI_|AXONFIRE_|ACC_PRODUCT_CONFIG)/.test(
+        name,
+      ),
   ),
 );
 const help = spawnSync(process.execPath, ["apps/cli/axonfire.mjs", "--help"], {
@@ -18,8 +21,17 @@ const help = spawnSync(process.execPath, ["apps/cli/axonfire.mjs", "--help"], {
   encoding: "utf8",
 });
 assert.equal(help.status, 0);
-assert.match(help.stdout, /Usage: npm run cli/);
-console.log("PASS compiled CLI launcher help (no credentials)");
+assert.match(help.stdout, /Usage: codebuddy\|cbc/);
+console.log("PASS default original CLI launcher help (no credentials)");
+
+const workbenchHelp = spawnSync(
+  process.execPath,
+  ["apps/cli/axonfire.mjs", "workbench", "--help"],
+  { cwd, env, encoding: "utf8" },
+);
+assert.equal(workbenchHelp.status, 0);
+assert.match(workbenchHelp.stdout, /Usage: npm run workbench/);
+console.log("PASS explicit workbench CLI launcher help");
 
 const directory = await mkdtemp(join(tmpdir(), "axonfire-launcher-"));
 const seededAssets = await ownedBuiltinAssets(directory);

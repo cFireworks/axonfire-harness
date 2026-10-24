@@ -1,0 +1,70 @@
+{
+  "sample": "WorkBuddy 5.3.14",
+  "bundleSha256": "4120898f1ded86ac545316721d216c827a325c2513a8fae4bcd8c8bbbf211afd",
+  "files": [
+    {
+      "path": "package.json",
+      "bytes": 8974,
+      "sha256": "17f1c5dc7823ef61f34d35124178ab7aa69fd522e365e6c3e37508e84e197639"
+    },
+    {
+      "path": "sandbox-config.json",
+      "bytes": 457,
+      "sha256": "fe85a6a4e1cae2a42699705f12a7fb8538ef05de8351a9ae63b3a226374eb2bb"
+    },
+    {
+      "path": "dist/wasm/tree-sitter.wasm",
+      "bytes": 190779,
+      "sha256": "70aa2b222e10a91306a85f5b9c8e028e3dc09943854aa63640c643fc7e051c2f"
+    },
+    {
+      "path": "dist/wasm/tree-sitter-bash.wasm",
+      "bytes": 1364404,
+      "sha256": "d1844429a58620f306b6f42aebe92298243ca8120cd833a3ab5d87c7a2e7b9fd"
+    },
+    {
+      "path": "vendor/genie-trash/darwin-arm64",
+      "bytes": 907824,
+      "sha256": "c1426c9fd572e8cfb648e82b13e17fe2ff93fd88de060c3b060b2e5cc686bc8a",
+      "executable": true,
+      "platform": "darwin",
+      "arch": "arm64"
+    },
+    {
+      "path": "vendor/ripgrep/COPYING",
+      "bytes": 126,
+      "sha256": "01c266bced4a434da0051174d6bee16a4c82cf634e2679b6155d40d75012390f"
+    },
+    {
+      "path": "vendor/ripgrep/arm64-darwin/rg",
+      "bytes": 6501024,
+      "sha256": "cfec1a7e1ff7b9b7c54d5427bfae45d5805f69353d7fe4e26efe665c8115f26b",
+      "executable": true,
+      "platform": "darwin",
+      "arch": "arm64"
+    },
+    {
+      "path": "vendor/ripgrep/arm64-darwin/ripgrep.node",
+      "bytes": 6202048,
+      "sha256": "91892674824a5f1e1655d05022d1c8fc8300cf8af6ce3ef8b44e3f2ae46563e1"
+    },
+    {
+      "path": "vendor/sandbox/5.3.3/sandbox-cli",
+      "bytes": 3493024,
+      "sha256": "db944b749d228b394838c7b0500e4726c5d81394c3929f3415cf80fd7f70eb41",
+      "executable": true,
+      "platform": "darwin",
+      "arch": "arm64"
+    },
+    {
+      "path": "vendor/sandbox/5.3.3/tsbx_rules.json",
+      "bytes": 5763,
+      "sha256": "69891f30f1e9f1943c19fb5246ce016142fda75e0a4bdbfada8cb8227e7f92c9"
+    },
+    {
+      "path": "vendor/assets/icon.png",
+      "bytes": 23433,
+      "sha256": "3628c1891ff84443439bb1905b81a816367b3e994e9de4ee4a3baeb0bc9ab314"
+    }
+  ]
+}

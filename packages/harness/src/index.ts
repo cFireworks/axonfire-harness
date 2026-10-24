@@ -18,7 +18,11 @@ export * from "./agents/standalone-agent-manager-host.js";
 export * from "./agents/plugin-agent-compose.js";
 export * from "./agents/native-agent-markdown.js";
 export * from "./agents/native-agent-permission-utils.js";
-export { createAgentManagerRuntime, createAgentManagerPlanGates, agentManagerConstants } from "./agents/native-agent-manager-runtime.js";
+export {
+  createAgentManagerRuntime,
+  createAgentManagerPlanGates,
+  agentManagerConstants,
+} from "./agents/native-agent-manager-runtime.js";
 export type { AgentManagerRuntime } from "./agents/native-agent-manager-runtime.js";
 export * from "./tools/defer-tool-config-service.js";
 export * as NativeToolSpecs from "./tools/native-tool-specs.js";
@@ -34,8 +38,8 @@ export * from "./channels/channel-host.js";
 export * from "./channels/channel-client-runtime.js";
 export * from "./channels/channel-client-services.js";
 export * from "./channels/channel-client-constants.js";
-export {createWechatCredentialStore} from "./channels/wechat-credential-store.js";
-export {createWecomCredentialStore} from "./channels/wecom-credential-store.js";
+export { createWechatCredentialStore } from "./channels/wechat-credential-store.js";
+export { createWecomCredentialStore } from "./channels/wecom-credential-store.js";
 export * as WechatCredentials from "./channels/wechat-credential-store.js";
 export * as WecomCredentials from "./channels/wecom-credential-store.js";
 export * as WechatConstants from "./channels/wechat-client-constants.js";
@@ -112,20 +116,56 @@ export * from "./permissions/managed-security-policy.js";
 export * from "./permissions/tool-permission-plan-strategy.js";
 export * from "./permissions/permission-manager.js";
 export * from "./permissions/interruption-service.js";
-export {createNativeSdkControl,HOOK_EVENTS,DEFAULT_CONTROL_SIGNAL_CONFIG,isControlRequest,isControlResponse,isControlCancelRequest,isControlSignalMessage,type SdkControlNativeRuntime} from './sdk/native-sdk-control.js';
-export {createSdkControlHost,type SdkControlHostOptions,type SdkControlOutput} from './sdk/sdk-control-host.js';
-export {createNativeMcpHost,type NativeMcpHostOptions} from './mcp/native-mcp-host.js';
-export {createNativeMcpRuntime} from './mcp/native-mcp-runtime.js';
-export {createNativeMcpResultProcessor} from './mcp/native-mcp-results.js';
-export {createNativeMcpUtils} from './mcp/native-mcp-utils.js';
-export {createNativeMcpManagerRuntime} from './mcp/native-mcp-manager-runtime.js';
-export {createNativeProductRuntime} from './config/native-product-runtime.js';
-export {createNativeProductHost,type NativeProductHostOptions} from './config/native-product-host.js';
-export {createNativeProductWatchers} from './config/native-product-watchers.js';
-export {MergeStrategy,OVERRIDE_MODE,ProductProviderPriority} from './config/native-product-constants.js';
-export {createNativeMcpProjectionHost,type NativeMcpProjectionOptions} from './mcp/native-mcp-projection-host.js';
-export {McpScope,MERGE_SCOPE_PRIORITY,McpConfigDiagnosticSeverity} from './mcp/native-mcp-manager-constants.js';
-export {createNativeInterruptionService,createNativeToolApprovalServices,type NativeInterruptionControllerRuntime,SessionCompactionAbortError,SdkPermissionDeniedError} from "./permissions/native-interruption-service.js";
+export {
+  createNativeSdkControl,
+  HOOK_EVENTS,
+  DEFAULT_CONTROL_SIGNAL_CONFIG,
+  isControlRequest,
+  isControlResponse,
+  isControlCancelRequest,
+  isControlSignalMessage,
+  type SdkControlNativeRuntime,
+} from "./sdk/native-sdk-control.js";
+export {
+  createSdkControlHost,
+  type SdkControlHostOptions,
+  type SdkControlOutput,
+} from "./sdk/sdk-control-host.js";
+export {
+  createNativeMcpHost,
+  type NativeMcpHostOptions,
+} from "./mcp/native-mcp-host.js";
+export { createNativeMcpRuntime } from "./mcp/native-mcp-runtime.js";
+export { createNativeMcpResultProcessor } from "./mcp/native-mcp-results.js";
+export { createNativeMcpUtils } from "./mcp/native-mcp-utils.js";
+export { createNativeMcpManagerRuntime } from "./mcp/native-mcp-manager-runtime.js";
+export { createNativeProductRuntime } from "./config/native-product-runtime.js";
+export {
+  createNativeProductHost,
+  type NativeProductHostOptions,
+} from "./config/native-product-host.js";
+export { createNativeProductWatchers } from "./config/native-product-watchers.js";
+export {
+  MergeStrategy,
+  OVERRIDE_MODE,
+  ProductProviderPriority,
+} from "./config/native-product-constants.js";
+export {
+  createNativeMcpProjectionHost,
+  type NativeMcpProjectionOptions,
+} from "./mcp/native-mcp-projection-host.js";
+export {
+  McpScope,
+  MERGE_SCOPE_PRIORITY,
+  McpConfigDiagnosticSeverity,
+} from "./mcp/native-mcp-manager-constants.js";
+export {
+  createNativeInterruptionService,
+  createNativeToolApprovalServices,
+  type NativeInterruptionControllerRuntime,
+  SessionCompactionAbortError,
+  SdkPermissionDeniedError,
+} from "./permissions/native-interruption-service.js";
 export * from "./permissions/interruption-stream-recovery.js";
 export * from "./prompts/prompt-renderer.js";
 export * from "./replay/record-replay-model.js";
@@ -293,53 +333,195 @@ export * from "./images/native-image-utils.js";
 export * from "./images/native-read-image-tool.js";
 export * from "./images/read-image-runtime.js";
 export * from "./images/current-image-model.js";
-export * from './sessions/aborted-stream-draft-store.js';
-export * from './sessions/abortable-iterator.js';
-export * from './sessions/content-filter-input-utils.js';
-export * from './sessions/session-result-lifecycle.js';
-export * from './sessions/session-result-runtime.js';
-export * from './sessions/input-history-service.js';
-export * from './sessions/input-history-runtime.js';
-export * from './sessions/response-input-utils.js';
-export * from './models/response-error-utils.js';
-export * from './context/response-history-utils.js';
-export * from './responses/response-interceptor-runtime.js';
-export * from './responses/native-response-interceptors.js';
-export * from './responses/context-truncation-interceptor.js';
-export * from './responses/finish-reason-error-interceptor.js';
-export * from './responses/textual-tool-call-interceptor.js';
-export * from './responses/truncated-tool-call-interceptor.js';
-export * from './responses/queued-messages-cleanup-interceptor.js';
-export * from './responses/media-content-error-interceptor.js';
-export * from './responses/fallback-model-error-interceptor.js';
-export * from './responses/model-permission-error-interceptor.js';
-export * from './hooks/hook-constants.js';
-export * from './hooks/hook-event-metadata.js';
-export * from './hooks/hook-runtime.js';
-export * from './hooks/hook-rule-matcher.js';
-export * from './hooks/hook-shell-helpers.js';
-export * from './hooks/native-hook-executor.js';
-export * from './hooks/native-hook-manager.js';
-export * from './hooks/native-prompt-hook-service.js';
-export * from './hooks/native-scoped-hook-registry.js';
-export * from './hooks/prompt-hook-protocol.js';
-export * from './hooks/hook-lifecycle-runtime.js';
-export * from './hooks/hook-lifecycle-helpers.js';
-export * from './hooks/hook-message-utils.js';
-export * from './hooks/hook-permission-utils.js';
-export * from './hooks/hook-platform-shell.js';
-export * from './hooks/native-session-hook-manager.js';
-export * from './hooks/native-tool-hook-manager.js';
-export * from './hooks/native-tool-execution-pipeline.js';
-export * from './tools/native-tool-errors.js';
-export * from './prompts/native-user-prompt.js';
-export * from './prompts/user-prompt-host.js';
-export * from './protocol/captured-acp-modules.js';
-export * from './protocol/native-acp-input-renderer.js';
-export * from './protocol/acp-input-host.js';
-export * from './sessions/native-session-prompt.js';
-export * from './protocol/native-acp-agent.js';
-export * from './protocol/native-acp-view.js';
-export * from './protocol/native-acp-primitives.js';
-export * from './protocol/native-acp-services.js';
-export * from './protocol/acp-services-host.js';
+export * from "./sessions/aborted-stream-draft-store.js";
+export * from "./sessions/abortable-iterator.js";
+export * from "./sessions/content-filter-input-utils.js";
+export * from "./sessions/session-result-lifecycle.js";
+export * from "./sessions/session-result-runtime.js";
+export * from "./sessions/input-history-service.js";
+export * from "./sessions/input-history-runtime.js";
+export * from "./sessions/response-input-utils.js";
+export * from "./models/response-error-utils.js";
+export * from "./context/response-history-utils.js";
+export * from "./responses/response-interceptor-runtime.js";
+export * from "./responses/native-response-interceptors.js";
+export * from "./responses/context-truncation-interceptor.js";
+export * from "./responses/finish-reason-error-interceptor.js";
+export * from "./responses/textual-tool-call-interceptor.js";
+export * from "./responses/truncated-tool-call-interceptor.js";
+export * from "./responses/queued-messages-cleanup-interceptor.js";
+export * from "./responses/media-content-error-interceptor.js";
+export * from "./responses/fallback-model-error-interceptor.js";
+export * from "./responses/model-permission-error-interceptor.js";
+export * from "./hooks/hook-constants.js";
+export * from "./hooks/hook-event-metadata.js";
+export * from "./hooks/hook-runtime.js";
+export * from "./hooks/hook-rule-matcher.js";
+export * from "./hooks/hook-shell-helpers.js";
+export * from "./hooks/native-hook-executor.js";
+export * from "./hooks/native-hook-manager.js";
+export * from "./hooks/native-prompt-hook-service.js";
+export * from "./hooks/native-scoped-hook-registry.js";
+export * from "./hooks/prompt-hook-protocol.js";
+export * from "./hooks/hook-lifecycle-runtime.js";
+export * from "./hooks/hook-lifecycle-helpers.js";
+export * from "./hooks/hook-message-utils.js";
+export * from "./hooks/hook-permission-utils.js";
+export * from "./hooks/hook-platform-shell.js";
+export * from "./hooks/native-session-hook-manager.js";
+export * from "./hooks/native-tool-hook-manager.js";
+export * from "./hooks/native-tool-execution-pipeline.js";
+export * from "./tools/native-tool-errors.js";
+export * from "./prompts/native-user-prompt.js";
+export * from "./prompts/user-prompt-host.js";
+export * from "./protocol/captured-acp-modules.js";
+export * from "./protocol/native-acp-input-renderer.js";
+export * from "./protocol/acp-input-host.js";
+export * from "./sessions/native-session-prompt.js";
+export * from "./protocol/native-acp-agent.js";
+export * from "./protocol/native-acp-view.js";
+export * from "./protocol/native-acp-primitives.js";
+export * from "./protocol/native-acp-services.js";
+export * from "./protocol/acp-services-host.js";
+
+export * from "./protocol/native-acp-connections-host.js";
+
+export * from "./di/native-component-providers.js";
+export * from "./agents/native-agent-run-registration.js";
+export * from "./agents/native-agent-interceptors-host.js";
+export * from "./agents/native-worktree-context.js";
+
+export * from "./sandbox/native-sandbox-cli.js";
+export * from "./sandbox/native-sandbox-protocol.js";
+export * from "./sandbox/native-sandbox-turn-config.js";
+export * from "./sandbox/native-sandbox-services.js";
+
+export * from "./sandbox/native-sandbox-rules.js";
+
+export * from "./sandbox/native-bash-sandbox-manager.js";
+
+export * from "./sandbox/native-sandbox-shell.js";
+
+export * from "./sandbox/native-safe-delete.js";
+export * from "./sandbox/native-security-audit.js";
+
+export * from "./sandbox/native-sandbox-finalization.js";
+
+export * from "./runtime/native-process-lifecycle.js";
+export * from "./runtime/native-safe-exit.js";
+
+export * from "./sandbox/native-local-shell.js";
+export * from "./sandbox/native-local-shell-services.js";
+
+export * from "./sandbox/native-shell-io.js";
+export * from "./sandbox/node-shell-io.js";
+
+export * from "./runtime/native-telemetry-exit.js";
+
+export * from "./runtime/native-agent-metrics.js";
+
+export * from "./runtime/native-tracing.js";
+
+export * from "./runtime/native-galileo-service.js";
+
+export * from "./runtime/native-galileo-transport.js";
+
+export * from "./runtime/native-otlp-serializers.js";
+
+export * from "./runtime/native-otlp-export.js";
+
+export * from "./runtime/native-otlp-http.js";
+
+export * from "./runtime/native-galileo-exporters.js";
+
+export * from "./runtime/native-galileo-metric-exporter.js";
+
+export * from "./runtime/native-otel-environment.js";
+
+export * from "./runtime/native-metric-reader.js";
+
+export * from "./runtime/native-export-context.js";
+
+export * from "./runtime/native-meter-provider.js";
+
+export * from "./runtime/native-otel-resource.js";
+
+export * from "./runtime/native-logger-provider.js";
+
+export { createNativeGalileoLogger } from "./runtime/native-galileo-logger.js";
+
+export { createNativeGalileoSelfMonitor } from "./runtime/native-galileo-self-monitor.js";
+
+export { createNativeGalileoMeters } from "./runtime/native-galileo-meters.js";
+
+export { createNativeGalileoTrace } from "./runtime/native-galileo-trace.js";
+
+export { createNativeBasicTracer } from "./runtime/native-basic-tracer.js";
+
+export { createNativeGalileoSetup } from "./runtime/native-galileo-setup.js";
+
+export { createNativeGalileoConfig } from "./runtime/native-galileo-config.js";
+
+export { createNativeGalileoFetch } from "./runtime/native-galileo-fetch.js";
+
+export { createNativeGalileoHttpInstrumentation } from "./runtime/native-galileo-http-instrumentation.js";
+
+export {
+  createNativeGalileoSdkHost,
+  type NativeGalileoSdkHostOptions,
+} from "./runtime/native-galileo-sdk-host.js";
+
+export {
+  createNativeGalileoConfigResolver,
+  resolveGalileoConfig,
+} from "./runtime/native-galileo-config-resolver.js";
+
+export { createNativeHttpsProxyAgent } from "./runtime/native-https-proxy-agent.js";
+export { createNativeGalileoServiceModule } from "./runtime/native-galileo-service-module.js";
+
+export { createNativeDi } from "./di/native-di.js";
+
+export { createNativeBackendApplication } from "./runtime/native-backend-application.js";
+
+export { createNativeContainerBootstrap } from "./di/native-container-bootstrap.js";
+
+export { installNativeModuleRuntime } from "./di/native-module-runtime.js";
+export { createNativeProductRegistration } from "./di/native-product-registration.js";
+
+export { createNativeSourceMapSupport } from "./di/native-source-map-support.js";
+
+export { createNativeBackendNamespace } from "./di/native-backend-namespace.js";
+
+export { createNativeExpress } from "./http/native-express.js";
+export { createNativeBackendServer } from "./http/native-backend-server.js";
+
+export { createNativeHttpComponents } from "./http/native-http-components.js";
+export { createNativeBackendFoundation } from "./http/native-backend-foundation.js";
+
+export { createNativeHttpController } from "./http/native-http-controller.js";
+
+export { createNativeCommonServices } from "./runtime/native-common-services.js";
+
+export { createNativeNodeServices } from "./runtime/native-node-services.js";
+
+export { createNativeContextVariableServices } from "./runtime/native-context-variable-services.js";
+
+export { createNativeFilesystemServices } from "./runtime/native-filesystem-services.js";
+
+export { createNativeProductConfigServices } from "./runtime/native-product-config-services.js";
+
+export { createNativeWinstonServices } from "./runtime/native-winston-services.js";
+
+export { createNativeEventServices } from "./runtime/native-event-services.js";
+
+export * from "./runtime/native-node-logging.js";
+
+export * from "./runtime/native-code-ratio-services.js";
+
+export * from "./runtime/native-prompt-services.js";
+
+export * from "./runtime/native-product-modules.js";
+
+export * from "./runtime/native-product-runtime.js";
+
+export * from "./runtime/native-product-entry.js";

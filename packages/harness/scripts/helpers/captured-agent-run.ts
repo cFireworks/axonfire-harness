@@ -79,8 +79,8 @@ export function loadCapturedAgentRun(cli: string) {
         assert.equal(raw.body.body.length, count);
         members += count;
       }
-      assert.equal(members, 169);
-      assert.equal(native.AGENT_RUN_CLASSES.length, 32);
+      assert.equal(members, 172);
+      assert.equal(native.AGENT_RUN_CLASSES.length, 33);
       for (const [local, id] of native.AGENT_RUN_BINDINGS) {
         const d: any = scope.body.body
           .flatMap((n: any) =>
@@ -172,8 +172,8 @@ export function loadCapturedAgentRun(cli: string) {
       [],
       utils.AGENT_RUN_UTILITY_FACTORIES,
     ) as typeof utils.createNativeAgentRunUtilities,
-    classes: 32,
-    members: 169,
+    classes: 33,
+    members: 172,
     declarations: native.AGENT_RUN_BLOCKS.length,
     factories:
       native.AGENT_RUN_FACTORIES.length +

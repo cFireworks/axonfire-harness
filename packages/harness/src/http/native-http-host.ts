@@ -1,4 +1,5 @@
 // Explicit namespace/hook ownership around the unchanged original HTTP core.
+import { createNativePluginSemver } from "../plugins/native-plugin-semver.js";
 import * as util from "node:util";
 import assert from "node:assert";
 import * as asyncHooks from "node:async_hooks";
@@ -16,6 +17,8 @@ export interface NativeHttpHostOptions {
   Reflect?: any;
   console?: any;
   sourceFactory?: typeof createNativeHttpRuntime;
+  /** Defer context creation until requested by the original module graph. */
+  lazy?: boolean;
 }
 export function createNativeHttpHost(options: NativeHttpHostOptions = {}) {
   const hooks = new Set<asyncHooks.AsyncHook>(),
@@ -23,10 +26,12 @@ export function createNativeHttpHost(options: NativeHttpHostOptions = {}) {
   const processState: any = {
     env: options.env ?? {},
     namespaces: {},
+    versions: { ...process.versions },
     _rawDebug: (process as any)._rawDebug.bind(process),
   };
   const common: any = {};
   const modules: any = {
+    94377: createNativePluginSemver(),
     39023: util,
     42613: assert,
     90290: {
@@ -60,31 +65,44 @@ export function createNativeHttpHost(options: NativeHttpHostOptions = {}) {
       getModule: options.getModule,
     });
     Object.assign(common, native.common, { generateUUUID: randomUUID });
-    const Context = native.Context;
-    const namespace = native.cls.getNamespace(
-      "3f45efdf-383c-4152-877b-1e98a410e0da",
-    );
-    const configuration = NATIVE_HTTP_CONFIGURATION.map(
-      ([id, local, property, expression, keyModule, keyExport]) => ({
-        component:
-          NATIVE_HTTP_SCOPES.find((scope) => scope.id === id)?.exports.find(
-            (entry) => entry[1] === local,
-          )?.[0] ?? local,
-        property,
-        key: keyModule
-          ? native.getModule(keyModule)[keyExport!]
-          : JSON.parse(expression),
-      }),
-    );
-    const classes = native.classes;
-    let closed = false,
-      closing: Promise<void> | undefined;
+    let Context: any, namespace: any, classes: any;
+    let configuration: { component: string; property: string; key: any }[];
+    let closed = false, closing: Promise<void> | undefined;
+    function initialize() {
+      if (closed) throw Error("Native HTTP host is closed");
+      if (classes) return;
+      try {
+        Context = native.Context;
+        namespace = native.cls.getNamespace(
+          "3f45efdf-383c-4152-877b-1e98a410e0da",
+        );
+        configuration = NATIVE_HTTP_CONFIGURATION.map(
+          ([id, local, property, expression, keyModule, keyExport]) => ({
+            component:
+              NATIVE_HTTP_SCOPES.find((scope) => scope.id === id)?.exports.find(
+                (entry) => entry[1] === local,
+              )?.[0] ?? local,
+            property,
+            key: keyModule
+              ? native.getModule(keyModule)[keyExport!]
+              : JSON.parse(expression),
+          }),
+        );
+        classes = native.classes;
+      } catch (error) {
+        closed = true;
+        releaseOwnedState();
+        throw error;
+      }
+    }
+    if (!options.lazy) initialize();
     function run<T>(
       request: any,
       response: any,
       operation: (context: any) => T,
     ): T {
       if (closed) throw Error("Native HTTP host is closed");
+      initialize();
       // Use the original namespace's return-preserving API, not an ALS approximation.
       // Context.run itself still retains its original undefined return/fire-and-forget behavior.
       const value = namespace.runAndReturn(() => {
@@ -115,15 +133,15 @@ export function createNativeHttpHost(options: NativeHttpHostOptions = {}) {
     }
     return {
       native,
-      configuration,
-      Context,
-      BaseContext: native.BaseContext,
-      AttributeScope: native.AttributeScope,
-      namespace,
+      get configuration() { initialize(); return configuration; },
+      get Context() { initialize(); return Context; },
+      get BaseContext() { initialize(); return native.BaseContext; },
+      get AttributeScope() { initialize(); return native.AttributeScope; },
+      get namespace() { initialize(); return namespace; },
       processState,
       common,
       modules,
-      classes,
+      get classes() { initialize(); return classes; },
       run,
       close,
       get closed() {

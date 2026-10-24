@@ -3,6 +3,7 @@ import { EventEmitter } from "node:events";
 import { AsyncLocalStorage } from "node:async_hooks";
 import * as streams from "node:stream";
 import { Subject, BehaviorSubject } from "rxjs";
+import { createNativeAcpConnectionsHost } from "../../src/protocol/native-acp-connections-host.js";
 import { createNativeAcpConnections } from "../../src/protocol/native-acp-connections.js";
 import { createNativeAcpPrimitives } from "../../src/protocol/native-acp-primitives.js";
 import { createCapturedAcpSdk } from "../../src/vendor/captured-acp-sdk.js";
@@ -167,74 +168,59 @@ export function acpConnectionsFixture(
       ? globalThis.clearInterval
       : (token: any) => timers.delete(token),
   };
-  const n = factory(runtime),
-    stream: any = new n.AcpStreamManagerImpl(),
-    transports: any = new n.AcpTransportManagerImpl(),
-    transportFactory: any = new n.AcpTransportFactoryImpl(),
-    agents: any = new n.AcpAgentManagerImpl(),
-    server: any = new n.AcpServerImpl(),
-    acp: any = new n.AcpContextImpl(),
-    guard: any = new n.AcpConnectionGuardImpl(),
-    controller: any = new n.AcpController(),
-    middleware: any = new n.AcpSecurityMiddleware();
   const audit = { log: (...args: any[]) => calls.push(["audit", ...args]) },
     sessions = patch.sessions ?? {
       sessionSubject: new BehaviorSubject(undefined),
       flushHistory: async (session: any) => calls.push(["flush", session.id]),
     };
-  Object.assign(agents, { logger });
-  Object.assign(transportFactory, { streamManager: stream });
-  Object.assign(transports, {
-    factory: transportFactory,
-    streamManager: stream,
-  });
-  Object.assign(server, {
-    logger,
-    acpContext: acp,
-    transportManager: transports,
-    agentManager: agents,
-    sessionManager: sessions,
-  });
-  Object.assign(guard, {
-    logger,
-    settingsManager: { get: async () => patch.gateway },
-  });
-  Object.assign(controller, {
-    acpContext: acp,
-    streamManager: stream,
-    transportManager: transports,
-    connectionGuard: guard,
-    auditLog: audit,
-  });
-  Object.assign(stream, {
-    interruptionService: {
-      cancelAllForSession: (...args: any[]) =>
-        calls.push(["cancelInterruptions", ...args]),
+  const host = createNativeAcpConnectionsHost({
+    runtime,
+    sourceFactory: factory,
+    beforeClose: async () => {
+      stdin.end();
+      await patch.beforeClose?.();
     },
-    broadcastService: {
-      broadcastToolCallFailedForSession: async (...args: any[]) =>
-        calls.push(["failedTools", ...args]),
-    },
-  });
-  Object.assign(middleware, {
-    logger,
-    connectionGuard: guard,
-    auditLog: audit,
-    requestMatcher: { match: () => true },
-    pathResolver: { resolve: async (path: string) => path },
-    corsService: {
-      applyCorsHeaders: (_response: any, origin: any) =>
-        calls.push(["cors", origin]),
-    },
-    auth: {
-      isEnabled: () => patch.authEnabled ?? true,
-      authenticate: (request: any) => {
-        calls.push(["authenticate", request]);
-        return patch.authValid ?? false;
+    dependencies: {
+      logger,
+      sessionManager: sessions,
+      settingsManager: { get: async () => patch.gateway },
+      auditLog: audit,
+      interruptionService: {
+        cancelAllForSession: (...args: any[]) =>
+          calls.push(["cancelInterruptions", ...args]),
       },
-      recordFailedAttempt: () => patch.rateLimited ?? false,
+      broadcastService: {
+        broadcastToolCallFailedForSession: async (...args: any[]) =>
+          calls.push(["failedTools", ...args]),
+      },
+      requestMatcher: { match: () => true },
+      pathResolver: { resolve: async (path: string) => path },
+      corsService: {
+        applyCorsHeaders: (_response: any, origin: any) =>
+          calls.push(["cors", origin]),
+      },
+      auth: {
+        isEnabled: () => patch.authEnabled ?? true,
+        authenticate: (request: any) => {
+          calls.push(["authenticate", request]);
+          return patch.authValid ?? false;
+        },
+        recordFailedAttempt: () => patch.rateLimited ?? false,
+      },
     },
   });
+  const {
+    n,
+    stream,
+    transports,
+    transportFactory,
+    agents,
+    server,
+    acp,
+    guard,
+    controller,
+    middleware,
+  } = host;
   di.set(Logger, logger);
   di.set(protocol.AcpStreamManager, stream);
   di.set(protocol.AcpAgentManager, agents);
@@ -293,6 +279,7 @@ export function acpConnectionsFixture(
     return req;
   }
   return {
+    host,
     n,
     sdk,
     protocol,
@@ -337,22 +324,13 @@ export function acpConnectionsFixture(
       await settle();
     },
     async close() {
-      stdin.end();
-      for (const state of stream.connectionStates.values())
-        try {
-          state.incomingController?.close();
-        } catch {}
-      for (const id of [...transports.transports.keys()])
-        await transports.close(id);
-      for (const id of [...stream.streams.keys()]) stream.close(id);
-      await server.stop();
-      transports.transportCreated.complete();
-      await Promise.all(endpoints.map((endpoint) => endpoint.closed));
-      await settle();
-      for (const id of [...guard.tokens.keys()]) guard.revokeToken(id);
-      timers.clear();
-      stdin.destroy();
-      stdout.destroy();
+      try {
+        await host.close();
+      } finally {
+        timers.clear();
+        stdin.destroy();
+        stdout.destroy();
+      }
     },
   };
 }

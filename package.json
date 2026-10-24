@@ -13,13 +13,13 @@
   ],
   "scripts": {
     "build": "npm run build -w @axonfire/harness",
-    "check": "npm run check -w @axonfire/harness && node --check apps/web/main.mjs && node --check apps/web/server.mjs && node --check apps/web/public/app.js",
+    "check": "npm run check -w @axonfire/harness && node --check apps/web/main.mjs && node --check apps/web/server.mjs && node --check apps/web/public/app.js && node --check apps/cli/native.mjs && node --check apps/web/native-process.mjs && node --check apps/web/native-acp-client.mjs && node --check apps/web/native-runtime.mjs && node --check apps/cli/native-approval-policy.mjs",
     "start": "node --env-file-if-exists=.env apps/cli/axonfire.mjs web",
     "dev": "npm run build && npm start",
     "cli": "node --env-file-if-exists=.env apps/cli/axonfire.mjs",
     "demo": "node --env-file-if-exists=.env apps/cli/axonfire.mjs web --demo",
     "test": "npm test -w @axonfire/harness && npm run test:hosts",
-    "test:hosts": "node --test apps/web/test/*.test.mjs",
+    "test:hosts": "node --test --test-concurrency=2 apps/web/test/*.test.mjs apps/cli/test/*.test.mjs",
     "smoke:runtime": "npm run smoke:runtime -w @axonfire/harness && npm run smoke:settings -w @axonfire/harness && npm run smoke:builtin-seed -w @axonfire/harness && npm run smoke:cloud-product -w @axonfire/harness && npm run smoke:session-addons -w @axonfire/harness && npm run smoke:settings-consumers -w @axonfire/harness && npm run smoke:product-environment -w @axonfire/harness && npm run smoke:resource-prompts -w @axonfire/harness && npm run smoke:user-prompts -w @axonfire/harness && npm run smoke:acp-input -w @axonfire/harness && npm run smoke:acp-protocol -w @axonfire/harness && npm run smoke:acp-services -w @axonfire/harness && npm run smoke:acp-connections -w @axonfire/harness && npm run smoke:acp-view -w @axonfire/harness && npm run smoke:session-ingress -w @axonfire/harness && npm run smoke:session-stack -w @axonfire/harness && npm run smoke:agent-run -w @axonfire/harness && npm run smoke:native-runner -w @axonfire/harness && npm run smoke:native-http -w @axonfire/harness && npm run smoke:authentication -w @axonfire/harness && npm run smoke:acp-parent -w @axonfire/harness && npm run smoke:interaction-services -w @axonfire/harness && npm run smoke:acp-replay -w @axonfire/harness",
     "smoke:acp-protocol": "npm run smoke:acp-protocol -w @axonfire/harness",
     "smoke:acp-connections": "npm run smoke:acp-connections -w @axonfire/harness",
@@ -35,6 +35,10 @@
     "smoke:acp-replay": "npm run smoke:acp-replay -w @axonfire/harness",
     "smoke:launchers": "node scripts/smoke-launchers.mjs",
     "verify:config": "npm run verify:config -w @axonfire/harness",
-    "verify:recovery": "node scripts/verify-recovery.mjs"
-  }
+    "verify:recovery": "node scripts/verify-recovery.mjs",
+    "native": "node --env-file-if-exists=.env apps/cli/native.mjs",
+    "workbench": "node --env-file-if-exists=.env apps/cli/axonfire.mjs workbench",
+    "web:workbench": "node --env-file-if-exists=.env apps/cli/axonfire.mjs web --workbench"
+  },
+  "packageManager": "pnpm@11.17.0+sha512.cca3cea332ad254bb84145f966d19f4879615210346fc92c79a047f23a0d7b3cca3c3792f0076ba1f1831d277efbcf0a9119b31a9a60eca7fb3d6231f331ef72"
 }

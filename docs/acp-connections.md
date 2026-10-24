@@ -71,3 +71,6 @@ npm run verify:acp-connections -w @axonfire/harness -- /absolute/path/codebuddy.
 29 组连接组件与 10 组 SDK/Zod 有限行为差分，共 39 组；完整类/函数/初始化/静态配置/路由及 SDK factory 另做 AST 核对。专项 42 项，额外三项经真实 owned PassThrough stdio 和 127.0.0.1 Node HTTP 运行原 Server/Controller/Stream 与完整 SDK，验证 UTF-8、双向 permission、独立 GET 通知和 DELETE。新增一组保留原 SDK client 拒收产品 session_end 的行为。组件测试的业务 Agent、认证、终端、文件与模型均为明确 doubles，不读取安装账户、不连接原生产服务；它们不等于完整业务链已接入 HTTP。后续已另通过真实 SDK/ACP pipe 验证完整 Agent/View 与单一审批，见 [View 宿主](acp-view-host.md)。
 
 尚需完整 Agent/View.render 迭代生命周期、默认审批 owner 的单一归属和实际入口切换、真实认证/完整网关服务、request-send telemetry/标题 Hook、Desktop SessionManager/HistoryStore/Plan 回放与 daemon 动态模式回收。源码声明恢复、有限差分和本地传输通过均不等于整个 harness 已 100% 还原。
+# Runtime assembly
+
+The recovered connection components now have a [public runtime host](native-acp-connections-host.md), including explicit DI bindings, owned transport cleanup, and SSE backpressure shutdown handling. This does not switch default CLI/Web startup to the complete native product graph.

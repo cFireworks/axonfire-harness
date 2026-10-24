@@ -36,7 +36,86 @@ function deferred() {
   });
   return { promise, resolve };
 }
+const sandboxTelemetryCases: Scenario[] = [
+  "report-once", "missing-ids", "parent-session", "reporter-throws", "optional-reporter",
+].map((mode) => ({
+  name: "source SandboxTurnTelemetry shares original lifecycle state: " + mode,
+  async run(factories) {
+    const f = await agentRunFixture(factories);
+    try {
+      const reports: any[] = [], warnings: string[] = [], disabledReasons: any[] = [];
+      // Explicit component-test sandbox backend. No sandbox process or external
+      // telemetry is started; both compared classes remain the complete source.
+      const n = factories.factory({
+        modules: {
+          ...f.modules,
+          35151: { ...f.modules[35151], SettingsScope: { USER: "user" } },
+          20852: {
+            isSafeDeleteRuntimeEnabledInSandboxConfig: () => false,
+            getDefaultSandboxAllowWritePath: () => "/owned-workspace",
+          },
+          39311: {
+            getSandboxTurnDisabledReason: () => undefined,
+            getSandboxConfigApplicationState: () => undefined,
+            setSandboxTurnDisabledReason: (_session: any, reason: any) => disabledReasons.push(reason),
+          },
+          74674: { SANDBOX_COMMANDS: { ENABLE_MODIFY_BACKUP: "owned-backup" } },
+        },
+        getModule: f.n.getModule,
+        platform: "linux",
+      });
+      const lifecycle = Object.assign(new n.SandboxAgentRunInterceptor(), {
+        logger: f.logger,
+        settingsManager: { clearCache() {}, list: async () => ({ sandbox: { enabled: true } }) },
+        sandboxTurnConfig: {},
+        cwdService: { setCwdState() {}, getCwd: () => "/owned-workspace" },
+        processManager: { isRunning: () => true },
+        sandboxLifecycle: {
+          getClient: () => ({ sendRequest: async () => ({ enabled: false }) }),
+          getWorkdir: async () => "/owned-workspace",
+        },
+      });
+      const telemetry = Object.assign(new n.SandboxTurnTelemetryAgentRunInterceptor(), {
+        logger: { warn: (message: string) => warnings.push(message) },
+        ...(mode === "optional-reporter" ? {} : {
+          telemetryReporter: { reportTurnState: (report: any) => {
+            reports.push(report);
+            if (mode === "reporter-throws") throw Error("owned telemetry failure");
+          } },
+        }),
+      });
+      assert.equal(telemetry.priority, 550);
+      const c = f.context([user("owned sandbox request")]);
+      c.session.meta.rootRequestId = "owned-root";
+      c.session.conversationRequestId = "owned-turn";
+      // A fresh context has no pending lifecycle result to report.
+      await telemetry.intercept(c);
+      assert.deepEqual(reports, []);
+      await lifecycle.intercept(c);
+      assert.deepEqual(disabledReasons, ["unsupported-platform"]);
+      if (mode === "missing-ids") delete c.session.meta.rootRequestId;
+      if (mode === "parent-session") c.session.meta.parentSessionId = "owned-parent";
+      await telemetry.intercept(c);
+      const firstWarnings = [...warnings];
+      // Consumed before parent/ID checks or reporting, including reporter failure.
+      await telemetry.intercept(c);
+      assert.deepEqual(warnings, firstWarnings);
+      assert.equal(reports.length, ["report-once", "reporter-throws"].includes(mode) ? 1 : 0);
+      if (reports.length) assert.deepEqual(reports[0], {
+        rootRequestId: "owned-root", conversationRequestId: "owned-turn",
+        useSandboxCli: false, disabledReason: "unsupported-platform",
+      });
+      assert.equal(warnings.length, ["missing-ids", "reporter-throws"].includes(mode) ? 1 : 0);
+      if (mode === "missing-ids") assert.match(warnings[0]!, /turn request IDs were not initialized/);
+      if (mode === "reporter-throws") assert.match(warnings[0]!, /report failed: Error: owned telemetry failure/);
+      telemetry.logger.warn = () => { throw Error("owned logger failure"); };
+      assert.doesNotThrow(() => telemetry._logFailure("owned failure"));
+      return { reports, warnings, disabledReasons };
+    } finally { await f.close(); }
+  },
+}));
 export const AGENT_RUN_CASES: Scenario[] = [
+  ...sandboxTelemetryCases,
   scenario(
     "source MemoryContext uses the original lazy namespace loader for explicit owned OS identity fallback",
     async (f) => {
@@ -84,14 +163,23 @@ export const AGENT_RUN_CASES: Scenario[] = [
   scenario(
     "source AgentRun constructors retain all 32 name-map entries and original priorities without decorators",
     async (f) => {
-      const entries = Object.entries(f.n.interceptorClasses).map(
-        ([name, C]: any) => {
+      const entries = [...f.n.interceptorNames].map(
+        ([C, name]: any) => {
           const instance = new C();
           assert.equal(f.n.resolveInterceptorName(instance), name);
           return [name, instance.priority];
         },
       );
       assert.equal(entries.length, 32);
+      assert.equal(Object.keys(f.n.interceptorClasses).length, 33);
+      assert.equal(
+        f.n.interceptorClasses.SandboxTurnTelemetryAgentRunInterceptor,
+        f.n.SandboxTurnTelemetryAgentRunInterceptor,
+      );
+      assert.equal(
+        f.n.interceptorNames.has(f.n.SandboxTurnTelemetryAgentRunInterceptor),
+        false,
+      );
       assert.equal(new f.n.HistoryAgentRunInterceptor().priority, 1400);
       assert.equal(new f.n.UserInputAgentRunInterceptor().priority, 1900);
       assert.equal(f.n.originalModule.AgentServiceImpl, f.n.AgentServiceImpl);
@@ -281,10 +369,11 @@ export const AGENT_RUN_CASES: Scenario[] = [
   scenario(
     "source skipRun drains only non-held queue when idle, not previously aborted, and not deferred",
     async (f) => {
+      let skip = true;
       f.interceptors.push({
         priority: 1,
         intercept: async (c: any) => {
-          c.skipRun = true;
+          c.skipRun = skip;
         },
       });
       f.s.queue.push(user("held", { queueHold: true }));
@@ -293,7 +382,9 @@ export const AGENT_RUN_CASES: Scenario[] = [
       f.s.queue.push(user("regular"));
       await f.service.run(f.agent, [], { context: f.s });
       assert.equal(f.scheduled.length, 1);
-      f.interceptors.length = 0;
+      // Original ContainerBasedProvider caches registrations on first lookup;
+      // change this interceptor's decision, not the already-cached provider list.
+      skip = false;
       f.s.queue.length = 0;
       await f.scheduled.shift()!();
       assert.ok(f.calls.some((x) => x[0] === "runner"));

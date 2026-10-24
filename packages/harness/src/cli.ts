@@ -9,7 +9,7 @@ import { CommandMessageUtils } from "./commands/command-message-utils.js";
 
 const HELP = `WorkBuddy 5.3.14 harness reconstruction (standalone host, incomplete product coverage)
 
-Usage: npm run cli -- [options]
+Usage: npm run workbench -- [options]
   -p, --print <prompt>         Run once, stream text, then exit
   --cwd <directory>            Tool working directory (default: current directory)
   --state-dir <directory>      JSONL storage (default: <cwd>/.workbuddy-harness)
