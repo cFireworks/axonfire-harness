@@ -101,6 +101,7 @@ test("native unavailable auto mode downgrades Auto or Plan pre-mode and does not
     const out = await toolPermissionFixture({
       mode,
       meta: { prePlanPermissionMode: PermissionMode.Auto },
+      tool: "Bash",
       autoAvailable: false,
     }).run();
     assert.equal(out.result.behavior, "ask");
@@ -113,6 +114,7 @@ test("native unavailable auto mode downgrades Auto or Plan pre-mode and does not
 test("native auto headless denial limits abort, while interactive fallback remains ask", async () => {
   const out = await toolPermissionFixture({
     mode: PermissionMode.Auto,
+    tool: "Bash",
     classification: {
       behavior: "denialLimitExceeded",
       headlessAbort: true,
@@ -416,4 +418,14 @@ test("real SDK native deferred approval reaches builtin target through original 
   assert.ok(!JSON.stringify(result).includes("Error"), JSON.stringify(result));
   assert.equal(await readFile(f.target, "utf8"), "original");
   assert.deepEqual(f.approvals, ["Write"]);
+});
+
+test("native Auto inherits AcceptEdits and does not classify Write", async () => {
+  const out = await toolPermissionFixture({
+    mode: PermissionMode.Auto,
+    tool: "Write",
+    classification: { behavior: "deny", reason: "must not be consulted" },
+  }).run();
+  assert.equal(out.result.behavior, "allow");
+  assert.equal(out.events.some(event => event[0] === "classify"), false);
 });

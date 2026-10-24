@@ -1,3 +1,5 @@
+import { nativeAutoClassifierTool, nativeEmptyAutoClassifierTool } from "../permissions/native-auto-mode-projections.js";
+import { ToolNames } from "./tool-names.js";
 import { tool, type RunContext, type Tool } from "@openai/agents";
 import type { ToolOptions } from "@openai/agents-core";
 import type { ZodObject } from "zod";
@@ -29,6 +31,7 @@ export type ToolParameterSource = ToolParameters | (() => Promise<ToolParameters
 function isZodParameters(value: ToolParameters): value is ZodObject<any> { return typeof value.safeParse === "function" && typeof value.parse === "function"; }
 
 export type RegisteredToolHandler = {
+  toAutoClassifierInput?: (input: any) => string | undefined;
   extractRawResponse?: (result: any) => any;
   resolveThrownErrorCode?: (error: any) => string | undefined;
   argumentRenderer?: { displayProperties?: Array<{ name: string; type?: string }>; formatText?: (input: any) => unknown };
@@ -54,6 +57,8 @@ export type ToolBuildOptions = {
   globalDeferLoading?: boolean;
   delegateToolsAvailable?: boolean;
 };
+
+const NATIVE_AUTO_TOOL_NAMES = new Set<string>(Object.values(ToolNames));
 
 const ALWAYS_ALLOWED_IN_DELEGATE = new Set([
   "Read",
@@ -148,6 +153,19 @@ export class ToolManager {
     void this.indexRegisteredTool(name);
   }
 
+  private autoClassifierTool(name: string, handler: RegisteredToolHandler) {
+    if (handler.toAutoClassifierInput) return { name, toAutoClassifierInput: handler.toAutoClassifierInput.bind(handler) };
+    return nativeAutoClassifierTool(name) ?? (NATIVE_AUTO_TOOL_NAMES.has(name) ? nativeEmptyAutoClassifierTool(name) : undefined);
+  }
+
+  /** Original projections for registered native tools; unknown custom tools stay absent. */
+  getAutoClassifierTools(): Array<{ name: string; toAutoClassifierInput(input: any): any }> {
+    return [...this.handlers].flatMap(([name, handler]) => {
+      const projection = this.autoClassifierTool(name, handler);
+      return projection ? [projection] : [];
+    });
+  }
+
   getDefinition(name: string): ProductTool | undefined {
     return this.product.toolsByName.get(name);
   }
@@ -161,6 +179,7 @@ export class ToolManager {
     const parameters = await this.resolveParameters(handler.parameters);
     const executable:DeferredBuiltinTool = {
       name: registered,
+      ...(this.autoClassifierTool(registered, handler) ?? {}),
       aliases: handler.aliases ?? nativeToolPermissionMetadata(registered).aliases,
       resolveToolType: nativeToolPermissionMetadata(registered).resolveToolType.bind(nativeToolPermissionMetadata(registered)),
       ...((handler.argumentRenderer ?? this.argumentRenderers.get(registered)) ? { argumentRenderer: handler.argumentRenderer ?? this.argumentRenderers.get(registered)! } : {}),

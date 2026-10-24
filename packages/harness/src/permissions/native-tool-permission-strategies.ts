@@ -25,7 +25,7 @@ export function createNativeToolPermissionStrategies(runtime: any) {
       PathUtils: runtime.pathUtils,
     },
     iC = "default",
-    iy = "dontAsk",
+    iy = "acceptEdits",
     iE = { PlanStorageService: "plans" },
     nk = {
       ContainerUtil: {
@@ -37,7 +37,7 @@ export function createNativeToolPermissionStrategies(runtime: any) {
                   x.mode ===
                   (key === "default"
                     ? PermissionMode.Default
-                    : PermissionMode.DontAsk),
+                    : PermissionMode.AcceptEdits),
               ),
         getAll: (..._args: any[]) => instances,
       },

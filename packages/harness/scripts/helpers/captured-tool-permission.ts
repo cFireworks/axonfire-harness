@@ -41,6 +41,14 @@ export function loadCapturedToolPermission(source: string) {
     ["DontAsk", 11582270, 11582631],
     ["Auto", 11584041, 11584358],
   ] as const;
+  // Pin the dependency binding as well as the class bodies. A shared wrong
+  // injected token can otherwise make both sides of a paired test agree.
+  if (
+    !source.slice(11577183, 11577255).startsWith(
+      "iy=class{constructor(){this.mode=ih.PermissionMode.AcceptEdits}",
+    )
+  )
+    throw Error("Auto strategy AcceptEdits binding changed");
   const strategy = new Script(
     `(()=>{${source.slice(11583503, 11584041).replace(/,iQ=$/, ";")};return[${definitions.map(([, start, end]) => `new (${source.slice(start, end)})()`).join(",")}]})()`,
   );
@@ -141,7 +149,7 @@ export function loadCapturedToolPermission(source: string) {
           PathUtils: runtime.pathUtils,
         },
         iC: "default",
-        iy: "dontAsk",
+        iy: "acceptEdits",
         iE: { PlanStorageService: "plans" },
         nk: {
           ContainerUtil: {
@@ -154,7 +162,7 @@ export function loadCapturedToolPermission(source: string) {
                       x.mode ===
                       (key === "default"
                         ? PermissionMode.Default
-                        : PermissionMode.DontAsk),
+                        : PermissionMode.AcceptEdits),
                   ),
           },
         },

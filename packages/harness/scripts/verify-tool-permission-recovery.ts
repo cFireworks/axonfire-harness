@@ -284,6 +284,7 @@ for (const mode of [PermissionMode.Auto, PermissionMode.Plan])
       await compare({
         mode,
         meta: { prePlanPermissionMode: PermissionMode.Auto },
+        tool: "Bash",
         classification,
         autoAvailable,
       });

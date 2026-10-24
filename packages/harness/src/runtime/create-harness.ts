@@ -1,3 +1,4 @@
+import { createNativeAutoModeRuntime } from "../permissions/native-auto-mode-runtime.js";
 import { withTrace, type AgentInputItem, type ModelProvider } from "@openai/agents-core";
 import { LocalNoopTrace } from "./local-trace.js";
 import { mkdir } from "node:fs/promises";
@@ -176,6 +177,8 @@ export type HarnessOptions = {
   productRuntime?: Partial<Omit<NativeProductHostOptions, "initialConfiguration" | "getWorkDir" | "getHomeDir">>;
   /** Complete native classifier/SDK callback path; independent of the approval UI host. */
   nativePermissions?: boolean;
+  /** Explicitly compose the original Auto classifier with this harness's model/configuration services. */
+  nativeAutoMode?: boolean;
   /** Complete captured approval controller, with legacy UI retained as the default during migration. */
   nativeApprovals?: boolean;
   approvalController?: Partial<NonNullable<InterruptionServiceOptions["controller"]>>;
@@ -271,7 +274,7 @@ export async function createHarness(options: HarnessOptions) {
   }
   if (options.baseURL && !["http:", "https:"].includes(new URL(options.baseURL).protocol)) throw new Error("baseURL must use HTTP or HTTPS");
   const sdkControl = options.sdkControl ? createSdkControlHost(options.sdkControl) : undefined;
-  const nativeApprovals = options.nativeApprovals ?? (!!sdkControl || !!options.nativeMcp), nativePermissions = options.nativePermissions ?? (!!sdkControl || !!options.nativeMcp);
+  const nativeApprovals = options.nativeApprovals ?? (!!sdkControl || !!options.nativeMcp), nativePermissions = options.nativePermissions ?? (!!sdkControl || !!options.nativeMcp || !!options.nativeAutoMode);
   const sdkPermissionClient = options.approvalController?.sdkPermissionClient ?? sdkControl?.permission;
   const sdkCliOverrides = new Set<string>();
   let pluginSettings: any;
@@ -469,10 +472,20 @@ export async function createHarness(options: HarnessOptions) {
     hookInputProcessorProvider:{sortSync:()=>[imageToolHookInputProcessor,...options.hooks?.hookInputProcessorProvider?.sortSync()??[]].sort((a,b)=>(a.priority??500)-(b.priority??500))},
   });
   tools.attachHookLifecycle(nativeHooks.pipeline);
+  let autoModeRuntime: ReturnType<typeof createNativeAutoModeRuntime> | undefined;
+  const composeAutoMode = options.nativeAutoMode && !options.permissionHost?.autoModePermissionService && !options.permissionHost?.autoMode;
   const permissions = createToolPermissionHost({
     getWorkDir, getHomeDir: () => stateDir, sessionStore: store, planStorageService: plans,
     sessionHookManager: nativeHooks.sessionManager, toolHookManager: nativeHooks.toolManager,
     logger: { warn: (...args: any[]) => options.logger?.warn(args.map(String).join(' ')) },
+    ...(composeAutoMode ? { autoModePermissionService: {
+      isAutoModeAvailable: () => autoModeRuntime!.service.isAutoModeAvailable(),
+      classifyAsk(input: any) {
+        // Registrations can change after construction; project the current tool set.
+        autoModeRuntime!.classifier.tools = tools.getAutoClassifierTools();
+        return autoModeRuntime!.service.classifyAsk(input);
+      },
+    } } : {}),
     ...options.permissionHost,
     settingsManager: options.permissionHost?.settingsManager ?? pluginSettings,
     onSdkDecision(tool,context,input,callId,needsApproval) {
@@ -851,6 +864,17 @@ export async function createHarness(options: HarnessOptions) {
       return Promise.all([commandManager.refresh(), options.productRuntime?.onConfiguration?.(configuration)]).then(() => undefined);
     },
   });
+  if (composeAutoMode) {
+    autoModeRuntime = createNativeAutoModeRuntime({
+      settingsManager: options.permissionHost?.settingsManager ?? pluginSettings,
+      promptManager: { async get(name) { return product.promptsByName.get(name); } },
+      agentManager: agents, productManager: productRuntime.facade,
+      memoryManager: memoryRules.manager, tools: tools.getAutoClassifierTools(),
+      getHomeDir: () => stateDir,
+      agentService: { runOneTimeWithOverrides: (name, input, overrides) => service.runOneTimeWithOverrides(name, input, overrides) },
+      logger: { warn: (...args: any[]) => options.logger?.warn(args.map(String).join(" ")) },
+    });
+  }
   if (pluginHost) {
     pluginHost.attach({ hookManager:nativeHooks!.manager,skillProductProvider: skillProvider, toolManager: tools, commandManager, outputStyleManager: pluginHost.outputStyles,
       agentManager: agents, sessionManager: sessions, lspManager: { async reloadPluginServers() {
@@ -1090,7 +1114,7 @@ export async function createHarness(options: HarnessOptions) {
   }catch(error){await close();throw error;}
   channelClients?.initializeConfigured();
   channelHost.start();
-  return { product, agents, agentFactory, tools, mcp, sessions, store, service, stateMachine, interruptions, compactor, memory, memoryRules, autoMemory, hooks:nativeHooks, permissions, shell, taskManager, taskStorage, taskTools, agentTool, taskOutputTools, plans, planTools, asks, askTool, promptContext, createWorkflowSubagentSpawner, createWorkflowRuntime, workflowTool, backgroundTaskNotifier, recordingStore, recordReplayProvider: provider, webFetchTool, webSearchTool, webRuntime,
+  return { product, agents, agentFactory, tools, mcp, sessions, store, service, stateMachine, interruptions, compactor, memory, memoryRules, autoMemory, autoModeRuntime, hooks:nativeHooks, permissions, shell, taskManager, taskStorage, taskTools, agentTool, taskOutputTools, plans, planTools, asks, askTool, promptContext, createWorkflowSubagentSpawner, createWorkflowRuntime, workflowTool, backgroundTaskNotifier, recordingStore, recordReplayProvider: provider, webFetchTool, webSearchTool, webRuntime,
     sdkControl, sdkHandlers, nativeMcp, connectNativeMcp, nativePermissions, approvalOwners, productRuntime, productManager: productRuntime.facade, settingsHost,settingsManager:pluginSettings,pluginHost, pluginManager: pluginSource, pluginRuntimeRefresh: pluginHost?.refresh, channelHost, channelClients, channelManager, channelPermissionAdapter, wechatReplyTool, wecomReplyTool,
     delegateToolManager, delegateToolsChangedHandler, delegateTool,
     lspManager, lspTool,

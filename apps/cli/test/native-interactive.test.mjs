@@ -1,3 +1,4 @@
+import { nativeFixtureEnv } from "../../test/native-fixture-env.mjs";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
@@ -71,9 +72,9 @@ for (const mode of ["reject-trust", "chat", "allow-read", "reject-read"]) test(
     terminal = pty.spawn(process.execPath, [launcher, first], {
       name: "xterm-256color", cols: 110, rows: 32, cwd: root,
       env: {
-        PATH: process.env.PATH ?? "", HOME: root, SHELL: "/bin/sh", TERM: "xterm-256color",
+        ...nativeFixtureEnv, HOME: root, SHELL: "/bin/sh", TERM: "xterm-256color",
         AXONFIRE_STATE_DIR: join(root, "state"), AXONFIRE_NATIVE_PRODUCT_CONFIG: configPath,
-        DISABLE_TELEMETRY: "1", CODEBUDDY_REMOTE_CONFIG_DISABLED: "true",
+
       },
     });
     dataListener = terminal.onData(data => {
@@ -84,7 +85,10 @@ for (const mode of ["reject-trust", "chat", "allow-read", "reject-read"]) test(
       }
     });
     exitListener = terminal.onExit(event => { exited = event; });
-    await waitFor(() => output.includes("Do you trust the files in this folder?"), "folder trust screen");
+    // A terminal frame may arrive across multiple PTY chunks. Wait for both
+    // the title and actionable option before asserting or sending input.
+    await waitFor(() => output.includes("Do you trust the files in this folder?")
+      && output.includes("Trust folder only"), "complete folder trust screen");
     assert.match(output, /Trust folder only/);
     assert.equal(requests.length, 0, "the initial model turn must wait for folder trust");
     await delay(200); // Let the original React input effects attach after the first frame.

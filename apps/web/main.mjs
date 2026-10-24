@@ -120,7 +120,7 @@ export async function main(args) {
       (native
         ? Boolean(
             process.env.AXONFIRE_NATIVE_PRODUCT_CONFIG ||
-            process.env.ACC_PRODUCT_CONFIG_V3,
+              process.env.ACC_PRODUCT_CONFIG_V3,
           )
         : Boolean(apiKey && baseURL)),
     ...(native
@@ -147,7 +147,9 @@ export async function main(args) {
     if (stopping) return;
     stopping = true;
     await host.close();
+    process.off("SIGINT", stop);
+    process.off("SIGTERM", stop);
   };
-  process.once("SIGINT", stop);
-  process.once("SIGTERM", stop);
+  process.on("SIGINT", stop);
+  process.on("SIGTERM", stop);
 }

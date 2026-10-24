@@ -337,12 +337,24 @@ textarea::placeholder {
   background: white;
   margin: 10px 8px 0 0;
 }
-.decision input {
+.decision input,
+.decision select,
+.decision textarea {
   display: block;
   width: 100%;
   padding: 9px;
   border: 1px solid #cbcdbd;
   margin: 8px 0 16px;
+}
+.decision input[type="checkbox"] {
+  width: auto;
+}
+.decision textarea {
+  min-height: 72px;
+}
+.decision label {
+  display: block;
+  margin-top: 12px;
 }
 #notice {
   padding: 13px 37px;
@@ -447,7 +459,17 @@ textarea::placeholder {
   .footnote {
     font-size: 8px;
   }
-  #notice {
+  .decision input[type="checkbox"] {
+  width: auto;
+}
+.decision textarea {
+  min-height: 72px;
+}
+.decision label {
+  display: block;
+  margin-top: 12px;
+}
+#notice {
     padding: 12px 20px;
   }
 }

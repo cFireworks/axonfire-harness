@@ -47,6 +47,7 @@ export type DeferredToolResult = {
 };
 
 export type DeferredBuiltinTool = {
+  toAutoClassifierInput?: (input: any) => string | undefined;
   aliases?: string[];
   resolveToolType?: (names: string[]) => string;
   argumentRenderer?: { displayProperties?: Array<{ name: string; type?: string }>; formatText?: (input: any) => unknown };

@@ -7,9 +7,10 @@ export async function startNativeProductProcess({
   env = process.env,
   timeout = 15000,
   args = [],
+  nodeExecutable = process.execPath,
 } = {}) {
   const child = spawn(
-    process.execPath,
+    nodeExecutable,
     [
       fileURLToPath(new URL("../cli/native.mjs", import.meta.url)),
       "--serve",

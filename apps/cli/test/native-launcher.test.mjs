@@ -1,3 +1,4 @@
+import { nativeFixtureEnv } from "../../test/native-fixture-env.mjs";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
@@ -101,13 +102,11 @@ test(
         }),
       );
       const env = {
-        PATH: process.env.PATH,
+        ...nativeFixtureEnv,
         HOME: root,
         SHELL: "/bin/sh",
         AXONFIRE_STATE_DIR: join(root, "state"),
         AXONFIRE_NATIVE_PRODUCT_CONFIG: configPath,
-        DISABLE_TELEMETRY: "1",
-        CODEBUDDY_REMOTE_CONFIG_DISABLED: "true",
       };
       const help = await execute(process.execPath, [launcher, "--help"], {
         cwd: root,

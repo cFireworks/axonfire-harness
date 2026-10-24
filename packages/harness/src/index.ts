@@ -112,6 +112,11 @@ export * from "./models/model-transport.js";
 export * from "./models/model-transport-utils.js";
 export * from "./models/model-error-utils.js";
 export * from "./permissions/permission.js";
+export * from "./permissions/native-auto-mode-service.js";
+export * from "./permissions/native-auto-mode-classifier.js";
+export * from "./permissions/native-auto-mode-support.js";
+export * from "./permissions/native-auto-mode-runtime.js";
+export * from "./permissions/native-auto-mode-projections.js";
 export * from "./permissions/managed-security-policy.js";
 export * from "./permissions/tool-permission-plan-strategy.js";
 export * from "./permissions/permission-manager.js";
@@ -525,3 +530,83 @@ export * from "./runtime/native-product-modules.js";
 export * from "./runtime/native-product-runtime.js";
 
 export * from "./runtime/native-product-entry.js";
+
+export * from "./sessions/native-session-restart.js";
+
+export * from "./sessions/native-session-reconfiguration.js";
+
+export * from "./sessions/native-session-readiness.js";
+
+export * from "./sessions/native-session-startup.js";
+
+export * from "./sessions/native-session-records.js";
+
+export * from "./sessions/native-session-repository.js";
+export * from "./vendor/captured-storage-orm.js";
+export * from "./storage/native-storage-migrations.js";
+export * from "./storage/native-database-service.js";
+export * from "./sessions/native-session-cleanup.js";
+
+export * from "./sessions/native-session-task-state.js";
+
+export * from "./sessions/native-session-backend-events.js";
+
+export * from "./sessions/native-session-plans.js";
+
+export * from "./sessions/native-session-tool-results.js";
+
+export * from "./sessions/native-session-history.js";
+
+export * from "./sessions/native-session-team-state.js";
+
+export * from "./sessions/native-session-replay.js";
+
+export * from "./sessions/native-session-prompt-controller.js";
+
+export * from "./sessions/native-session-loading.js";
+
+export * from "./sessions/native-session-info.js";
+
+export * from "./sessions/native-session-replay-transport.js";
+
+export * from "./sessions/native-session-load-rpc.js";
+
+export * from "./sessions/native-session-reclaim.js";
+
+export * from "./sessions/native-session-host-runtime.js";
+
+export * from "./terminal/native-terminal-proxy.js";
+
+export { createNativeAuthProductCoordinator, AUTH_PRODUCT_COORDINATOR_SOURCE } from "./config/native-auth-product-coordinator.js";
+
+export * from "./config/native-product-experiment-manager.js";
+
+export * from "./config/native-desktop-product-manager.js";
+
+export * from "./config/native-desktop-cloud-product.js";
+
+export * from "./http/native-desktop-product-interceptors.js";
+
+export * from "./http/native-desktop-rest.js";
+
+export * from "./config/native-desktop-product-merger.js";
+
+export * from "./auth/native-desktop-authentication.js";
+
+export * from "./auth/native-desktop-file-authentication.js";
+
+export * from "./auth/native-desktop-custom-token.js";
+
+export * from "./auth/native-desktop-external-link.js";
+
+export * from "./auth/native-desktop-product-environment.js";
+
+export * from "./config/native-desktop-environment-providers.js";
+
+export * from "./config/native-desktop-client-product.js";
+
+export * from "./auth/native-workbuddy-auth-bindings.js";
+
+export * from "./config/native-workbuddy-local-storage.js";
+
+export * from "./auth/desktop-account-product-host.js";

@@ -1,3 +1,7 @@
+import {
+  createNativeAutoModePermissionService,
+  type AutoModeHostOptions,
+} from "./native-auto-mode-service.js";
 import * as fs from "node:fs";
 import { createMemoryRuleUtilities } from "../memory/memory-rule-utilities.js";
 import { ToolArgumentRewriteService } from "../tools/tool-argument-rewrite-service.js";
@@ -22,6 +26,8 @@ export type ToolPermissionHostOptions = {
   directoryTrusted?: boolean;
   isTTY?: boolean;
   autoModePermissionService?: any;
+  /** Compose the recovered Auto service with an explicitly owned classifier. */
+  autoMode?: AutoModeHostOptions;
   bashSandboxManager?: any;
   commandParserService?: any;
   commandSafety?: any;
@@ -98,14 +104,22 @@ export function createToolPermissionHost(
           return undefined;
         },
       },
-      autoModePermissionService: options.autoModePermissionService ?? {
-        async isAutoModeAvailable() {
-          return { available: false, reason: "No classifier host configured" };
-        },
-        async classifyAsk() {
-          throw Error("No classifier host configured");
-        },
-      },
+      autoModePermissionService:
+        options.autoModePermissionService ??
+        (options.autoMode
+          ? createNativeAutoModePermissionService({
+              ...options.autoMode,
+              settingsManager: options.settingsManager,
+              logger,
+            })
+          : {
+              async isAutoModeAvailable() {
+                return { available: false, reason: "No classifier host configured" };
+              },
+              async classifyAsk() {
+                throw Error("No classifier host configured");
+              },
+            }),
     },
   );
   const initialized = new WeakMap<object, Promise<void>>();

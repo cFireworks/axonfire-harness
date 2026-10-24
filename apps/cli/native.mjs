@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 // Host boundary for the recovered product entrypoints. Run in its own process.
+import { configureNativeStdio } from "./native-stdio.mjs";
 import { configureNativeApprovalTimeout } from "./native-approval-policy.mjs";
 import { createRequire } from "node:module";
-import { readFileSync, mkdirSync } from "node:fs";
+import { mkdirSync } from "node:fs";
+import { prepareNativeProductInput } from "./native-product-input.mjs";
 import { homedir } from "node:os";
 import { dirname, resolve, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -16,17 +18,8 @@ const informational =
   args.includes("--version") ||
   args.includes("-V");
 try {
-  const configFile = process.env.AXONFIRE_NATIVE_PRODUCT_CONFIG;
-  if (configFile) {
-    const config = JSON.parse(readFileSync(resolve(configFile), "utf8"));
-    if (!config || typeof config !== "object" || Array.isArray(config))
-      throw new Error("Native product configuration must be a JSON object");
-    process.env.ACC_PRODUCT_CONFIG_V3 = JSON.stringify(config);
-  }
-  if (!informational && !process.env.ACC_PRODUCT_CONFIG_V3)
-    throw new Error(
-      "Set AXONFIRE_NATIVE_PRODUCT_CONFIG to your product JSON file, or provide ACC_PRODUCT_CONFIG_V3. See docs/native-product-runtime.md.",
-    );
+  configureNativeStdio(process);
+  prepareNativeProductInput(process.env, { informational });
 
   configureNativeApprovalTimeout(args, process.env);
 

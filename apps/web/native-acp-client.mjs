@@ -1,20 +1,26 @@
 // HTTP/SSE transport adapter for the original ACP service. Contains no agent loop.
 export async function connectNativeAcp(
   origin,
-  { onRequest, onNotification, clientCapabilities = {} } = {},
+  {
+    onRequest,
+    onNotification,
+    clientCapabilities = {},
+    gatewayHeaders = {},
+  } = {},
 ) {
   const base = new URL(origin);
   if (base.protocol !== "http:" || base.hostname !== "127.0.0.1")
     throw new Error("Native ACP requires an owned loopback origin");
   const connected = await fetch(new URL("/api/v1/acp/connect", base), {
     method: "POST",
-    headers: { "x-codebuddy-request": "1" },
+    headers: { ...gatewayHeaders, "x-codebuddy-request": "1" },
   });
   if (!connected.ok) throw new Error("Native ACP connection failed");
   const { connectionId, sessionToken } = await connected.json();
   if (typeof connectionId !== "string" || typeof sessionToken !== "string")
     throw new Error("Invalid native ACP connection");
   const headers = {
+    ...gatewayHeaders,
     "x-codebuddy-request": "1",
     "acp-connection-id": connectionId,
     "acp-session-token": sessionToken,

@@ -1,12 +1,35 @@
+import { nativeFixtureEnv } from "../../test/native-fixture-env.mjs";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
-import { spawn } from "node:child_process";
+import { spawn, execFile } from "node:child_process";
+import { promisify } from "node:util";
 import { once } from "node:events";
 import { mkdtemp, writeFile, readFile, access, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+
+async function descendants(parentPid) {
+  if (process.platform === "win32") return [];
+  const { stdout } = await promisify(execFile)(
+    "ps",
+    ["-A", "-o", "pid=,ppid="],
+    { maxBuffer: 4 * 1024 * 1024 },
+  );
+  const rows = stdout
+    .trim()
+    .split("\n")
+    .map((line) => line.trim().split(/\s+/).map(Number));
+  const found = new Set([parentPid]);
+  let previous;
+  do {
+    previous = found.size;
+    for (const [pid, ppid] of rows) if (found.has(ppid)) found.add(pid);
+  } while (found.size !== previous);
+  found.delete(parentPid);
+  return [...found];
+}
 
 async function webProcess(root, config) {
   const child = spawn(
@@ -21,13 +44,11 @@ async function webProcess(root, config) {
     ],
     {
       env: {
-        PATH: process.env.PATH,
+        ...nativeFixtureEnv,
         HOME: root,
         SHELL: "/bin/sh",
         AXONFIRE_STATE_DIR: join(root, "state"),
         AXONFIRE_NATIVE_PRODUCT_CONFIG: config,
-        DISABLE_TELEMETRY: "1",
-        CODEBUDDY_REMOTE_CONFIG_DISABLED: "true",
       },
       stdio: ["ignore", "pipe", "pipe"],
     },
@@ -39,13 +60,40 @@ async function webProcess(root, config) {
   });
   child.stderr.resume();
   async function close() {
+    const owned = await descendants(child.pid);
     if (!exited) child.kill("SIGTERM");
     const timer = setTimeout(() => {
       if (!exited) child.kill("SIGKILL");
     }, 8000);
     try {
-      const [, signal] = await exit;
-      assert.notEqual(signal, "SIGKILL");
+      const [code, signal] = await exit;
+      assert.equal(signal, null, "Web must finish its asynchronous shutdown");
+      assert.equal(code, 0);
+      for (const pid of owned) {
+        let alive = true;
+        for (let attempt = 0; attempt < 100; attempt++) {
+          try {
+            process.kill(pid, 0);
+          } catch (error) {
+            if (error.code === "ESRCH") {
+              alive = false;
+              break;
+            }
+            throw error;
+          }
+          await new Promise((resolve) => setTimeout(resolve, 20));
+        }
+        if (alive) {
+          try {
+            process.kill(pid, "SIGTERM");
+          } catch {}
+        }
+        assert.equal(
+          alive,
+          false,
+          `owned Web descendant ${pid} survived shutdown`,
+        );
+      }
     } finally {
       clearTimeout(timer);
     }
@@ -275,7 +323,7 @@ for (const mode of [
           return;
         }
         const events = await consuming;
-        assert.ok(decisionId);
+        assert.ok(decisionId, JSON.stringify(events));
         assert.doesNotMatch(JSON.stringify(events), /owned-secret/);
         if (mode === "allow" || question) {
           assert.equal(events.at(-1).type, "done", JSON.stringify(events));
@@ -342,6 +390,32 @@ for (const mode of [
                     "Native browser turn complete.",
                   ),
               ),
+            );
+            const separate = await consume(
+              await web.post("/api/prompt", {
+                prompt: "Start an independent conversation",
+              }),
+            );
+            assert.equal(
+              separate.at(-1).type,
+              "done",
+              JSON.stringify(separate),
+            );
+            assert.notEqual(
+              separate.find((event) => event.type === "session").data.id,
+              sessionId,
+            );
+            assert.equal(requests.length, 4);
+            assert.equal(
+              requests[3].messages.some(
+                (message) =>
+                  message.role === "assistant" &&
+                  JSON.stringify(message.content).includes(
+                    "Native browser turn complete.",
+                  ),
+              ),
+              false,
+              "per-session native backends must not share conversation history",
             );
           }
         } else {

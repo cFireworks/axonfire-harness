@@ -1,3 +1,4 @@
+import { elicitationCard } from "./elicitation.js";
 const $ = (id) => document.getElementById(id);
 let csrf,
   sessionId,
@@ -81,6 +82,14 @@ async function sessions() {
   }
 }
 function decision(type, data) {
+  if (type === "elicitation") {
+    const card = elicitationCard(data.request, (answer) =>
+      api("/api/elicit", { id: data.id, ...answer }),
+    );
+    $("decisions").append(card);
+    card.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    return;
+  }
   const card = document.createElement("div");
   card.className = "decision";
   const title = document.createElement("strong");
@@ -193,7 +202,12 @@ async function run(path, body) {
           output ??= message("assistant");
           output.textContent += data.text;
         }
-        if (event === "approval" || event === "question") decision(event, data);
+        if (
+          event === "approval" ||
+          event === "question" ||
+          event === "elicitation"
+        )
+          decision(event, data);
         if (event === "done") {
           terminal = true;
           if (data.compacted) notice("上下文已压缩，完整本地记录仍保留。");

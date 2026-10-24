@@ -446,15 +446,20 @@ export const ACP_PROTOCOL_CASES: Case[] = [
         out.push(h.v.isCancelBarrierActive(at, now));
       assert.deepEqual(out, [false, true, true, true, false, false]);
       h.view.lastCancelAtBySession.set("owned", now - 499);
-      return [
-        out,
-        await h.view.executePrompt(
-          { request: { sessionId: "owned" } },
-          h.session,
-          h.agent,
-          {},
-        ),
-      ];
+      let dispatches = 0;
+      h.view.tryExecuteLocalCommand = async () => {
+        dispatches++;
+        return { stopReason: "end_turn" };
+      };
+      const request = { request: { sessionId: "owned", prompt: [{ type: "text", text: "/owned" }] } };
+      const blocked = await h.view.executePrompt(request, h.session, h.agent, {});
+      assert.equal(blocked.stopReason, "cancelled");
+      assert.equal(dispatches, 0, "499 ms barrier prevents even local command dispatch");
+      await h.tick(1);
+      const allowed = await h.view.executePrompt(request, h.session, h.agent, {});
+      assert.equal(allowed.stopReason, "end_turn");
+      assert.equal(dispatches, 1, "exact 500 ms boundary resumes normal dispatch");
+      return [out, blocked, allowed, dispatches];
     },
   ),
   scenario(
@@ -651,6 +656,31 @@ export const ACP_PROTOCOL_CASES: Case[] = [
       assert.equal(h.tasks.listenerCount("task-completed"), 0);
       assert.equal(h.session.combineSubject.observers.length, 0);
       return [h.updates, h.session.meta];
+    },
+  ),
+  scenario(
+    "late interruption abort marker cancels one completed follow-up and is consumed",
+    async (h) => {
+      const controller = new AbortController();
+      const first = h.agent.createEventForwardingPromise(h.session, tracking, { signal: controller.signal });
+      controller.abort();
+      assert.equal((await first).stopReason, "cancelled");
+      // Original rejection handling can set this after awaiting trace flush,
+      // when the abort-forwarder subscription has already been cleaned up.
+      h.session.meta.userInitiatedAbort = true;
+      const second = h.agent.createEventForwardingPromise(h.session, tracking);
+      rawModel(h, { choices: [{ finish_reason: "stop" }] });
+      h.session.combineSubject.next({ type: "result", data: stream() });
+      const completedButCancelled = await second;
+      assert.equal(completedButCancelled.stopReason, "cancelled");
+      assert.equal(completedButCancelled.finishReason, "stop");
+      assert.equal(h.session.meta.userInitiatedAbort, undefined);
+      const third = h.agent.createEventForwardingPromise(h.session, tracking);
+      rawModel(h, { choices: [{ finish_reason: "stop" }] });
+      h.session.combineSubject.next({ type: "result", data: stream() });
+      const recovered = await third;
+      assert.equal(recovered.stopReason, "end_turn");
+      return [completedButCancelled, recovered, h.logs];
     },
   ),
   ...["end_turn", "refusal", "max_tokens"].map((reason) =>

@@ -87,17 +87,24 @@ export async function nodeLoggingScenario(
     logger.setContext("Owned");
     const observed: any[] = [];
     subscription = di.onLogEmitter.event((e: any) => observed.push(e));
+    // Original save() uses UTC date folders, while collection bounds use local days.
+    // This scenario tests writing/archiving across both date buckets, not date filtering.
+    const logRange = {
+      start: Date.now() - 86400000,
+      end: Date.now() + 86400000,
+    };
     logger.debug("filtered");
     logger.info("written", "child");
     await new Promise((r) => setImmediate(r));
     await storage.flush();
     storage.storeSync("sync", product.LogLevel.Error);
-    const files = await storage.collectLogFiles({
-      start: Date.now(),
-      end: Date.now(),
-    });
-    assert.equal(files.length, 1);
-    const text = await readFile(files[0][0], "utf8");
+    const files = await storage.collectLogFiles(logRange);
+    assert.ok(files.length >= 1);
+    const text = (
+      await Promise.all(
+        files.map(([file]: [string, string]) => readFile(file, "utf8")),
+      )
+    ).join("\n");
     assert.match(text, /Workspace Path:/);
     assert.match(text, /written/);
     assert.match(text, /sync/);
@@ -106,7 +113,7 @@ export async function nodeLoggingScenario(
       observed.map((e) => e.message),
       ["filtered", "written"],
     );
-    const zip = await storage.retrieve({ start: Date.now(), end: Date.now() });
+    const zip = await storage.retrieve(logRange);
     const bytes = await readFile(zip);
     assert.equal(bytes.readUInt32LE(0), 0x04034b50);
     await rm(zip);
@@ -124,7 +131,7 @@ export async function nodeLoggingScenario(
     return {
       logger: logger.constructor.name,
       levels: observed.slice(0, 2).map((e) => e.level),
-      files: files.length,
+      files: true,
       zip: true,
       upload: false,
     };

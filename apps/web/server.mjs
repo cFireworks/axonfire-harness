@@ -1,11 +1,21 @@
 // New local-only host adapter. The recovered runtime remains in packages/harness.
 import { createServer } from "node:http";
 import { randomUUID } from "node:crypto";
+import Ajv from "ajv";
+import addFormats from "ajv-formats";
 import { readFile } from "node:fs/promises";
-import { createHarness } from "@axonfire/harness";
+const elicitationValidator = new Ajv({ strict: false });
+addFormats(elicitationValidator);
+// Load the standalone SDK only when that host is actually selected. Its tracing
+// provider installs process signal handlers, which do not belong to native Web.
+async function createDefaultRuntime(options) {
+  const { createHarness } = await import("@axonfire/harness");
+  return createHarness(options);
+}
 
 const assets = new Map([
   ["/", ["index.html", "text/html; charset=utf-8"]],
+  ["/elicitation.js", ["elicitation.js", "text/javascript; charset=utf-8"]],
   ["/app.js", ["app.js", "text/javascript; charset=utf-8"]],
   ["/style.css", ["style.css", "text/css; charset=utf-8"]],
 ]);
@@ -64,12 +74,12 @@ export async function createWebHost(options) {
       const abort = () => finish(undefined);
       const timer = setTimeout(abort, 120_000);
       signal.addEventListener("abort", abort, { once: true });
-      pending.set(id, { type, finish });
+      pending.set(id, { type, finish, data });
       event(active.response, type, { id, ...data });
     });
   }
   async function getRuntime() {
-    runtimePromise ??= (options.createRuntime ?? createHarness)({
+    runtimePromise ??= (options.createRuntime ?? createDefaultRuntime)({
       ...options.harness,
       approveTool: async (name, input, session, context) =>
         (await requestDecision(
@@ -77,6 +87,8 @@ export async function createWebHost(options) {
           { name, input, ...(context ? { context } : {}) },
           session.abortSignal,
         )) === true,
+      elicit: (request, session) =>
+        requestDecision("elicitation", { request }, session.abortSignal),
       askUserQuestion: (input, session) =>
         requestDecision("question", { input }, session.abortSignal),
     });
@@ -186,6 +198,48 @@ export async function createWebHost(options) {
       const body = await jsonBody(req);
       if (!body || typeof body !== "object" || Array.isArray(body)) {
         json(res, 400, { error: "Object required" });
+        return;
+      }
+      if (url.pathname === "/api/elicit") {
+        const decision = pending.get(body.id);
+        if (!decision || decision.type !== "elicitation") {
+          json(res, 404, { error: "Decision expired" });
+          return;
+        }
+        if (!["accept", "decline", "cancel"].includes(body.action)) {
+          json(res, 400, { error: "Elicitation action required" });
+          return;
+        }
+        const request = decision.data.request;
+        if (body.action === "accept" && request.mode !== "url") {
+          try {
+            const validate = elicitationValidator.compile(
+              request.requestedSchema,
+            );
+            elicitationValidator.removeSchema(request.requestedSchema);
+            if (
+              !body.content ||
+              typeof body.content !== "object" ||
+              Array.isArray(body.content) ||
+              !validate(body.content)
+            ) {
+              json(res, 400, {
+                error: "Form values do not match the requested schema",
+              });
+              return;
+            }
+          } catch {
+            json(res, 400, { error: "Unsupported elicitation schema" });
+            return;
+          }
+        }
+        decision.finish({
+          action: body.action,
+          ...(body.action === "accept" && request.mode !== "url"
+            ? { content: body.content }
+            : {}),
+        });
+        json(res, 200, { ok: true });
         return;
       }
       if (url.pathname === "/api/approve" || url.pathname === "/api/answer") {

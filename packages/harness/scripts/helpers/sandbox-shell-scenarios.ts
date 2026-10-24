@@ -180,6 +180,39 @@ export const SANDBOX_SHELL_CASES: {
     },
   },
   {
+    name: "original shell does not infer sandbox denial from stderr or nonzero exit without actionable audit records",
+    async run(factory) {
+      const results = [];
+      for (const records of [
+        undefined,
+        [],
+        [{ path: "/owned/blocked", actionMask: 0 }],
+        [{ path: "/owned/blocked", actionMask: 1, raw: { operation: "process-exec" } }],
+      ]) {
+        const f = sandboxShellFixture(factory), s = f.service;
+        s.init();
+        await f.ready();
+        const h = await s.execute({ command: "cat /owned/blocked", rawCommand: true });
+        await f.reverse({ command: "ProcessOutput", data: {
+          processId: "p1", stream: "stderr", data: b64("cat: /owned/blocked: Operation not permitted"),
+        } });
+        const data: any = { processId: "p1", exitCode: 1 };
+        if (records !== undefined) data.fileBlockRecords = records;
+        await f.reverse({ command: "ProcessExit", data });
+        const result = await h.wait();
+        assert.equal(result.exitCode, 1);
+        assert.match(result.stderr, /Operation not permitted/);
+        assert.equal(result.fileBlockRecords, records);
+        assert.equal(result.sandboxDenied, undefined);
+        assert.equal(result.sandboxBlockedPaths, undefined);
+        assert.equal(s.getActiveHandleCount(), 0);
+        h.dispose();
+        results.push(result);
+      }
+      return results;
+    },
+  },
+  {
     name: "connection loss force-exits pending handles and clears tracking",
     async run(factory) {
       const f = sandboxShellFixture(factory),

@@ -1,7 +1,8 @@
+import { nativeFixtureEnv } from "../../test/native-fixture-env.mjs";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
-import { mkdtemp, writeFile, readFile, rm, access } from "node:fs/promises";
+import { mkdtemp, writeFile, readFile, rm, access, readdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { startNativeProductProcess } from "../native-process.mjs";
@@ -11,7 +12,7 @@ for (const decision of ["reject", "allow", "cancel", "answer", "skip", "compact"
   test(
     `original ACP Write approval round trip: ${decision}`,
     { timeout: 30000 },
-    async () => {
+    async (t) => {
       const compact = decision === "compact";
       const allow = decision === "allow" || compact;
       const question = decision === "answer" || decision === "skip";
@@ -19,10 +20,18 @@ for (const decision of ["reject", "allow", "cancel", "answer", "skip", "compact"
       const root = await mkdtemp(join(tmpdir(), "axon-acp-client-"));
       const output = join(root, "output.txt"),
         evidence = "native-acp-write-4281";
-      let native, client;
+      let native, client, cleaned = false;
       const requests = [],
         approvals = [],
         events = [];
+      t.signal.addEventListener("abort", () => {
+        if (cleaned) return;
+        console.error("OWNED_ACP_ABORT_BEFORE_CLEANUP", JSON.stringify({
+          decision, modelRequests: requests.length, approvals: approvals.length,
+          nativeStarted: Boolean(native), clientConnected: Boolean(client),
+          lastEventMethods: events.slice(-5).map(event => event.method),
+        }));
+      }, { once: true });
       const server = createServer(async (req, res) => {
         let text = "";
         for await (const chunk of req) text += chunk;
@@ -109,13 +118,11 @@ for (const decision of ["reject", "allow", "cancel", "answer", "skip", "compact"
         native = await startNativeProductProcess({
           cwd: root,
           env: {
-            PATH: process.env.PATH,
+            ...nativeFixtureEnv,
             HOME: root,
             SHELL: "/bin/sh",
             AXONFIRE_STATE_DIR: join(root, "state"),
             AXONFIRE_NATIVE_PRODUCT_CONFIG: config,
-            DISABLE_TELEMETRY: "1",
-            CODEBUDDY_REMOTE_CONFIG_DISABLED: "true",
           },
         });
         client = await connectNativeAcp(native.origin, {
@@ -260,11 +267,42 @@ for (const decision of ["reject", "allow", "cancel", "answer", "skip", "compact"
               "PERMISSION_DENIED",
             );
           if (decision === "cancel") {
+            // Original AcpView cancels new prompts for 500 ms after cancellation.
+            // The cancelled result is not a signal that this barrier has expired.
+            await new Promise(resolve => setTimeout(resolve, 500));
             const next = await client.request("session/prompt", {
               sessionId: session.sessionId,
               prompt: [{ type: "text", text: "Continue after cancellation" }],
             });
-            assert.equal(next.stopReason, "end_turn");
+            const sourceLogs = [];
+            if (!["end_turn", "cancelled"].includes(next.stopReason)) {
+              await native.close(); // Flush owned product logs before failure diagnostics.
+              for (const path of await readdir(root, { recursive: true })) {
+                if (!/\.log(?:\.\d+)?$/.test(path)) continue;
+                const text = await readFile(join(root, path), "utf8").catch(() => "");
+                sourceLogs.push(...text.split("\n").filter(line => /RESULT:|Forwarding aborted|TraceCancel|cancel barrier|Aborting session|abortController|userInitiatedAbort/.test(line)).slice(-50));
+              }
+            }
+            assert.ok(["end_turn", "cancelled"].includes(next.stopReason), JSON.stringify({
+              sourceLogs: sourceLogs.slice(-70),
+              next, modelRequests: requests.length,
+              phases: events.map(event => event.params?.update?._meta?.["codebuddy.ai/agentPhase"]).filter(Boolean).slice(-12),
+              answers: events.filter(event => event.params?.update?.sessionUpdate === "agent_message_chunk").map(event => event.params.update.content),
+            }));
+            assert.equal(requests.length, 2, "follow-up must actually reach the model after the barrier");
+            assert.ok(events.some(event => event.params?.update?.content?.text === "Native write turn finished."));
+            if (next.stopReason === "cancelled") {
+              assert.equal(next._meta["codebuddy.ai/finishReason"], "stop");
+              assert.equal(next._meta["codebuddy.ai/outcome"], "CANCELLED");
+            }
+            // A late original rejection marker may mislabel the completed follow-up,
+            // but its result handling consumes that marker; the next turn must recover.
+            const recovered = await client.request("session/prompt", {
+              sessionId: session.sessionId,
+              prompt: [{ type: "text", text: "Continue after cancellation marker is consumed" }],
+            });
+            assert.equal(recovered.stopReason, "end_turn");
+            assert.equal(requests.length, 3);
             await assert.rejects(access(output));
           }
           assert.ok(
@@ -286,6 +324,7 @@ for (const decision of ["reject", "allow", "cancel", "answer", "skip", "compact"
           maxRetries: 10,
           retryDelay: 100,
         });
+        cleaned = true;
       }
     },
   );

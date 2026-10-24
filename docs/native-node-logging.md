@@ -30,3 +30,7 @@ npm run verify:node-logging -w @axonfire/harness -- /absolute/path/to/codebuddy.
 npm run verify:backend-foundation -w @axonfire/harness -- /absolute/path/to/codebuddy.js
 npm run smoke:native-di -w @axonfire/harness
 ```
+
+## Original date boundary
+
+The original writer uses UTC `YYYY-MM-DD` directories, while `collectLogFiles` expands query bounds with local-time `setHours`. A current-local-day query can therefore omit a newly written UTC-previous-day directory (observed after midnight in Asia/Shanghai). This behavior is preserved. The write/archive scenario now requests a window covering both date buckets and verifies the combined file contents; it does not claim to fix original date filtering.

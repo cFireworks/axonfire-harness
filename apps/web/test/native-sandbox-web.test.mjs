@@ -1,3 +1,4 @@
+import { nativeFixtureEnv } from "../../test/native-fixture-env.mjs";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
@@ -43,8 +44,8 @@ for (const allow of [false, true]) test(`native Web sandbox approval context and
       harness: {
         workDir: root,
         nativeSettings: { cliOptions: { settings: JSON.stringify({ sandbox: { enabled: true, filesystem: { denyRead: [file] } } }) } },
-        env: { PATH: process.env.PATH, HOME: root, SHELL: "/bin/sh", AXONFIRE_NATIVE_PRODUCT_CONFIG: config,
-          AXONFIRE_STATE_DIR: join(root, "state"), DISABLE_TELEMETRY: "1", CODEBUDDY_REMOTE_CONFIG_DISABLED: "true" },
+        env: { ...nativeFixtureEnv, HOME: root, SHELL: "/bin/sh", AXONFIRE_NATIVE_PRODUCT_CONFIG: config,
+          AXONFIRE_STATE_DIR: join(root, "state"),   },
       },
     });
     const url = await web.listen(0);

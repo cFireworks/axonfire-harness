@@ -1,3 +1,4 @@
+import { nativeFixtureEnv } from "../../test/native-fixture-env.mjs";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
@@ -44,8 +45,8 @@ test("non-interactive native CLI settles sandbox escalation through the original
       "--settings", JSON.stringify({ sandbox: { enabled: true, filesystem: { denyRead: [file] } } }),
     ], {
       cwd: root, timeout: 30000, maxBuffer: 1024 * 1024,
-      env: { PATH: process.env.PATH, HOME: root, SHELL: "/bin/sh", AXONFIRE_NATIVE_PRODUCT_CONFIG: config,
-        AXONFIRE_STATE_DIR: join(root, "state"), DISABLE_TELEMETRY: "1", CODEBUDDY_REMOTE_CONFIG_DISABLED: "true" },
+      env: { ...nativeFixtureEnv, HOME: root, SHELL: "/bin/sh", AXONFIRE_NATIVE_PRODUCT_CONFIG: config,
+        AXONFIRE_STATE_DIR: join(root, "state"),   },
     });
     // A signal-induced exit can also return code zero; require the actual final turn.
     assert.match(result.stdout, /Owned Bash turn finished/);

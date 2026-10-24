@@ -15,9 +15,53 @@ The original 30-second readiness limit, 5-second callback limit, 1-second teleme
 
 The build stages the captured macOS arm64 sandbox executable under `dist/native-product/vendor/sandbox/5.3.3`. The original process manager finds this versioned vendor path before consulting the platform-package fallback. Its original `--config`, IPC address and `--app_home` arguments work with the captured binary.
 
-`apps/cli/test/native-sandbox-binary.test.mjs` exercises the original lifecycle and IPC classes with real Node process/socket/filesystem boundaries and a temporary application home. It opens a session, applies a `no_access` file rule, executes `/bin/cat`, verifies a nonzero exit plus a canonical-path file-block record and no stdout, then clears the rule and verifies the same read succeeds. The test also checks child PID registration and cleanup. It runs only on macOS arm64 and requires build-staged assets.
+`apps/cli/test/native-sandbox-binary.test.mjs` exercises the original lifecycle and IPC classes with real Node process/socket/filesystem boundaries and a temporary application home. It opens a session, applies a `no_access` file rule, executes `/bin/cat`, verifies a nonzero exit plus a canonical-path file-block record and no stdout, then clears the rule and verifies the same read succeeds. Four concurrent reads then check distinct process IDs, denied-path audit attribution and exact allowed output. A passive socket observer compares each raw `ProcessExit` payload with the original client callback before Shell enrichment. The test also checks child PID registration and cleanup. It runs only on macOS arm64 and requires build-staged assets.
 
-This is evidence for the captured binary and one real file-isolation path, in addition to the earlier deterministic protocol-peer comparisons. It does not establish full product Bash routing, network policy coverage, projection semantics, helper installation or cross-platform protection. No original factory was changed to make the binary test pass.
+This is evidence for the captured binary and one real file-isolation path, in addition to the earlier deterministic protocol-peer comparisons. Separate native CLI/ACP/Web tests cover product Bash denial and approval escalation; this direct binary fixture does not establish network policy coverage, projection semantics, helper installation or cross-platform protection. No original factory was changed to make the binary test pass.
+
+## Exit audit boundaries
+
+The original Shell preserves native `fileBlockRecords` and enriches results only when those records contain an actionable file denial. Nonzero exit codes and “Operation not permitted” stderr alone do not set `sandboxDenied`. Source-paired tests cover omitted records, empty records, zero action masks and ignored `process-exec` operations. No synthetic audit records or fallback denial classification are added.
+
+A previous captured-binary run returned a denied exit without file-block records. Ten subsequent sequential probes passed, as did the concurrent wire-capture fixture, so the earlier intermittent failure remains unexplained. The latest full 81-host run reproduced this gap: 79 passed, one sandbox audit failure and one separate MCP TODO. A subsequent focused run passed, without resolving the intermittent cause. Failed assertions now also include bounded stdout/stderr tails from the original native process capture. Failed assertions retain the raw exit payload, output and recent native logs; the blocked-path requirement remains enforced. REA evidence `ev_4e0f4e0383918618470c779f343080ed556ad83aa6abe13a30e112ae34849ff0` analyzes the original IPC client, Pipe handle and Shell declarations: three files, 6,308 AST nodes and zero parse failures. Native executable decompilation was unavailable because this environment has no configured REA native-analysis provider; this evidence concerns JavaScript behavior and observed protocol traffic.
+
+### Native macOS audit monitor: partial static recovery
+
+The captured arm64 `sandbox-cli` is not stripped of Rust function symbols. Its SHA-256 is `db944b749d228b394838c7b0500e4726c5d81394c3929f3415cf80fd7f70eb41`, Mach-O UUID `C62F1179-DF4E-311A-94BD-469A1B0BBB40`. REA Mach-O evidence `ev_fe0df082e6e2fdd6d442bc474a22ceb8be3138d1983147f64e7af2a23f81602c` establishes the arm64 slice and `__TEXT` mapping (VM base `0x100000000`, file offset zero). This is metadata evidence; the control-flow observations below come from local LLVM static disassembly and indirect-symbol bindings, not a configured REA decompiler or original Rust source.
+
+| Native symbol | Unslid address |
+| --- | --- |
+| `SandboxLogMonitor.start` | `0x10011f38c` |
+| `SandboxLogMonitor.stop_and_collect` | `0x100120aec` |
+| `deny_records_to_ipc_file_block_records` | `0x100122a30` |
+| `run_executable_pipe_macos` | `0x1001303c4` |
+| `macos_post_exit_cleanup` | `0x100134274` |
+
+The start function builds `/usr/bin/log stream --style ndjson --info --debug --predicate` with the literal predicate `((processID == 0) AND (senderImagePath CONTAINS "/Sandbox"))`. These command strings are file-backed at `0x1002284a3` onward (the `stream` literal is at `0x100226a60`). Reader logs independently show per-command `WB_SBX_...` tags and whether each line matched the tag and parsed into a denial. This native log stream can observe unrelated Sandbox events; the tag filter is a separate step.
+
+The startup readiness reader is separately identified at `0x10012dae0` (next text symbol `0x10012dcc4`). It calls `BufRead.read_line` at `0x10012db94`, checks the resulting string length at `0x10012dbcc`–`0x10012dbd4`, frees the string and returns presence/absence. This function does not parse JSON, match a readiness message or inspect the line's contents. The parent calls `_pthread_join` at `0x10011f8b0`, checks the joined result at `0x10011f924`/`0x10011f928`, and emits the “log stream ready” message at `0x10011f978`. Thus startup does wait for a successful nonempty stdout line; the analysis does not establish that the line proves a fully active OS subscription. No startup fix or root-cause claim follows from this observation alone.
+
+The read-only analysis is reproducible on macOS with Command Line Tools:
+
+```sh
+node scripts/inspect-sandbox-audit-native.mjs
+node scripts/inspect-sandbox-audit-native.mjs --include-assembly > work/sandbox-audit-native-static.json
+```
+
+An explicit binary path may be supplied before the optional flag. The script rejects a different sample hash, validates the Mach-O text mapping, resolves four unique Rust symbols, records code-span hashes and command literals, and identifies the relevant imported stubs. It invokes `nm` and `llvm-objdump`, never sandbox-cli. Code spans stop at the next text symbol; this does not claim complete cold/shared code coverage. The retained REA evidence establishes the matching image identity/layout, while this script reproduces the supplemental static disassembly.
+
+The normal, non-poisoned `stop_and_collect` path has the following recovered timing structure:
+
+1. Sleep in 10 ms increments and inspect the record count. With no records, stop this phase once the accumulated sleep counter reaches 300 ms.
+2. Once a record appears, wait a further 150 ms, subject to the overall 600 ms counter limit.
+3. Poll every 10 ms until three consecutive unchanged record-count observations, resetting the stability counter when the count changes, or until the overall counter reaches 600 ms.
+4. Log the pre-kill count, terminate the owned log process, wait/join, and collect the final records, including records read between termination and EOF.
+
+These are accumulated requested-sleep values, not wall-clock deadlines. At `0x100120b64`/`0x100120b68`, the nanosecond immediate is `0x00989680` (10,000,000); `0x100120bb8` calls the stub at `0x1001d1214`, which the indirect symbol table identifies as `_nanosleep`. The comparisons at `0x100120b98`, `0x100120d40`, `0x100120dcc` and `0x100120ea4` establish the 300 ms, 150 ms, 600 ms and stability-count boundaries. The `_kill` stub at `0x1001d113c` is called with signal 9 at `0x100120ff0`. Rust allocation, mutex-poisoning and error paths are not fully reconstructed here.
+
+A normal owned diagnostic run observed a matching syslog denial, `pre-kill records=1, waited=190ms`, and the corresponding IPC fileBlockRecords (`work/sandbox-audit-native-logs.log`). Four concurrent isolated fixture runs also passed. This confirms the mechanism, not the intermittent failure's cause. Delayed or filtered native log delivery remains a candidate explanation for an empty collection; no failing run with matching complete native reader logs has yet proved it. The latest full aggregate reproduced the missing audit record (88 tests: 86 passes, one failure, one known MCP TODO); see `work/current-host-aggregate-after-session-controller.log`.
+
+The fixture collects bounded native stdout/stderr and owned log-file tails. The original manager snapshot retains only the first and last 1,024 characters, so the fixture additionally observes each child stream directly with a UTF-8 decoder and keeps an independent 65,536-character tail per stream. The successful `work/sandbox-independent-output.log` run confirms that these tails preserve the intervening monitor ready, reader/tag/parse, and pre-kill count messages. This independent capture does not change production capture behavior. On failure it appends file logs again after lifecycle shutdown, allowing buffered native logs to flush without delaying the measured operation. Set `AXONFIRE_SANDBOX_DIAGNOSTICS=1` for successful-run observations. Neither this diagnostic switch nor the partial static recovery changes the native executable, wait constants or denial assertions.
 
 ## Explicit parent assembly
 
@@ -63,7 +107,7 @@ npm run verify:sandbox-protocol -w @axonfire/harness -- /path/to/captured/codebu
 
 REA 6.7.0 analyzed the original inert declaration groups under evidence `ev_0daf2a51a670a9c255f0f71671eb94acdd42908ea71c82f5e6bda1a11a76b978`: 8,598 AST nodes, one parsed JavaScript file, zero skipped files and parse failures. Semantic coverage is partial/truncated under the 750-node/150-unknown per-file and global limits and 45-second analysis budget. Static results and finite runtime comparisons do not establish whole-product equivalence.
 
-The default CLI/Web has not enabled this graph. Explicit Shell composition is available as described below. The legacy Linux engine, safe-delete and audit services, telemetry/PID-registry implementations, the native executable, and full parent product wiring remain external or incomplete. The recovered services do not replace those dependencies with successful no-ops.
+The default CLI/Web now activates the recovered product graph, including sandbox routing, safe-delete and audit services. The build stages the captured macOS arm64 executable and original shims; native host tests exercise file denial and escalation. Explicit Shell composition remains available below. Cross-platform native deployment, macOS helper installation, network enforcement and projection behavior remain incomplete or unverified. See the [recovery ledger](recovery-status.md) for current integration evidence.
 
 
 ## Rule synchronization
@@ -156,7 +200,7 @@ Fifteen component source/recovery pairs compare original declarations and utilit
 npm run verify:sandbox-shell -w @axonfire/harness -- /path/to/captured/codebuddy.js
 ```
 
-REA evidence `ev_e205556d0223073f7fc871897a316540f0a1ffe7f7c741d072f36bc8ec9757ac` covers 52,604 AST nodes, one parsed JavaScript file, zero skipped files and zero parse failures. Semantic coverage is partial/truncated under the 750-node/150-unknown per-file and global limits and a 45-second analysis budget. Complete original declaration/factory/static AST checks and finite behavior comparisons supplement that evidence; full product equivalence and default CLI/Web integration remain unproven.
+REA evidence `ev_e205556d0223073f7fc871897a316540f0a1ffe7f7c741d072f36bc8ec9757ac` covers 52,604 AST nodes, one parsed JavaScript file, zero skipped files and zero parse failures. Semantic coverage is partial/truncated under the 750-node/150-unknown per-file and global limits and a 45-second analysis budget. Complete original declaration/factory/static AST checks and finite behavior comparisons supplement that evidence; full product equivalence remains unproven. Later native CLI/Web integration evidence is recorded in the [recovery ledger](recovery-status.md).
 
 ## Safe-delete helpers and shipped assets
 

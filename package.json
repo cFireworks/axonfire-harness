@@ -13,7 +13,7 @@
   ],
   "scripts": {
     "build": "npm run build -w @axonfire/harness",
-    "check": "npm run check -w @axonfire/harness && node --check apps/web/main.mjs && node --check apps/web/server.mjs && node --check apps/web/public/app.js && node --check apps/cli/native.mjs && node --check apps/web/native-process.mjs && node --check apps/web/native-acp-client.mjs && node --check apps/web/native-runtime.mjs && node --check apps/cli/native-approval-policy.mjs",
+    "check": "npm run check -w @axonfire/harness && node --check apps/web/main.mjs && node --check apps/web/server.mjs && node --check apps/web/public/app.js && node --check apps/web/public/elicitation.js && node --check apps/cli/native.mjs && node --check apps/cli/native-product-input.mjs && node --check apps/web/native-owned-runtime.mjs && node --check apps/web/native-account-runtime.mjs && node --check apps/web/native-process.mjs && node --check apps/web/native-acp-client.mjs && node --check apps/web/native-runtime.mjs && node --check apps/cli/native-approval-policy.mjs && node --check apps/cli/native-stdio.mjs",
     "start": "node --env-file-if-exists=.env apps/cli/axonfire.mjs web",
     "dev": "npm run build && npm start",
     "cli": "node --env-file-if-exists=.env apps/cli/axonfire.mjs",
